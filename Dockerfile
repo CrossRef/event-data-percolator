@@ -1,5 +1,5 @@
-# Event Data Event Bus Mock
-# Production build of Crossref Event Data Event Bus
+# Event Data Percolator
+# Production build of Crossref Event Data Percolator
 
 FROM clojure:lein-2.7.0-alpine
 MAINTAINER Joe Wass jwass@crossref.org

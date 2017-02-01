@@ -31,7 +31,7 @@
                  [org.clojure/tools.logging "0.3.1"]
                  [org.apache.logging.log4j/log4j-core "2.6.2"]
                  [org.slf4j/slf4j-simple "1.7.21"]]
-  :main ^:skip-aot event-data-event-bus.core
+  :main ^:skip-aot event-data-percolator.core
   :target-path "target/%s"
   :test-selectors {:default (constantly true)
                    :unit :unit
