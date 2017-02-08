@@ -4,12 +4,13 @@ services:
     build: .
     volumes:
      - .:/usr/src/app
-     - ./.m2-cache:/home/deploy/.m2
+     - ./.m2-cache:/root/.m2
     environment:
      - JWT_SECRETS=TEST,TEST2
      - STORAGE=redis
      - REDIS_HOST=redis
      - REDIS_PORT=6379
      - REDIS_DB=0
+     - PORT=8005
     command: "lein test :unit"
 

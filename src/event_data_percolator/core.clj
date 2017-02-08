@@ -1,7 +1,13 @@
 (ns event-data-percolator.core
+  (:require [event-data-percolator.server :as server]
+            [event-data-percolator.process :as process]
+            [clojure.tools.logging :as log])
   (:gen-class))
 
 (defn -main
-  "I don't do a whole lot ... yet."
   [& args]
-  (println "Hello, World!"))
+  (condp = (first args)
+    "accept" (server/run-server)
+    "process" (process/run-process)
+    "push" (process/run-push)
+    (log/error "Unrecognised command: " (first args))))

@@ -1,0 +1,90 @@
+
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js  ie lt-ie9 lt-ie8 lt-ie7 gray-background fg-item-page"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js  ie lt-ie9 lt-ie8 gray-background fg-item-page"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js  ie lt-ie9 gray-background fg-item-page"> <![endif]-->
+<!--[if IE 9]>         <html class="no-js  ie ie9 gray-background fg-item-page"> <![endif]-->
+<!--[if IE  ]>         <html class="no-js  ie gray-background fg-item-page"> <![endif]-->
+<!--[if IE]><!--> <html class="no-js  gray-background fg-item-page" lang="en"> <!--<![endif]-->
+  <head>
+    <meta charset="UTF-8">
+    <title>
+      A Modeler&#39;s Tale
+    </title>
+    <meta name="referrer" content="origin"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta name="csrf_token" content="1e060de3-8671-4cfe-8dd3-503173c38f8c" />
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/apple-touch-icon-57x57.png" />
+<link rel="apple-touch-icon-precomposed" sizes="114x114" href="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/apple-touch-icon-114x114.png" />
+<link rel="apple-touch-icon-precomposed" sizes="72x72" href="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/apple-touch-icon-72x72.png" />
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/apple-touch-icon-144x144.png" />
+<link rel="apple-touch-icon-precomposed" sizes="60x60" href="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/apple-touch-icon-60x60.png" />
+<link rel="apple-touch-icon-precomposed" sizes="120x120" href="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/apple-touch-icon-120x120.png" />
+<link rel="apple-touch-icon-precomposed" sizes="76x76" href="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/apple-touch-icon-76x76.png" />
+<link rel="apple-touch-icon-precomposed" sizes="152x152" href="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/apple-touch-icon-152x152.png" />
+<link rel="icon" type="image/png" href="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/favicon-196x196.png" sizes="196x196" />
+<link rel="icon" type="image/png" href="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/favicon-96x96.png" sizes="96x96" />
+<link rel="icon" type="image/png" href="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/favicon-32x32.png" sizes="32x32" />
+<link rel="icon" type="image/png" href="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/favicon-16x16.png" sizes="16x16" />
+<link rel="icon" type="image/png" href="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/favicon-128.png" sizes="128x128" />
+<meta name="application-name" content="&nbsp;"/>
+<meta name="msapplication-TileColor" content="#FFFFFF" />
+<meta name="msapplication-TileImage" content="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/mstile-144x144.png" />
+<meta name="msapplication-square70x70logo" content="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/mstile-70x70.png" />
+<meta name="msapplication-square150x150logo" content="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/mstile-150x150.png" />
+<meta name="msapplication-wide310x150logo" content="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/mstile-310x150.png" />
+<meta name="msapplication-square310x310logo" content="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/favicon/mstile-310x310.png" />
+    
+  <link rel="canonical" href="https://figshare.com/articles/A_Modeler_s_Tale/3423371">
+  <meta name="citation_title" content="A Modeler&#39;s Tale" />
+  <meta property="og:title" content="A Modeler&#39;s Tale">
+  <meta name="twitter:title" content="A Modeler&#39;s Tale">
+  <meta itemprop="name" content="A Modeler&#39;s Tale">
+  <meta name="citation_publication_date" content="2016-06-09T06:49:04Z" />
+
+  <meta name="citation_author" content="markus, wolfien" />
+
+  <meta name="citation_author" content="andrea, bagnacani" />
+
+  <meta name="citation_author" content="tom, gebhardt" />
+
+  <meta name="citation_author" content="martin, scharm" />
+
+
+
+  <meta name="description" content="A Modeler&#39;s Tale" />
+  <meta name="abstract" content="We created the movie for the 10th International CellML Workshop June 2016 in Auckland, New Zealand.The video shows Researcher 1 (GMT), who developed a model that may cure stupidity. He wants to share the simulation study with his collaborator Researcher 2 (GMT+7) to get some feedback. However, it turns out that sharing the simulation study is not that easy and Researcher 2 (GMT+7) is not able to reproduce the results of Researcher 1 (GMT) using The Simulator.Fortunately, Supervisor comes in to help Researcher 1 (GMT). He points Researcher 1 (GMT) to COMBINE archives. A COMBINE archive is a container format meant to organise and annotate all files necessary to reproduce a simulation study.Eventually, Researcher 1 (GMT) is able to transfer his late-breaking research results bundled into a COMBINE archive to Researcher 2 (GMT+7). The Simulator finally knows what to do, as there is now everything available and in the right place. It turns out that the model is valid and stupidity is going to cease!ThanksWe would like to thank the whole Free Software Community, as most of the video was produced using Free Software! Special thanks to* Debian GNU/Linux (debian.org)* Cheese (wiki.gnome.org/Apps/Cheese)* Flowblade (github.com/jliljebl/flowblade)* Gimp (gimp.org)* Kevin MacLeod (incompetech.com) for providing the music as CC:BY" />
+  <meta property="og:description" content="We created the movie for the 10th International CellML Workshop June 2016 in Auckland, New Zealand.The video shows Researcher 1 (GMT), who developed a model that may cure stupidity. He wants to share the simulation study with his collaborator Researcher 2 (GMT+7) to get some feedback. However, it turns out that sharing the simulation study is not that easy and Researcher 2 (GMT+7) is not able to reproduce the results of Researcher 1 (GMT) using The Simulator.Fortunately, Supervisor comes in to help Researcher 1 (GMT). He points Researcher 1 (GMT) to COMBINE archives. A COMBINE archive is a container format meant to organise and annotate all files necessary to reproduce a simulation study.Eventually, Researcher 1 (GMT) is able to transfer his late-breaking research results bundled into a COMBINE archive to Researcher 2 (GMT+7). The Simulator finally knows what to do, as there is now everything available and in the right place. It turns out that the model is valid and stupidity is going to cease!ThanksWe would like to thank the whole Free Software Community, as most of the video was produced using Free Software! Special thanks to* Debian GNU/Linux (debian.org)* Cheese (wiki.gnome.org/Apps/Cheese)* Flowblade (github.com/jliljebl/flowblade)* Gimp (gimp.org)* Kevin MacLeod (incompetech.com) for providing the music as CC:BY">
+  <meta name="twitter:description" content="We created the movie for the 10th International CellML Workshop June 2016 in Auckland, New Zealand.The video shows Researcher 1 (GMT), who developed a model that may cure stupidity. He wants to share the simulation study with his collaborator Researcher 2 (GMT+7) to get some feedback. However, it turns out that sharing the simulation study is not that easy and Researcher 2 (GMT+7) is not able to reproduce the results of Researcher 1 (GMT) using The Simulator.Fortunately, Supervisor comes in to help Researcher 1 (GMT). He points Researcher 1 (GMT) to COMBINE archives. A COMBINE archive is a container format meant to organise and annotate all files necessary to reproduce a simulation study.Eventually, Researcher 1 (GMT) is able to transfer his late-breaking research results bundled into a COMBINE archive to Researcher 2 (GMT+7). The Simulator finally knows what to do, as there is now everything available and in the right place. It turns out that the model is valid and stupidity is going to cease!ThanksWe would like to thank the whole Free Software Community, as most of the video was produced using Free Software! Special thanks to* Debian GNU/Linux (debian.org)* Cheese (wiki.gnome.org/Apps/Cheese)* Flowblade (github.com/jliljebl/flowblade)* Gimp (gimp.org)* Kevin MacLeod (incompetech.com) for providing the music as CC:BY">
+  <meta itemprop="description" content="We created the movie for the 10th International CellML Workshop June 2016 in Auckland, New Zealand.The video shows Researcher 1 (GMT), who developed a model that may cure stupidity. He wants to share the simulation study with his collaborator Researcher 2 (GMT+7) to get some feedback. However, it turns out that sharing the simulation study is not that easy and Researcher 2 (GMT+7) is not able to reproduce the results of Researcher 1 (GMT) using The Simulator.Fortunately, Supervisor comes in to help Researcher 1 (GMT). He points Researcher 1 (GMT) to COMBINE archives. A COMBINE archive is a container format meant to organise and annotate all files necessary to reproduce a simulation study.Eventually, Researcher 1 (GMT) is able to transfer his late-breaking research results bundled into a COMBINE archive to Researcher 2 (GMT+7). The Simulator finally knows what to do, as there is now everything available and in the right place. It turns out that the model is valid and stupidity is going to cease!ThanksWe would like to thank the whole Free Software Community, as most of the video was produced using Free Software! Special thanks to* Debian GNU/Linux (debian.org)* Cheese (wiki.gnome.org/Apps/Cheese)* Flowblade (github.com/jliljebl/flowblade)* Gimp (gimp.org)* Kevin MacLeod (incompetech.com) for providing the music as CC:BY">
+  <meta name="google" content="notranslate" />
+
+  <meta name="DC.identifier" content="doi:10.6084/m9.figshare.3423371.v1" />
+
+  <meta property="og:url" content="https://figshare.com/articles/A_Modeler_s_Tale/3423371">
+  <meta name="twitter:url" content="https://figshare.com/articles/A_Modeler_s_Tale/3423371">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="figshare">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:site" content="@figshare">
+  <link href="//plus.google.com/107997370406416536977" rel="publisher">
+
+  <meta property="og:image" content="https://s3-eu-west-1.amazonaws.com/pfigshare-u-previews/5357942/thumb.png">
+  <meta name="twitter:image" content="https://s3-eu-west-1.amazonaws.com/pfigshare-u-previews/5357942/thumb.png">
+  <meta itemprop="image" content="https://s3-eu-west-1.amazonaws.com/pfigshare-u-previews/5357942/thumb.png">
+
+
+    
+      <link rel="stylesheet" type="text/css" href="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public/global/styles/main.css" />
+    
+    <link rel="stylesheet" type="text/css" href="//web-static.figshare.com/assets/f5c84d4ba964d8f63650ae28d69a6e0c0ebef68c/public.css" />
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    
+  </head>
+  <body>
+  <!-- Snipped -->
+  </body>
+</html>

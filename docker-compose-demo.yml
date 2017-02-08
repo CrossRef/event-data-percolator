@@ -1,0 +1,46 @@
+version: '2'
+services:
+  redis:
+    image: redis
+
+
+  ebdstatus:
+    image: crossref/event-data-status:0.1.2
+    expose:
+     - "8003"
+    ports:
+     - "8003:8003"
+    depends_on:
+     - redis
+    environment:
+     - REDIS_HOST=redis
+     - REDIS_PORT=6379
+     - REDIS_DB=0
+     - PORT=8003
+     - JWT_SECRETS=TEST,TEST2
+    command: "lein run"
+
+  demo:
+    build: .
+    expose:
+     - "8005"
+    ports:
+     - "8005:8005"
+    volumes:
+     - .:/usr/src/app
+     - ./.m2-cache:/root/.m2
+    depends_on:
+     - redis
+     - ebdstatus
+    environment:
+     - JWT_SECRETS=TEST,TEST2
+     - STORAGE=redis
+     - REDIS_HOST=redis
+     - REDIS_PORT=6379
+     - REDIS_DB=0
+     - PORT=8005
+     - STATUS_SERVICE=http://ebdstatus:8003
+    command: "lein run"
+
+
+

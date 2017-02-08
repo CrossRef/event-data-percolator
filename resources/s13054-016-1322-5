@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<!--[if lte IE 8 ]><html lang="en" class="no-js oldIE"><![endif]-->
+<!--[if (gt IE 8)|!(IE)]><!--><html lang="en" class="no-js"><!--<![endif]-->
+<head>
+    <title>Prehospital administration of tranexamic acid in trauma patients | Critical Care | Full Text</title>
+    
+    
+    <meta name="journal_id" content='13054'/>
+    
+    <meta name="dc.title" content='Prehospital administration of tranexamic acid in trauma patients'/>
+    
+    <meta name="dc.description" content='Evidence on prehospital administration of the antifibrinolytic tranexamic acid (TXA) in civilian trauma populations is scarce. The aim was to study whether prehospital TXA use in trauma patients was associated with improved outcomes. The prehospital database of the ADAC (General German Automobile Club) Air Rescue Service was linked with the TraumaRegister of the German Trauma Society to reidentify patients documented in both registries. Primarily admitted trauma patients (2012 until 2014) who were treated with TXA during the prehospital phase were matched with patients who had not received prehospital TXA, applying propensity score-based matching. The matching yielded two identical cohorts (n&#8201;=&#8201;258 in each group), since there were no significant differences in demographics or injury characteristics (mean Injury Severity Score 24&#8201;&#177;&#8201;14 [TXA] vs. 24&#8201;&#177;&#8201;16 [control]; p&#8201;=&#8201;0.46). The majority had sustained blunt injury (90.3 % vs. 93.0 %; p&#8201;=&#8201;0.34). There were no differences with respect to prehospital therapy, including rates of intubation, chest tube insertion or both administration of i.v. fluids and catecholamines. During ER treatment, the TXA cohort received fewer numbers of red blood cells and plasma units, but without reaching statistical significance. Incidences of organ failure, sepsis or thromboembolism showed no significant differences as well, although data were incomplete for these parameters. Early mortality was significantly lower in the TXA group (e.g., 24-h mortality 5.8 % [TXA] vs. 12.4 % [control]; p&#8201;=&#8201;0.01), and mean time to death was 8.8&#8201;&#177;&#8201;13.4 days vs. 3.6&#8201;&#177;&#8201;4.9 days, respectively (p&#8201;=&#8201;0.001). Overall hospital mortality was similar in both groups (14.7 % vs. 16.3 %; p&#8201;=&#8201;0.72). The most pronounced mortality difference was observed in patients with a high propensity score, reflecting severe injury load. This is the first civilian study, to our knowledge, in which the effect of prehospital TXA use in trauma patients has been examined. TXA was associated with prolonged time to death and significantly improved early survival. Until further evidence emerges, the results of this study support the use of TXA during prehospital treatment of severely injured patients.'/>
+    
+    <meta name="dc.source" content='Critical Care 2016 20:1'/>
+    
+    <meta name="dc.format" content='text/html'/>
+    
+    <meta name="dc.publisher" content='BioMed Central'/>
+    
+    <meta name="dc.date" content='2016-05-12'/>
+    
+    <meta name="dc.type" content='OriginalPaper'/>
+    
+    <meta name="dc.language" content='En'/>
+    
+    <meta name="dc.copyright" content='2016 Wafaisade et al.'/>
+    
+    <meta name="dc.rightsAgent" content='reprints@biomedcentral.com'/>
+    
+    <meta name="prism.issn" content='1364-8535'/>
+    
+    <meta name="prism.publicationName" content='Critical Care'/>
+    
+    <meta name="prism.publicationDate" content='2016-05-12'/>
+    
+    <meta name="prism.volume" content='20'/>
+    
+    <meta name="prism.number" content='1'/>
+    
+    <meta name="prism.section" content='OriginalPaper'/>
+    
+    <meta name="prism.startingPage" content='143'/>
+    
+    <meta name="prism.copyright" content='2016 Wafaisade et al.'/>
+    
+    <meta name="prism.rightsAgent" content='reprints@biomedcentral.com'/>
+    
+    <meta name="prism.url" content='http://ccforum.biomedcentral.com/articles/10.1186/s13054-016-1322-5'/>
+    
+    <meta name="citation_pdf_url" content='http://ccforum.biomedcentral.com/track/pdf/10.1186/s13054-016-1322-5?site=ccforum.biomedcentral.com'/>
+    
+    <meta name="citation_abstract_html_url" content='http://ccforum.biomedcentral.com/articles/10.1186/s13054-016-1322-5'/>
+    
+    <meta name="citation_fulltext_html_url" content='http://ccforum.biomedcentral.com/articles/10.1186/s13054-016-1322-5'/>
+    
+    <meta name="citation_journal_title" content='Critical Care'/>
+    
+    <meta name="citation_publisher" content='BioMed Central'/>
+    
+    <meta name="citation_issn" content='1364-8535'/>
+    
+    <meta name="citation_title" content='Prehospital administration of tranexamic acid in trauma patients'/>
+    
+    <meta name="citation_volume" content='20'/>
+    
+    <meta name="citation_issue" content='1'/>
+    
+    <meta name="citation_date" content='2016/05/12'/>
+    
+    <meta name="citation_publication_date" content='2016/05/12'/>
+    
+    <meta name="citation_firstpage" content='143'/>
+    
+    <meta name="citation_fulltext_world_readable" content=''/>
+    
+    <meta name="dc.creator" content='Arasch Wafaisade'/>
+    
+    <meta name="dc.creator" content='Rolf Lefering'/>
+    
+    <meta name="dc.creator" content='Bertil Bouillon'/>
+    
+    <meta name="dc.creator" content='Andreas B. B&#246;hmer'/>
+    
+    <meta name="dc.creator" content='Michael G&#228;&#223;ler'/>
+    
+    <meta name="dc.creator" content='Matthias Ruppert'/>
+    
+    <meta name="dc.subject" content='Intensive / Critical Care Medicine'/>
+    
+    <meta name="dc.subject" content='Emergency Medicine'/>
+    
+    <meta name="citation_author" content='Arasch Wafaisade'/>
+    
+    <meta name="citation_author_institution" content='Department of Trauma and Orthopedic Surgery, University of Witten/Herdecke, Cologne-Merheim Medical Center, Cologne, Germany'/>
+    
+    <meta name="citation_author" content='Rolf Lefering'/>
+    
+    <meta name="citation_author_institution" content='Institute for Research in Operative Medicine (IFOM), University of Witten/Herdecke, Cologne, Germany'/>
+    
+    <meta name="citation_author" content='Bertil Bouillon'/>
+    
+    <meta name="citation_author_institution" content='Department of Trauma and Orthopedic Surgery, University of Witten/Herdecke, Cologne-Merheim Medical Center, Cologne, Germany'/>
+    
+    <meta name="citation_author" content='Andreas B. B&#246;hmer'/>
+    
+    <meta name="citation_author_institution" content='Department of Anesthesiology and Intensive Care Medicine, University of Witten/Herdecke, Cologne-Merheim Medical Center, Cologne, Germany'/>
+    
+    <meta name="citation_author" content='Michael G&#228;&#223;ler'/>
+    
+    <meta name="citation_author_institution" content='Department of Medicine &#8211; ADAC Air Rescue Service (Subsidiary of the General German Automobile Club), Munich, Germany'/>
+    
+    <meta name="citation_author" content='Matthias Ruppert'/>
+    
+    <meta name="citation_author_institution" content='Department of Medicine &#8211; ADAC Air Rescue Service (Subsidiary of the General German Automobile Club), Munich, Germany'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=J Trauma; citation_title=Impact of hemorrhage on trauma outcome: an overview of epidemiology, clinical presentations, and therapeutic considerations; citation_author=DS Kauvar; citation_author=R Lefering; citation_author=CE Wade; citation_volume=60; citation_issue=6 Suppl; citation_publication_date=2006; citation_pages=S3-11; citation_doi=10.1097/01.ta.0000199961.02677.19; citation_id=CR1;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Emerg Med J.; citation_title=Drivers of acute coagulopathy after severe trauma: a multivariate analysis of 1987 patients; citation_author=A Wafaisade; citation_author=S Wutzler; citation_author=R Lefering; citation_author=T Tjardes; citation_author=M Banerjee; citation_author=T Paffrath; citation_volume=27; citation_publication_date=2010; citation_pages=934-9; citation_doi=10.1136/emj.2009.088484; citation_id=CR2;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Injury.; citation_title=Early coagulopathy in multiple injury: an analysis from the German Trauma Registry on 8724 patients; citation_author=M Maegele; citation_author=R Lefering; citation_author=N Yucel; citation_author=T Tjardes; citation_author=D Rixen; citation_author=T Paffrath; citation_volume=38; citation_publication_date=2007; citation_pages=298-304; citation_doi=10.1016/j.injury.2006.10.003; citation_id=CR3;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=J Trauma.; citation_title=Acute traumatic coagulopathy; citation_author=K Brohi; citation_author=J Singh; citation_author=M Heron; citation_author=T Coats; citation_volume=54; citation_publication_date=2003; citation_pages=1127-30; citation_doi=10.1097/01.TA.0000069184.82147.06; citation_id=CR4;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=JAMA.; citation_title=Transfusion of plasma, platelets, and red blood cells in a 1:1:1 vs a 1:1:2 ratio and mortality in patients with severe trauma: the PROPPR randomized clinical trial; citation_author=JB Holcomb; citation_author=BC Tilley; citation_author=S Baraniuk; citation_author=EE Fox; citation_author=CE Wade; citation_author=JM Podbielski; citation_volume=313; citation_publication_date=2015; citation_pages=471-82; citation_doi=10.1001/jama.2015.12; citation_id=CR5;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=J Trauma Acute Care Surg.; citation_title=Coagulation management of bleeding trauma patients is changing in German trauma centers: an analysis from the trauma registry of the German Society for Trauma Surgery; citation_author=A Wafaisade; citation_author=R Lefering; citation_author=M Maegele; citation_author=S Lendemans; citation_author=S Floh&#233;; citation_author=B Hussmann; citation_volume=72; citation_publication_date=2012; citation_pages=936-42; citation_doi=10.1097/TA.0b013e31823dca70; citation_id=CR6;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=J Trauma Acute Care Surg.; citation_title=Hyperfibrinolysis, physiologic fibrinolysis, and fibrinolysis shutdown: the spectrum of postinjury fibrinolysis and relevance to antifibrinolytic therapy; citation_author=HB Moore; citation_author=EE Moore; citation_author=E Gonzalez; citation_author=MP Chapman; citation_author=TL Chin; citation_author=CC Silliman; citation_volume=77; citation_publication_date=2014; citation_pages=811-7; citation_doi=10.1097/TA.0000000000000341; citation_id=CR7;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Lancet.; citation_title=Effects of tranexamic acid on death, vascular occlusive events, and blood transfusion in trauma patients with significant haemorrhage (CRASH-2): a randomised, placebo-controlled trial; citation_author=H Shakur; citation_author=I Roberts; citation_author=R Bautista; citation_author=J Caballero; citation_author=T Coats; citation_author=Y Dewan; citation_volume=376; citation_publication_date=2010; citation_pages=23-32; citation_doi=10.1016/S0140-6736(10)61479-1; citation_id=CR8;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Lancet; citation_title=The importance of early treatment with tranexamic acid in bleeding trauma patients: an exploratory analysis of the CRASH-2 randomised controlled trial; citation_author=I Roberts; citation_author=H Shakur; citation_author=A Afolabi; citation_author=K Brohi; citation_author=T Coats; citation_author=Y Dewan; citation_volume=377; citation_publication_date=2011; citation_pages=1096-101.e2; citation_doi=10.1016/S0140-6736(11)60317-6; citation_id=CR9;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Crit Care.; citation_title=Management of bleeding and coagulopathy following major trauma: an updated European guideline; citation_author=DR Spahn; citation_author=B Bouillon; citation_author=V Cerny; citation_author=TJ Coats; citation_author=J Duranteau; citation_author=E Fern&#225;ndez-Mond&#233;jar; citation_volume=17; citation_publication_date=2013; citation_pages=R76; citation_doi=10.1186/cc12685; citation_id=CR10;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Resuscitation.; citation_title=EZ-IO(&#174;) intraosseous device implementation in German Helicopter Emergency Medical Service; citation_author=M Helm; citation_author=B Haunstein; citation_author=T Schlechtriemen; citation_author=M Ruppert; citation_author=L Lampl; citation_author=M G&#228;&#223;ler; citation_volume=88; citation_publication_date=2015; citation_pages=43-7; citation_doi=10.1016/j.resuscitation.2014.12.015; citation_id=CR11;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Anaesthesist.; citation_title=The NACA scale: construct and predictive validity of the NACA scale for prehospital severity rating in trauma patients; citation_author=M Weiss; citation_author=L Bernoulli; citation_author=A Zollinger; citation_volume=50; citation_publication_date=2001; citation_pages=150-4; citation_doi=10.1007/s001010170030; citation_id=CR12;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Unfallchirurg; citation_title=Trauma register of the German Society of Trauma Surgery [in German]; citation_volume=97; citation_publication_date=1994; citation_pages=230-7; citation_id=CR13;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=J Trauma.; citation_title=The injury severity score: a method for describing patients with multiple injuries and evaluating emergency care; citation_author=SP Baker; citation_author=B O&#8217;Neill; citation_author=W Haddon; citation_author=WB Long; citation_volume=14; citation_publication_date=1974; citation_pages=187-96; citation_doi=10.1097/00005373-197403000-00001; citation_id=CR14;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Injury.; citation_title=AIS 2005: a contemporary injury scale; citation_author=TA Gennarelli; citation_author=E Wodzin; citation_volume=37; citation_publication_date=2006; citation_pages=1083-91; citation_doi=10.1016/j.injury.2006.07.009; citation_id=CR15;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Crit Care Med.; citation_title=Use of the SOFA score to assess the incidence of organ dysfunction/failure in intensive care units: results of a multicenter, prospective study; citation_author=JL Vincent; citation_author=A Mendon&#231;a; citation_author=F Cantraine; citation_author=R Moreno; citation_author=J Takala; citation_author=PM Suter; citation_volume=26; citation_publication_date=1998; citation_pages=1793-800; citation_doi=10.1097/00003246-199811000-00016; citation_id=CR16;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Crit Care Med.; citation_title=Let&#8217;s agree on terminology: definitions of sepsis; citation_author=RC Bone; citation_volume=19; citation_publication_date=1991; citation_pages=973-6; citation_doi=10.1097/00003246-199107000-00024; citation_id=CR17;'/>
+    
+    <meta name="citation_reference" content='citation_title=Thromboplastinzeit; citation_inbook_title=Labor und Diagnose: Indikation und Bewertung von Laborbefunden f&#252;r die medizinische Diagnostik; citation_author=C Wagner; citation_author=F Dati; citation_publisher=TH-Books; citation_publication_date=2000; citation_pages=613-6; citation_id=CR18;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Shock.; citation_title=Challenges to effective research in acute trauma resuscitation: consent and endpoints; citation_author=JB Holcomb; citation_author=R Weiskopf; citation_author=H Champion; citation_author=SA Gould; citation_author=RM Sauer; citation_author=K Brasel; citation_volume=35; citation_publication_date=2011; citation_pages=107-13; citation_doi=10.1097/SHK.0b013e3181f7fd01; citation_id=CR19;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=J Cardiothorac Surg.; citation_title=Safety and effectiveness of two treatment regimes with tranexamic acid to minimize inflammatory response in elective cardiopulmonary bypass patients: a randomized double-blind, dose-dependent, phase IV clinical trial; citation_author=JJ Jim&#233;nez; citation_author=JL Iribarren; citation_author=M Brouard; citation_author=D Hern&#225;ndez; citation_author=S Palmero; citation_author=A Jim&#233;nez; citation_volume=6; citation_publication_date=2011; citation_pages=138; citation_doi=10.1186/1749-8090-6-138; citation_id=CR20;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Br J Surg.; citation_title=Systematic review, meta-analysis and meta-regression of the effect of tranexamic acid on surgical blood loss; citation_author=K Ker; citation_author=D Prieto-Merino; citation_author=I Roberts; citation_volume=100; citation_publication_date=2013; citation_pages=1271-9; citation_doi=10.1002/bjs.9193; citation_id=CR21;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Lancet.; citation_title=Tranexamic acid for trauma; citation_author=V Casati; citation_author=A Romano; citation_author=E Novelli; citation_author=A D&#8217;Angelo; citation_volume=376; citation_publication_date=2010; citation_pages=1049-50; citation_doi=10.1016/S0140-6736(10)61477-8; citation_id=CR22;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Arch Surg.; citation_title=Military Application of Tranexamic Acid in Trauma Emergency Resuscitation (MATTERs) Study; citation_author=JJ Morrison; citation_author=JJ Dubose; citation_author=TE Rasmussen; citation_author=MJ Midwinter; citation_volume=147; citation_publication_date=2012; citation_pages=113-9; citation_doi=10.1001/archsurg.2011.287; citation_id=CR23;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=JAMA Surg.; citation_title=Association of cryoprecipitate and tranexamic acid with improved survival following wartime injury: findings from the MATTERs II Study; citation_author=JJ Morrison; citation_author=JD Ross; citation_author=JJ Dubose; citation_author=JO Jansen; citation_author=MJ Midwinter; citation_author=TE Rasmussen; citation_volume=148; citation_publication_date=2013; citation_pages=218-25; citation_doi=10.1001/jamasurg.2013.764; citation_id=CR24;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=J Trauma Acute Care Surg.; citation_title=Do all trauma patients benefit from tranexamic acid?; citation_author=EJ Valle; citation_author=CJ Allen; citation_author=RM Haren; citation_author=JM Jouria; citation_author=H Li; citation_author=AS Livingstone; citation_volume=76; citation_publication_date=2014; citation_pages=1373-8; citation_doi=10.1097/TA.0000000000000242; citation_id=CR25;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Ann Surg.; citation_title=Tranexamic acid use in severely injured civilian patients and the effects on outcomes: a prospective cohort study; citation_author=E Cole; citation_author=R Davenport; citation_author=K Willett; citation_author=K Brohi; citation_volume=261; citation_publication_date=2015; citation_pages=390-4; citation_doi=10.1097/SLA.0000000000000717; citation_id=CR26;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=J Trauma Acute Care Surg; citation_title=Tranexamic acid as part of remote damage-control resuscitation in the prehospital setting: a critical appraisal of the medical literature and available alternatives; citation_author=S Ausset; citation_author=E Glassberg; citation_author=R Nadler; citation_author=G Sunde; citation_author=AP Cap; citation_author=C Hoffmann; citation_volume=78; citation_issue=6 Suppl 1; citation_publication_date=2015; citation_pages=S70-5; citation_doi=10.1097/TA.0000000000000640; citation_id=CR27;'/>
+    
+    <meta name="citation_reference" content='Paudyal P, Smith J, Robinson M, South A, Higginson I, Reuben A, et al. Tranexamic acid in major trauma: implementation and evaluation across South West England. Eur J Emerg Med. doi:
+                    10.1097/MEJ.0000000000000323
+                    
+                  .'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Injury.; citation_title=Tranexamic acid in the prehospital setting: Israel Defense Forces&#8217; initial experience; citation_author=AM Lipsky; citation_author=A Abramovich; citation_author=R Nadler; citation_author=U Feinstein; citation_author=G Shaked; citation_author=Y Kreiss; citation_volume=45; citation_publication_date=2014; citation_pages=66-70; citation_doi=10.1016/j.injury.2013.08.025; citation_id=CR29;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=J Trauma Acute Care Surg; citation_title=Role I trauma experience of the Israeli Defense Forces on the Syrian border; citation_author=A Benov; citation_author=E Glassberg; citation_author=R Nadler; citation_author=S Gendler; citation_author=T Erlich; citation_author=T Bader; citation_volume=77; citation_issue=3 Suppl 2; citation_publication_date=2014; citation_pages=S71-6; citation_doi=10.1097/TA.0000000000000377; citation_id=CR30;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Air Med J.; citation_title=Prehospital use of tranexamic acid for hemorrhagic shock in primary and secondary air medical evacuation; citation_author=EN Vu; citation_author=RS Schlamp; citation_author=RT Wand; citation_author=GA Kleine-Deters; citation_author=MP Vu; citation_author=JM Tallon; citation_volume=32; citation_publication_date=2013; citation_pages=289-92; citation_doi=10.1016/j.amj.2013.05.001; citation_id=CR31;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Prehosp Emerg Care.; citation_title=Design of the Study of Tranexamic Acid during Air Medical Prehospital Transport (STAAMP) trial: addressing the knowledge gaps; citation_author=JB Brown; citation_author=MD Neal; citation_author=FX Guyette; citation_author=AB Peitzman; citation_author=TR Billiar; citation_author=BS Zuckerbraun; citation_volume=19; citation_publication_date=2015; citation_pages=79-86; citation_doi=10.3109/10903127.2014.936635; citation_id=CR32;'/>
+    
+    <meta name="citation_reference" content='citation_journal_title=Emerg Med Australas.; citation_title=Tranexamic acid for trauma: filling the &#8220;GAP&#8221; in evidence; citation_author=B Mitra; citation_author=S Mazur; citation_author=PA Cameron; citation_author=S Bernard; citation_author=B Burns; citation_author=A Smith; citation_volume=26; citation_publication_date=2014; citation_pages=194-7; citation_doi=10.1111/1742-6723.12172; citation_id=CR33;'/>
+    
+    <meta name="prism.doi" content='10.1186/s13054-016-1322-5'/>
+    
+    <meta name="dc.identifier" content='10.1186/s13054-016-1322-5'/>
+    
+    <meta name="citation_doi" content='10.1186/s13054-016-1322-5'/>
+    
+    <meta name="DOI" content='10.1186/s13054-016-1322-5'/>
+    
+
+    <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+    <link rel="apple-touch-icon" sizes="57x57"
+          href="/static/images/apple-touch-icon-57x57.e249e00d.png"/>
+    <link rel="apple-touch-icon" sizes="60x60"
+          href="/static/images/apple-touch-icon-60x60.fb82a36f.png"/>
+    <link rel="apple-touch-icon" sizes="72x72"
+          href="/static/images/apple-touch-icon-72x72.e911dece.png"/>
+    <link rel="apple-touch-icon" sizes="76x76"
+          href="/static/images/apple-touch-icon-76x76.63bd2b8b.png"/>
+    <link rel="apple-touch-icon" sizes="114x114"
+          href="/static/images/apple-touch-icon-114x114.00d3da59.png"/>
+    <link rel="apple-touch-icon" sizes="120x120"
+          href="/static/images/apple-touch-icon-120x120.189ccdbf.png"/>
+    <link rel="apple-touch-icon" sizes="144x144"
+          href="/static/images/apple-touch-icon-144x144.4b231fd9.png"/>
+    <link rel="apple-touch-icon" sizes="152x152"
+          href="/static/images/apple-touch-icon-152x152.852d1454.png"/>
+    <link rel="apple-touch-icon" sizes="180x180"
+          href="/static/images/apple-touch-icon-180x180.2cfd7af9.png"/>
+    <link rel="icon" type="image/png"
+          href="/static/images/android-chrome-192x192.408ad37d.png" sizes="192x192"/>
+    <link rel="icon" type="image/png" href="/static/images/favicon-16x16.51659b44.png"
+          sizes="16x16"/>
+    <link rel="icon" type="image/png" href="/static/images/favicon-32x32.44498c19.png"
+          sizes="32x32"/>
+    <link rel="icon" type="image/png" href="/static/images/favicon-96x96.08ca36c9.png"
+          sizes="96x96"/>
+    <link rel="icon" type="image/png" href="/static/images/favicon-194x194.0969f3a3.png"
+          sizes="194x194"/>
+    <link rel="manifest" href="/static/images/favicons/biomedcentral/manifest.json"/>
+    <link rel="shortcut icon" href="/static/images/favicons/biomedcentral/favicon.ico"/>
+    <meta name="msapplication-TileColor" content="#da532c"/>
+    <meta name="msapplication-config"
+          content="/static/images/favicons/biomedcentral/browserconfig.xml"/>
+    <meta name="msapplication-TileImage"
+          content="/static/images/mstile-144x144.8b117caf.png"/>
+    <meta name="theme-color" content="#ffffff"/>
+
+
+<script>(function(H){H.className=H.className.replace(/\bno-js\b/,'js')})(document.documentElement)</script>
+<script>(function(d) {if (sessionStorage.getItem('webfonts') == 'true'){d.className += ' webfonts-loaded';}})(document.documentElement);</script>
+
+    <link rel="stylesheet" media="screen" href="/static/css/basic.06b5e140.css"/>
+    <link rel="stylesheet" media="print" href="/static/css/biomedcentral-print.85019cd8.css"/>
+    
+    <link rel="stylesheet" class="js-ctm" href="/static/css/biomedcentral.3f4ef002.css"
+          media="only screen and (-webkit-min-device-pixel-ratio:0) and (min-color-index:0), (-ms-high-contrast: none), only all and (min--moz-device-pixel-ratio:0) and (min-resolution: 3e1dpcm)">
+
+
+<script>var _gaq = [];</script>
+
+    <script type="text/javascript">
+        config = {
+            env: 'live',
+            site: 'ccforum.biomedcentral.com',
+            siteWithPath: 'ccforum.biomedcentral.com' + window.location.pathname,
+            twitterHashtag: '',
+            cmsPrefix: 'http://studio-cms.springer.com/studio/',
+            
+            doi: '10.1186/s13054-016-1322-5',
+            figshareScriptUrl: 'https://widgets.figshare.com/static/figshare.js',
+            publisherBrand: 'BioMed Central'
+        };
+    </script>
+
+
+    <script>
+        (function (i, s, o, g, r, a, m) {
+            i['GoogleAnalyticsObject'] = r;
+            i[r] = i[r] || function () {
+                        (i[r].q = i[r].q || []).push(arguments)
+                    }, i[r].l = 1 * new Date();
+            a = s.createElement(o),
+                    m = s.getElementsByTagName(o)[0];
+            a.async = 1;
+            a.src = g;
+            m.parentNode.insertBefore(a, m)
+        })(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+
+        var sampleRate = 20;
+
+            
+            ga('create', "UA-62062842-30",
+                    {
+                        cookieDomain: 'none',
+                        allowLinker: true,
+                        siteSpeedSampleRate: sampleRate
+                    });
+            ga("set", "anonymizeIp", true);
+            ga('send', 'pageview');
+            
+
+        ga('create', "UA-54492316-9",
+                {
+                    cookieDomain: 'none',
+                    allowLinker: true,
+                    siteSpeedSampleRate: sampleRate,
+                    name: 'global'
+                });
+
+        ga("global.set", "anonymizeIp", true);
+        ga('global.send', 'pageview');
+    </script>
+
+
+
+    
+    <link rel="canonical" href="//ccforum.biomedcentral.com/articles/10.1186/s13054-016-1322-5"/>
+    
+
+
+    
+    <meta property="og:url" content="http://ccforum.biomedcentral.com/articles/10.1186/s13054-016-1322-5"/>
+    <meta property="og:type" content="article"/>
+    <meta property="og:site_name" content="Critical Care"/>
+    <meta property="og:title" content="Prehospital administration of tranexamic acid in trauma patients"/>
+    <meta property="og:description" content="Evidence on prehospital administration of the antifibrinolytic tranexamic acid (TXA) in civilian trauma populations is scarce. The aim was to study whether prehospital TXA use in trauma patients was associated with improved outcomes. The prehospital database of the ADAC (General German Automobile Club) Air Rescue Service was linked with the TraumaRegister of the German Trauma Society to reidentify patients documented in both registries. Primarily admitted trauma patients (2012 until 2014) who were treated with TXA during the prehospital phase were matched with patients who had not received prehospital TXA, applying propensity score-based matching. The matching yielded two identical cohorts (n &#x3D; 258 in each group), since there were no significant differences in demographics or injury characteristics (mean Injury Severity Score 24 ± 14 [TXA] vs. 24 ± 16 [control]; p &#x3D; 0.46). The majority had sustained blunt injury (90.3 % vs. 93.0 %; p &#x3D; 0.34). There were no differences with respect to prehospital therapy, including rates of intubation, chest tube insertion or both administration of i.v. fluids and catecholamines. During ER treatment, the TXA cohort received fewer numbers of red blood cells and plasma units, but without reaching statistical significance. Incidences of organ failure, sepsis or thromboembolism showed no significant differences as well, although data were incomplete for these parameters. Early mortality was significantly lower in the TXA group (e.g., 24-h mortality 5.8 % [TXA] vs. 12.4 % [control]; p &#x3D; 0.01), and mean time to death was 8.8 ± 13.4 days vs. 3.6 ± 4.9 days, respectively (p &#x3D; 0.001). Overall hospital mortality was similar in both groups (14.7 % vs. 16.3 %; p &#x3D; 0.72). The most pronounced mortality difference was observed in patients with a high propensity score, reflecting severe injury load. This is the first civilian study, to our knowledge, in which the effect of prehospital TXA use in trauma patients has been examined. TXA was associated with prolonged time to death and significantly improved early survival. Until further evidence emerges, the results of this study support the use of TXA during prehospital treatment of severely injured patients."/>
+    <meta property="og:image" content="https://images.springer.com/sgw/journals/medium/13054.jpg"/>
+
+</head>
+<body class="fulltext">
+    <!-- Snipped -->
+</body>
+</html>

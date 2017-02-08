@@ -10,6 +10,8 @@ The Percolator therefore does most of the work involved in finding Events. By ha
 
 (Of course, implementors of Event Data Agents are free to use whatever methods are best. The Event Data Percolator implements common patterns observed when building Crossref's Event Data Agents.)
 
+> NB: This is under development, details subject to change.
+
 ## Input Bundle format
 
 An Agent identifies Actions. An Action represents a single actionable stimulus that led to an Event. Examples:
@@ -78,22 +80,29 @@ The end-to-end workflow is as follows. Each is a discrete, self-contained step.
  - If it has already been seen, set the "duplicate" field to the Event ID and date. 
  - If the Action ID has not already been seen, set the "duplicate" value to "false".
 
-### 4. Process each Observation
+### 4. Process each Observation to extract Candidates
 
  - Transform Input Bundle, keeping structure identical.
- - According to the input type, apply the relevant transformation.
+ - According to the input type, apply the relevant transformation to generate candidates.
  - Each transformation is supplied the value of the "duplicate" value.
  - If it is "false", the transformation is applied normally.
  - If it is not false, the transformation won't attempt to extract any DOIs, but will pass through the input (or a hash of it).
 
-### 5. Create Events and Evidence Record
+### 5. Match Candidates into DOIs
+
+ - Transform Input Bundle, keeping structure identical
+ - For every Action:
+     - Collect all of the candidate DOIs and Landing Page URLs
+     - Attempt to convert each one into a DOI
+
+### 6. Create Events and Evidence Record
 
  - Generate an Evidence Record ID (a UUID).
  - Create an Evidence Record that includes the resulting Input Package under the "input" key
  - For every Action, take the union of DOIs found (as some may be found by more than one Observation).
  - Create a mapping of Action ID to list of Events, include in the Evidence Record under the "events" key.
 
-### 6. Send
+### 7. Send
 
  - Send Evidence Record to Evidence Registry with its ID.
  - Send each Event to the Event Bus.
@@ -112,6 +121,8 @@ The end-to-end workflow is as follows. Each is a discrete, self-contained step.
 Other fields may be supplied by the Agent if required, and will be carried through.
  
 ## Bundle Format
+
+Schema documented in `event-data-percolator.input-bundle` namespace.
 
 ### Input Bundle
 
@@ -165,32 +176,21 @@ Required fields:
 
 Type is one of the following:
 
- - `plain-text-content` - plain text for the extraction of unlinked DOIs, linked DOIs, article URLs
- - `plain-text-content-sensitive` - as `plain-text-content`, but the content of the text is sensitive so will not be included in the output evidence record
- - `html-content` - HTML document or fragment for the extraction of unlinked DOIs, linked DOIs, article URLs
- - `html-content-sensitive` - as `html-content`, but the content of the text is sensitive so it will not be included in the output evidence record
+ - `plaintext` - plain text for the extraction of unlinked DOIs, linked DOIs, article URLs
+ - `html` - HTML document or fragment for the extraction of unlinked DOIs, linked DOIs, article URLs
  - `url` - a URL that could be Article Landing Page URLs or unlinked DOIs, or linked DOIs
- - `html-content-url` - a list of URLs that could point to HTML documents, to be treated as per `html-content`
- - `html-content-url-version` -  a triple of [«canonical-url», «old-version-url», «new-version-url»] that represent a version diff (treated as `html-content-url`s). The result is events that represent the adding and removal of URLs.
+ - `content-url` - a list of URLs that could point to HTML documents, to be treated as per `html-content`
 
 Other fields depending on type:
 
- - `plain-text-content`
-     - `input`
- - `plain-text-content-sensitive`
-    - `input`
+ - `plaintext`
+     - `input-content`
  - `html-content`
-     - `input`
- - `html-content-sensitive`
-     - `input`
+     - `input-url`
  - `url`
-     - `input`
- - `html-content-url`
-    - `canonical-url`
-    - `old-url`
-    - `new-url`
- - `html-content-url-version`
-     - `input` - input URL triple
+     - `input-url`
+ - `content-url`
+    - `input-url`
 
 ## Output Observation fields
 
@@ -209,33 +209,15 @@ Each Observation is transformed, retaining its input (in some form) and providin
  - `matched-linked-landing-pages` - mapping of `candidate-linked-landing-pages` to normalized, extant, DOIs, where it was possible to match
  - `matched-dois` - list of DOIs, the union of all `matched-*` fields.
 
- - `plain-text-content`
-     - `input`
+ - `plaintext`
+     - `input-content`
      - `candidate-unlinked-dois`
      - `candidate-unlinked-landing-pages`
      - `matched-unlinked-dois`
      - `matched-unlinked-landing-pages`
      - `matched-dois`
- - `plain-text-content-sensitive`
-     - `input-hash`
-     - `candidate-unlinked-dois`
-     - `candidate-unlinked-landing-pages`
-     - `matched-unlinked-dois`
-     - `matched-unlinked-landing-pages`
-     - `matched-dois`
- - `html-content`
-     - `input`
-     - `candidate-unlinked-dois`
-     - `candidate-linked-dois`
-     - `candidate-unlinked-landing-pages`
-     - `candidate-linked-landing-pages`
-     - `matched-unlinked-dois`
-     - `matched-linked-dois`
-     - `matched-unlinked-landing-pages`
-     - `matched-linked-landing-pages`
-     - `matched-dois`
- - `html-content-sensitive`
-     - `input-hash`
+ - `html`
+     - `input-content`
      - `candidate-unlinked-dois`
      - `candidate-linked-dois`
      - `candidate-unlinked-landing-pages`
@@ -246,13 +228,13 @@ Each Observation is transformed, retaining its input (in some form) and providin
      - `matched-linked-landing-pages`
      - `matched-dois`
  - `url`
-     - `input`
+     - `input-url`
      - `candidate-unlinked-doi`
      - `candidate-unlinked-landing-page`
      - `matched-unlinked-landing-page`
      - `matched-doi`
- - `html-content-url`
-     - `input` - the URL
+ - `content-url`
+     - `input-url` - the URL
      - `retrieved-input`
      - `candidate-unlinked-dois`
      - `candidate-linked-dois`
@@ -263,14 +245,26 @@ Each Observation is transformed, retaining its input (in some form) and providin
      - `matched-unlinked-landing-pages`
      - `matched-linked-landing-pages`
      - `matched-dois`
- - `html-content-url-version`
-     - `input` - input URL triple
+
+## Nomenclature
+
+ - 'candidate DOI' - something that looks like a DOI.
+ - 'candidate landing page url` - a URL that has the domain name of a landing page, so might be on
+ - 'matching' - take a candidate, try to extract a DOI and/or verify that the DOI exists
 
 ## Tests
 
 ### Unit tests
 
  - `time docker-compose -f docker-compose-unit-tests.yml run -w /usr/src/app test lein test :unit`
+
+## Running
+
+There are three processes that should be run. They can be scaled independently. 
+
+ - `lein run accept`  - Accept inputs from Agents and enqueue. Lightweight. Recommended 3x for failover.
+ - `lein run process` - Process inputs from queue. Recommended > 3x for failover and load balancing.
+ - `lein run push` - Push downstream to Event Bus. Lightweight. Recommended 3x for failover.
 
 ## Docker
 
@@ -280,6 +274,54 @@ This should be run with Docker Swarm for load-balancing, service discovery and f
 
  - command: `lein run`
  - directory: `/usr/src/app`
+
+## Config
+
+Config via environment variables
+
+ - S3_KEY
+ - S3_SECRET
+ - S3_REGION_NAME
+ - S3_ACTION_BUCKET_NAME
+ - PORT
+ - JWT_SECRETS
+
+## Demo
+
+### Diagnostic in-and-out
+
+Background:
+
+     time docker-compose  -f docker-compose-demo.yml run -w /usr/src/app  -p 8005:8005 demo lein run accept
+
+Then:
+
+     curl http://localhost:8005/input/diagnostic --verbose --data @demo/demo.json --header "Content-type: application/json" -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyIxIjoiMSIsInN1YiI6Indpa2lwZWRpYSJ9.w7zV2vtKNzrNDfgr9dfRpv6XYnspILRli_V5vd1J29Q" | jq .
+
+### Full pipeline
+
+Three background processes: 
+
+     time docker-compose  -f docker-compose-demo.yml run -w /usr/src/app  -p 8005:8005 demo lein run accept
+     time docker-compose  -f docker-compose-demo.yml run -w /usr/src/app  -p 8005:8005 demo lein run process
+     time docker-compose  -f docker-compose-demo.yml run -w /usr/src/app  -p 8005:8005 demo lein run push
+
+Then:
+
+     curl http://localhost:8005/input --verbose --data @demo/demo.json --header "Content-type: application/json" -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyIxIjoiMSIsInN1YiI6Indpa2lwZWRpYSJ9.w7zV2vtKNzrNDfgr9dfRpv6XYnspILRli_V5vd1J29Q" | jq .
+
+
+### Quality
+
+Run code quality check:
+
+    time docker-compose run -w /usr/src/app test lein eastwood
+
+### Coverage
+
+Code coverage from running all tests. Results are found in `target/coverage`.
+
+    lein cloverage
 
 ## License
 

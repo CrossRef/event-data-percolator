@@ -4,7 +4,15 @@
   :license {:name "MIT License"
             :url "https://opensource.org/licenses/MIT"}
   :dependencies [[org.clojure/clojure "1.8.0"]
+                 [org.clojure/core.cache "0.6.5"]
+                 [enlive "1.1.6"]
+                 [commons-codec/commons-codec "1.10"]
                  [event-data-common "0.1.9"]
+                 [com.cemerick/url "0.1.1"]
+                 [prismatic/schema "1.1.3"]
+                 [http-kit.fake "0.2.1"]
+
+                 
                  [org.clojure/data.json "0.2.6"]
                  [crossref-util "0.1.10"]
                  [http-kit "2.1.18"]
@@ -33,6 +41,8 @@
                  [org.slf4j/slf4j-simple "1.7.21"]]
   :main ^:skip-aot event-data-percolator.core
   :target-path "target/%s"
+  :plugins [[jonase/eastwood "0.2.3"]
+            [lein-cloverage "1.0.9"]]
   :test-selectors {:default (constantly true)
                    :unit :unit
                    :component :component

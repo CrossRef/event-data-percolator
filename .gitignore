@@ -8,4 +8,4 @@ pom.xml.asc
 /.lein-*
 /.nrepl-port
 .DS_Store
-.m2
+.m2-cache
