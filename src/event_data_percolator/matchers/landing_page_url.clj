@@ -132,13 +132,11 @@
   [url web-trace-atom]
   "Try a multitude of ways to match, cheapest first."
   ; Step through lazy seq, an item at a time.
-  (first
-    (unchunk
-      (concat
-        (try-from-get-params url)
-        (try-doi-from-url-text url)
-        (try-pii-from-url-text url)
-        (try-fetched-page-metadata url web-trace-atom)))))
+  (or
+    (try-from-get-params url)
+    (try-doi-from-url-text url)
+    (try-pii-from-url-text url)
+    (try-fetched-page-metadata url web-trace-atom)))
 
 (defn match-landing-page-url-candidate
   [candidate web-trace-atom]

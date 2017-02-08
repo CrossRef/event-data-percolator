@@ -1,0 +1,21 @@
+{
+  "source-token": "123456789",
+  "source-id": "wiki",
+  "pages": [
+    {
+      "actions": [
+        {
+          "subj": {"title": "this is my title one"},
+          "url": "http://example.com/page-one",
+          "relation-type-id": "mentions",
+          "id": "11111",
+          "observations": [
+            {
+              "type": "url",
+              "input-url": "https://figshare.com/articles/A_Modeler_s_Tale/3423371/1"
+            }
+          ]
+        }
+      ]
+    }
+]}

@@ -22,7 +22,7 @@
           
           (when trace-atom
             (swap! trace-atom concat [{:status (:status result) :url url}]))
-
+          
           (condp = (:status result)
             200 result
             ; Weirdly some Nature pages return 401 with the content. http://www.nature.com/nrendo/journal/v10/n9/full/nrendo.2014.114.html

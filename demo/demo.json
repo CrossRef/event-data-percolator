@@ -1,6 +1,6 @@
 {
   "source-token": "123456789",
-  "source-id": "wiki"
+  "source-id": "wiki",
   "pages": [
     {
       "actions": [
@@ -13,6 +13,10 @@
             {
               "type": "content-url",
               "input-url": "http://example.com"
+            },
+            {
+              "type": "url",
+              "input-url": "https://figshare.com/articles/A_Modeler_s_Tale/3423371/1"
             }
           ]
         }

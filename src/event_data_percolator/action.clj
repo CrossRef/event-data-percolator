@@ -31,7 +31,7 @@
       "s3" (s3/build (:s3-key env) (:s3-secret env) (:s3-region-name env) (:s3-bucket-name env)))))
 
 ; TODO
-(def domain-set #{"example.com"})
+(def domain-set #{"example.com" "figshare.com" })
 
 (defn into-map [f coll]
   (into {} (map (juxt identity f)) coll))

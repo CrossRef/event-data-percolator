@@ -63,13 +63,18 @@
   [bundle]
   ; an atom that's passed around to functions that might want to log which URLs they access
   ; and their respose codes.
-  (let [web-trace-atom (atom [])]
-    (->> bundle
-        dedupe-actions
-        candidates
-        (match web-trace-atom)
-        events
-        (#(assoc % :web-trace web-trace-atom)))))
+  (let [web-trace-atom (atom [])
+        result (-> bundle
+            dedupe-actions
+            candidates
+            (match web-trace-atom)
+            events)
+        ; There are lazy sequences in here. Force the entire structure to be realized.
+        ; This is necessary because the web-trace-atom's value is observed at this point,
+        ; so we need to be confident that everything that's going to happen, has happened.
+        realized (clojure.walk/postwalk identity result)
+        with-trace (assoc realized :web-trace @web-trace-atom)]
+    with-trace))
 
 (defn extract-all-events
   [bundle]
