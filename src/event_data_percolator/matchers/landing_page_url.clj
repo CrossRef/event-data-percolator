@@ -114,7 +114,8 @@
 
           interested-values (concat interested-attr-values interested-text-values)
 
-          extant (keep doi/resolve-doi-maybe-escaped interested-values)]
+          ; Try to normalize by removing recognised prefixes, then resolve
+          extant (keep (comp doi/resolve-doi-maybe-escaped crdoi/non-url-doi) interested-values)]
 
       (-> extant first normalize-doi-if-exists))))
 

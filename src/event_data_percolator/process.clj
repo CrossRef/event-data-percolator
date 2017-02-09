@@ -1,6 +1,7 @@
 (ns event-data-percolator.process
   "Top level process inputs."
   (:require [event-data-percolator.queue :as queue]
+            [event-data-percolator.util.storage :as storage]
             [clojure.tools.logging :as log]
             [event-data-percolator.input-bundle :as input-bundle]))
 
@@ -9,7 +10,9 @@
 
 (defn process-input-bundle
   [input]
-  (input-bundle/process input))
+  ; Fetch the cached copy of the domain list.
+  (let [[domain-list domain-list-artifact-version] (storage/get-domain-list)]
+    (input-bundle/process input domain-list)))
 
 (defn run-process
   "Run processing input bundles from the input queue, place on output queue. Block."

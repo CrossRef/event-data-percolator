@@ -33,7 +33,9 @@
                                   :input-content "10.5555/11111"}
                                 {:type "url"
                                  :input-url "http://doi.org/10.5555/22222"}]}]}]}
-            result (input-bundle/candidates input-bundle)]
+            
+            ; Supply empty domain list as we're not testing landing page extraction.
+            result (input-bundle/candidates input-bundle #{})]
         (is (= result {:pages [{:actions
                                 [{:unrelated :junk
                                   :url "http://example.com"
@@ -59,9 +61,8 @@
     ; DOI resolver consulted to check existence of DOIs.
     (fake/with-fake-http ["https://doi.org/10.5555/11111" (doi-ok "http://example.com/abcdefg")
                           "https://doi.org/10.5555/22222" (doi-ok "http://example.com/hijklmn")]
-      ; This won't do any domain-look-upping. That's tested elsewhere.
-      (let [domain-list {}
-            ; Input bundle that came out of candidates.
+      
+      (let [; Input bundle that came out of candidates.
             input-bundle {:pages [{:actions
                                 [{:unrelated :junk
                                   :url "http://example.com"
@@ -75,7 +76,7 @@
                                    {:type "url"
                                     :input-url "http://doi.org/10.5555/22222"
                                     :candidates [{:type :doi-url, :value "http://doi.org/10.5555/22222"}]}]}]}]}
-            result (input-bundle/match input-bundle domain-list)]
+            result (input-bundle/match input-bundle nil)]
 
         (is (= result {:pages [{:actions
                                 [{:unrelated :junk,
@@ -202,3 +203,35 @@
                 :actions [":some-dummy-action-object-2"
                           ":some-dummy-action-object-3"]}]})))))
 
+(deftest ^:unit end-to-end-process
+  (testing "End-to-end processing of Input Bundle should result in an Evidence Record with Events and HTTP tracing."
+    ; A single redirect so that we can demonstrate that the trace is captured.
+    (fake/with-fake-http ["http://article.com/article/22222" {:status 303 :headers {:location "http://article.com/article/22222-X"}}
+                          "http://article.com/article/22222-X" {:status 200 :body "<html><head><meta name='dc.identifier' content='https://doi.org/10.5555/1234568'></head></html>"}
+
+                          "https://doi.org/10.5555/1234568" {:status 303 :headers {:location "http://article.com/article/22222-X"}}
+
+                          ; This one throws a timeout error, which should be reported
+                          "http://article.com/article/XXXXX" (fn [a b c] (throw (new org.httpkit.client.TimeoutException "I got bored")))]
+      (let [domain-list #{"article.com"}
+            input-bundle {:pages [
+                           {:actions [
+                             {:url "http://example.com/page/11111"
+                              :occurred-at "2017-05-02T00:00:00.000Z"
+                              :observations [
+                                {:type "url"
+                                 :input-url "http://article.com/article/22222"}
+                                {:type "url"
+                                 :input-url "http://article.com/article/XXXXX"}]}]}]}
+            
+            result (input-bundle/process input-bundle domain-list)]
+          
+        (is (= (set (:web-trace result))
+                #{{:url "http://article.com/article/22222" :status 303 }
+                  {:url "http://article.com/article/22222-X" :status 200 }
+                  {:url "http://article.com/article/XXXXX" :error :timeout-error}})
+            "All HTTP access should be recorded")
+
+        ; The rest of the pieces are tested above.
+        (is (= 1 (-> result :pages first :actions first :events count)) "One event should be found")
+        (is (-> result :id))))))

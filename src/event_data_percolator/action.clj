@@ -29,8 +29,6 @@
       ; S3 is suitable for production.
       "s3" (s3/build (:s3-key env) (:s3-secret env) (:s3-region-name env) (:s3-bucket-name env)))))
 
-(def domain-set #{"example.com" "figshare.com" })
-
 (defn into-map [f coll]
   (into {} (map (juxt identity f)) coll))
 
@@ -52,7 +50,7 @@
 (defn process-observations-candidates
   "Step Process all the observations of an Action to generate Candidates. Collect Candidates.
    Step 4 from docs."
-  [action]
+  [action domain-set]
   (let [observations (:observations action)
         processed-observations (map #(observation/process-observation % domain-set) observations)]
     (-> action

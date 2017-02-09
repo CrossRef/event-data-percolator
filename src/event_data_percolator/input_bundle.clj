@@ -1,6 +1,7 @@
 (ns event-data-percolator.input-bundle
   "Process and Input Bundle."
   (:require [event-data-percolator.action :as action]
+            [event-data-percolator.util.storage :as storage]
             [clj-time.core :as clj-time]
             [clj-time.format :as clj-time-format]
             [schema.core :as s])
@@ -61,8 +62,8 @@
 (defn candidates
   "Produce candidates in input bundle.
   Step 4 in docs."
-  [bundle]
-  (map-actions action/process-observations-candidates bundle))
+  [bundle domain-set]
+  (map-actions #(action/process-observations-candidates % domain-set) bundle))
 
 (defn match
   "Match candidates in input bundle.
@@ -75,16 +76,18 @@
   [bundle]
   (map-actions (partial action/create-events-for-action bundle) bundle))
 
+(def demo-domain-set #{"example.com" "figshare.com" })
+
 (defn process
-  [bundle]
+  [bundle domain-set]
   ; an atom that's passed around to functions that might want to log which URLs they access
   ; and their respose codes.
   (let [web-trace-atom (atom [])
         result (->
-            id-and-timestamp
             bundle
+            id-and-timestamp
             dedupe-actions
-            candidates
+            (candidates domain-set)
             (match web-trace-atom)
             events)
         ; There are lazy sequences in here. Force the entire structure to be realized.

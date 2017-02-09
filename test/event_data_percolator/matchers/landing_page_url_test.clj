@@ -92,7 +92,7 @@
 
   (testing "DOI can be fetched from meta tag: DC.identifier (different case)"
     (fake/with-fake-http ["https://figshare.com/articles/A_Modeler_s_Tale/3423371/1" (slurp "resources/A_Modeler_s_Tale")
-                          "https://doi.org/doi:10.6084/m9.figshare.3423371.v1" (ok "10.6084/m9.figshare.3423371.v1")]
+                          "https://doi.org/10.6084/m9.figshare.3423371.v1" (ok "10.6084/m9.figshare.3423371.v1")]
       (is (= (landing-page-url/try-fetched-page-metadata "https://figshare.com/articles/A_Modeler_s_Tale/3423371/1" nil)
               "https://doi.org/10.6084/m9.figshare.3423371.v1"))))
 

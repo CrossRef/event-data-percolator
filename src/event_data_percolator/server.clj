@@ -2,6 +2,7 @@
   (:require [clojure.data.json :as json]
             [clojure.tools.logging :as l]
             [event-data-percolator.input-bundle :as input-bundle]
+            [event-data-percolator.util.storage :as storage]
             [event-data-percolator.process :as process]
             [event-data-percolator.queue :as queue]
             [org.httpkit.server :as server]
@@ -68,7 +69,7 @@
                         {:status "Malformed"})))
 
   :post! (fn [ctx]
-    (let [result (input-bundle/process (::payload ctx))
+    (let [result (process/process-input-bundle (::payload ctx))
           serialized-result (json/write-str result)]
       {::serialized-result serialized-result}))
 
