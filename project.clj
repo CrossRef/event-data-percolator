@@ -11,8 +11,6 @@
                  [com.cemerick/url "0.1.1"]
                  [prismatic/schema "1.1.3"]
                  [http-kit.fake "0.2.1"]
-
-                 
                  [org.clojure/data.json "0.2.6"]
                  [crossref-util "0.1.10"]
                  [http-kit "2.1.18"]

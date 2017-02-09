@@ -79,7 +79,7 @@
 (def demo-domain-set #{"example.com" "figshare.com" })
 
 (defn process
-  [bundle domain-set]
+  [bundle domain-artifact-version domain-set]
   ; an atom that's passed around to functions that might want to log which URLs they access
   ; and their respose codes.
   (let [web-trace-atom (atom [])
@@ -89,6 +89,7 @@
             dedupe-actions
             (candidates domain-set)
             (match web-trace-atom)
+            (assoc-in [:artifacts :domain-set-artifact-version] domain-artifact-version)
             events)
         ; There are lazy sequences in here. Force the entire structure to be realized.
         ; This is necessary because the web-trace-atom's value is observed at this point,

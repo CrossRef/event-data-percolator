@@ -40,6 +40,7 @@ services:
      - REDIS_DB=0
      - PORT=8005
      - STATUS_SERVICE=http://ebdstatus:8003
+     - ARTIFACT_BASE=http://event-data-artifact-prod.s3.amazonaws.com/
     command: "lein run"
 
 

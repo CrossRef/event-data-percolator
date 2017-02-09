@@ -224,8 +224,12 @@
                                 {:type "url"
                                  :input-url "http://article.com/article/XXXXX"}]}]}]}
             
-            result (input-bundle/process input-bundle domain-list)]
-          
+            result (input-bundle/process input-bundle "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)]
+        
+        (is (= (-> result :artifacts :domain-set-artifact-version)
+                "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417")
+            "Domain list artifact version should be correctly set.")
+
         (is (= (set (:web-trace result))
                 #{{:url "http://article.com/article/22222" :status 303 }
                   {:url "http://article.com/article/22222-X" :status 200 }
