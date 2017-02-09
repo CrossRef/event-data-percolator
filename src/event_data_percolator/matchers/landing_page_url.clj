@@ -1,6 +1,6 @@
 (ns event-data-percolator.matchers.landing-page-url
   (:require [org.httpkit.client :as http]
-            [event-data-percolator.web :as web]
+            [event-data-percolator.util.web :as web]
             [clojure.tools.logging :as log]
             [crossref.util.doi :as crdoi]
             [event-data-percolator.util.doi :as doi]
@@ -30,8 +30,8 @@
     (catch IllegalArgumentException _ nil)))
 
 (defn try-doi-from-url-text
-  [url]
   "Match an embedded DOI, try various treatments to make it fit."
+  [url]
   (let [matches (map second (re-seq doi-re url))
 
         last-slash (map #(clojure.string/replace % #"^(10\.\d+/(.*))/.*$" "$1") matches)
@@ -129,8 +129,8 @@
             (unchunk (next s))))))
 
 (defn match-landing-page-url
-  [url web-trace-atom]
   "Try a multitude of ways to match, cheapest first."
+  [url web-trace-atom]
   ; Step through lazy seq, an item at a time.
   (or
     (try-from-get-params url)

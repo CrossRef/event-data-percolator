@@ -8,7 +8,6 @@
 (def doi-re #"(10\.\d{4,9}/[^\s]+)")
 (def shortdoi-re #"(?:(?:(?:dx.)?doi.org/)|10/)(?:info:doi/|urn:|doi:)?([a-zA-Z0-9]+)")
 
-
 (defn try-hostname
   "Try to get a hostname from a URL string."
   [text]

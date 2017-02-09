@@ -1,7 +1,5 @@
-(ns event-data-percolator.web
+(ns event-data-percolator.util.web
   (:require [org.httpkit.client :as http]))
-
-; TODO MOVE INTO UTIL
 
 (def redirect-depth 4)
 
@@ -22,7 +20,7 @@
           
           (when trace-atom
             (swap! trace-atom concat [{:status (:status result) :url url}]))
-          
+
           (condp = (:status result)
             200 result
             ; Weirdly some Nature pages return 401 with the content. http://www.nature.com/nrendo/journal/v10/n9/full/nrendo.2014.114.html

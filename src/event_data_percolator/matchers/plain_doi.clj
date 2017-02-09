@@ -4,8 +4,8 @@
   (:import [java.net URLEncoder URLDecoder]))
 
 (defn match-plain-doi
-  [plain-doi]
   "Return a canonical DOI if this is a valid, extant DOI."
+  [plain-doi]
   (when-let [validated (doi/validate-doi-dropping plain-doi)]
     (crdoi/normalise-doi validated)))
 

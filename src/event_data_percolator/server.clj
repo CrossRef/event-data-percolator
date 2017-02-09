@@ -58,7 +58,7 @@
 
   :malformed? (fn [ctx]
                 (let [payload (try (-> ctx :request :body reader (json/read :key-fn keyword)) (catch Exception _ nil))
-                      schema-errors (input-bundle/validation-errors payload)] ; TODO can be better
+                      schema-errors (input-bundle/validation-errors payload)]
                   [schema-errors {::payload payload ::schema-errors schema-errors}]))
 
   :handle-malformed (fn [ctx]
@@ -87,7 +87,7 @@
 
   :malformed? (fn [ctx]
                 (let [payload (try (-> ctx :request :body reader (json/read :key-fn keyword)) (catch Exception _ nil))
-                      schema-errors (input-bundle/validation-errors payload)] ; TODO can be better
+                      schema-errors (input-bundle/validation-errors payload)]
                   [schema-errors {::payload payload ::schema-errors schema-errors}]))
 
   :handle-malformed (fn [ctx]
@@ -103,7 +103,6 @@
   :handle-created (fn [ctx]
       {"Status" "accepted"}))
 
-; TODO old features from reverse
 (defroutes app-routes
   (POST "/input/diagnostic" [] (input-bundle-diagnostic))
   (POST "/input" [] (input-bundle))

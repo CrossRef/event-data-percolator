@@ -38,8 +38,6 @@
   [text]  
   (pii/find-candidate-piis text))
 
-; TODO ALL PROCESS TYPES CAN ACCEPT NIL INPUT 
-
 (defn process-plaintext-content-observation
   "Process an observation of type plaintext-content."
   [observation landing-page-domain-set]

@@ -14,8 +14,6 @@
              [event-data-percolator.observation-types.url :as url])
    (:import [org.apache.commons.codec.digest DigestUtils]))
 
-; TODO always include doi.org, dx.doi.org in url list - NO!
-
 (def process-types {
   "plaintext" plaintext/process-plaintext-content-observation
   "html" html/process-html-content-observation
@@ -39,8 +37,8 @@
         %))))
 
 (defn unrecognised-observation-type
-  [observation domain-list]
   "An observation processor for unrecognised types. Just pass through and set unrecognised flag."
+  [observation domain-list]
   (assoc observation :error :unrecognised-observation-type))
 
 (defn process-observation

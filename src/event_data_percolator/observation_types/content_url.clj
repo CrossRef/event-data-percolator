@@ -1,7 +1,7 @@
 (ns event-data-percolator.observation-types.content-url
   "Extract unlinked DOIs, unlinked URLs and linked URLs (including DOIs) from HTML document at given URL."
   (:require [event-data-percolator.observation-types.html :as html]
-            [event-data-percolator.web :as web])
+            [event-data-percolator.util.web :as web])
   (:import [org.jsoup Jsoup]
            [org.apache.commons.codec.digest DigestUtils]
            [java.net URL]))

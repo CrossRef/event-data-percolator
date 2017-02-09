@@ -19,8 +19,8 @@
                         }]}]}]})
 
 (defn validation-errors
-  [bundle]
   "Return validation errors, or nil on success."
+  [bundle]
   (try
     (s/validate bundles-schema bundle)
     nil
@@ -57,8 +57,6 @@
   [bundle]
   (map-actions (partial action/create-events-for-action bundle) bundle))
 
-; TODO register dupes
-
 (defn process
   [bundle]
   ; an atom that's passed around to functions that might want to log which URLs they access
@@ -77,8 +75,8 @@
     with-trace))
 
 (defn extract-all-events
-  [bundle]
   "Extract all events for pushing downstream."
+  [bundle]
   (mapcat
     (fn [page]
       (mapcat :events (:actions page)))

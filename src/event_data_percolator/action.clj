@@ -21,7 +21,6 @@
   "A redis connection for storing subscription and short-term information."
   (delay (redis/build redis-prefix (:redis-host env) (Integer/parseInt (:redis-port env)) (Integer/parseInt (get env :redis-db default-redis-db-str)))))
 
-; TODO USE LATER
 (def action-dedupe-store
   (delay
     (condp = (:storage env "s3")
@@ -30,17 +29,16 @@
       ; S3 is suitable for production.
       "s3" (s3/build (:s3-key env) (:s3-secret env) (:s3-region-name env) (:s3-bucket-name env)))))
 
-; TODO
 (def domain-set #{"example.com" "figshare.com" })
 
 (defn into-map [f coll]
   (into {} (map (juxt identity f)) coll))
 
 (defn dedupe-action
-  [action]
   "Take an Action, decorate with 'duplicate' field.
    If there's duplicate information (a chunk of JSON representing a previous Evidence Record), associate it with the Action, otherwise pass it through.
    Step 3 from docs."
+  [action]
   (let [id (:id action)]
     ; If there's no ID, pass through.
     (if-not id
@@ -52,9 +50,9 @@
           action)))))
 
 (defn process-observations-candidates
-  [action]
   "Step Process all the observations of an Action to generate Candidates. Collect Candidates.
    Step 4 from docs."
+  [action]
   (let [observations (:observations action)
         processed-observations (map #(observation/process-observation % domain-set) observations)]
     (-> action
@@ -62,9 +60,9 @@
         (dissoc :observations))))
 
 (defn match-candidates
-  [action web-trace-atom]
   "Attempt to match all candidates into DOIs.
    Step 5 from docs."
+  [action web-trace-atom]
    (let [matches (mapcat (fn [observation]
                        (map #(match/match-candidate % web-trace-atom) (:candidates observation)))
                      (:processed-observations action))
@@ -78,8 +76,8 @@
   (let [subj (merge {:url (:url action)} (:subj action {}))]
     {:uuid (str (UUID/randomUUID))
      :source_token (:source-token input-bundle)
-     :subj_id (:url action) ; TODO
-     :obj_id (:match match) ; TODO
+     :subj_id (:url action)
+     :obj_id (:match match)
      :relation_type_id (:relation-type-id action)
      :source_id (:source-id input-bundle)
      :action (:action-type action "add")
@@ -87,7 +85,7 @@
      :subj subj}))
 
 (defn create-events-for-action
-  [input-bundle action]
   "Return a seq of Events generated from the Action"
+  [input-bundle action]
   (assoc action
     :events (map (partial create-event-from-match input-bundle action) (:matches action))))

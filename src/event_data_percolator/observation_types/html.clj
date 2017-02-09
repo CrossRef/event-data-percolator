@@ -5,17 +5,6 @@
   (:import [org.jsoup Jsoup]
            [org.apache.commons.codec.digest DigestUtils]))
 
-; TODO? script bit?
-; (defn extract-text-fragments-from-html
-;   "Extract all text from an HTML document."
-;   [input]
-;   (string/join " "
-;     (-> input
-;     (html/html-snippet)
-;     (html/select [:body html/text-node])
-;     (html/transform [:script] nil)
-;     (html/texts))))
-
 (defn plaintext-from-html
   "Extract a single plaintext string from text of whole document."
   [html]
@@ -33,16 +22,6 @@
       (map #(.attr % "href"))
       (remove empty?)
       (set)))
-
-; (defn candidate-urls-matching-domains
-;   "Extract all well-formed URLs from links that have a matching domain in the list."
-;   [html domain-set]
-;   (let [possible-url-strs (links-from-html html)
-;         valid-urls (keep #(try (new URL %) (catch Exception e nil)) possible-url-strs)
-;         matching-domains (filter #(§domain-set (.getHost %)) valid-urls)
-;         url-strs (set (map str matching-domains))]
-;   url-strs))
-
 
 (defn process-html-content-observation
   "Process an observation of type html-content."

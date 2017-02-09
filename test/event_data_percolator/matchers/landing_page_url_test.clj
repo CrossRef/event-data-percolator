@@ -5,8 +5,8 @@
             [event-data-percolator.matchers.landing-page-url :as landing-page-url]))
 
 (defn ok
-  [url]
   "Fake OK return from DOI proxy."
+  [url]
   {:status 303 :headers {:location url}})
 
 (defn not-found [] {:status 404})
