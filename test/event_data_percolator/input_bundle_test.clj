@@ -214,7 +214,8 @@
                           ; This one throws a timeout error, which should be reported
                           "http://article.com/article/XXXXX" (fn [a b c] (throw (new org.httpkit.client.TimeoutException "I got bored")))]
       (let [domain-list #{"article.com"}
-            input-bundle {:pages [
+            input-bundle {:artifacts {:other :value} ; pass-through any artifact info from input package.
+                          :pages [
                            {:actions [
                              {:url "http://example.com/page/11111"
                               :occurred-at "2017-05-02T00:00:00.000Z"
@@ -229,6 +230,8 @@
         (is (= (-> result :artifacts :domain-set-artifact-version)
                 "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417")
             "Domain list artifact version should be correctly set.")
+
+        (is (= (-> result :artifacts :other) :value) "Pre-existing values in artifacts are passed through.")
 
         (is (= (set (:web-trace result))
                 #{{:url "http://article.com/article/22222" :status 303 }

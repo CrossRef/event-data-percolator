@@ -13,6 +13,7 @@
 (def bundles-schema
   {:source-token s/Str
    :source-id s/Str
+   (s/optional-key :artifacts) s/Any
    :pages
    [{:actions
      [{:url s/Str
