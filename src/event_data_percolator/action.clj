@@ -81,7 +81,7 @@
      :relation_type_id (:relation-type-id action)
      :source_id (:source-id input-bundle)
      :action (:action-type action "add")
-     :occurred_at (str (:posted-time action))
+     :occurred_at (str (:occurred-at action))
      :subj subj}))
 
 (defn create-events-for-action

@@ -6,7 +6,7 @@
 (def ok-response
   {:status 303 :headers {:location "http://link.springer.com/10.1007/s00423-015-1364-1"}})
 
-(deftest resolve-escaped
+(deftest ^:unit resolve-escaped
   (testing "resolve-doi-maybe-escaped should return an unescaped DOI, if input unescaped and it's valid"
     (fake/with-fake-http ["https://doi.org/10.1007/s00423-015-1364-1" ok-response]
       (is (= (doi/resolve-doi-maybe-escaped "10.1007/s00423-015-1364-1")

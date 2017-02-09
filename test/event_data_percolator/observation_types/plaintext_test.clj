@@ -4,7 +4,7 @@
 
 (def domain-set #{"example.com" "example.net"})
 
-(deftest process-plaintext-content-observation
+(deftest ^:unit process-plaintext-content-observation
   (testing "Plain DOIs can be extracted from text"
     (let [result (plaintext/process-plaintext-content-observation {:type "html" :input-content "the quick brown 10.5555/1111 jumps"} domain-set)]
       (is (= result {:type "html"

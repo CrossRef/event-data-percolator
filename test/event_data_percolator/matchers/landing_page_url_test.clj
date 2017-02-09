@@ -18,7 +18,7 @@
   ["http://journals.plos.org/plosone/article?id=10.5555/12345678"
    "http://synapse.koreamed.org/DOIx.php?id=10.5555/12345678"])
 
-(deftest try-from-get-params
+(deftest ^:unit try-from-get-params
   (testing "try-from-get-params can find valid DOIs"
     (fake/with-fake-http ["https://doi.org/10.5555/12345678" (ok "http://psychoceramics.labs.crossref.org/10.5555-12345678.html")]
       (doseq [input url-params-inputs]
@@ -31,7 +31,7 @@
         (let [result (landing-page-url/try-from-get-params input)]
           (is (= result nil)))))))
 
-(deftest try-doi-from-url-text
+(deftest ^:unit try-doi-from-url-text
   (testing "URL with embedded DOI plus text."
     (fake/with-fake-http ["https://doi.org/10.5235/219174411798862578" (ok "http://www.nomos-elibrary.de/index.php?doi=10.5235/219174411798862578")]
       (is (= (landing-page-url/try-doi-from-url-text "http://www.nomos-elibrary.de/10.5235/219174411798862578/criminal-law-issues-in-the-case-law-of-the-european-court-of-justice-a-general-overview-jahrgang-1-2011-heft-2")
@@ -61,7 +61,7 @@
       (is (= (landing-page-url/try-doi-from-url-text "http://link.springer.com/article/10.1007%2Fs00423-015-1364-1")
              "https://doi.org/10.1007/s00423-015-1364-1")))))
 
-(deftest try-pii-from-url-text
+(deftest ^:unit try-pii-from-url-text
   (testing "Extant PII can be extracted and matched"
     (fake/with-fake-http ["https://api.crossref.org/v1/works"
                           {:status 200
@@ -73,7 +73,7 @@
       (is (= (landing-page-url/try-pii-from-url-text "http://api.elsevier.com/content/article/PII:S0169534701023801?httpAccept=text/plain")
              "https://doi.org/10.1016/s0169-5347(01)02380-1")))))
 
-(deftest try-fetched-page-metadata
+(deftest ^:unit try-fetched-page-metadata
   (testing "DOI can be fetched from meta tag: prism.url"
     (fake/with-fake-http ["http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4852986/?report=classic" (slurp "resources/PMC4852986")
                           "https://doi.org/10.1007/s10461-013-0685-8" (ok "http://link.springer.com/10.1007/s10461-013-0685-8")]

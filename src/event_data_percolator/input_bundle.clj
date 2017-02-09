@@ -1,7 +1,13 @@
 (ns event-data-percolator.input-bundle
   "Process and Input Bundle."
   (:require [event-data-percolator.action :as action]
-            [schema.core :as s]))
+            [clj-time.core :as clj-time]
+            [clj-time.format :as clj-time-format]
+            [schema.core :as s])
+  (:import [java.util UUID]))
+
+(def date-format
+  (clj-time-format/formatters :basic-date))
 
 (def bundles-schema
   {:source-token s/Str
@@ -10,6 +16,7 @@
    [{:actions
      [{:url s/Str
        :relation-type-id s/Str
+       :occurred-at s/Str
        :id s/Str
        :subj s/Any
        :observations [{:type s/Str
@@ -33,6 +40,17 @@
     :pages (map (fn [page]
       (assoc page
         :actions (map f (:actions page)))) (:pages bundle))))
+
+(defn id-and-timestamp
+  "Associate an evidence and date stamp at the same time.
+   ID has YYYYMMDD prefix to make downstream analysis workflows a bit easier."
+  [bundle]
+  (let [now (clj-time/now)
+        id (str
+             (clj-time-format/unparse date-format now)
+             (UUID/randomUUID))
+        now-str (str now)]
+    (assoc bundle :id id :timestamp now-str)))
 
 (defn dedupe-actions
   "Dedupe actions in an input bundle.
@@ -62,7 +80,9 @@
   ; an atom that's passed around to functions that might want to log which URLs they access
   ; and their respose codes.
   (let [web-trace-atom (atom [])
-        result (-> bundle
+        result (->
+            id-and-timestamp
+            bundle
             dedupe-actions
             candidates
             (match web-trace-atom)

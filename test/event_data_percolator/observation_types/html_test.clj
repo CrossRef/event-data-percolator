@@ -49,7 +49,7 @@
 
 (def domain-set #{"example.com" "example.net"})
 
-(deftest process-html-content-observation
+(deftest ^:unit process-html-content-observation
   (testing "Plain DOIs can be extracted from text nodes"
     (let [result (html/process-html-content-observation {:type "html" :input-content "the quick brown 10.5555/1111 jumps"} domain-set)]
       (is (= result {:type "html"

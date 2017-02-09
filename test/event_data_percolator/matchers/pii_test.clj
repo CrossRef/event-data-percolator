@@ -4,7 +4,7 @@
             [org.httpkit.fake :as fake]
             [event-data-percolator.matchers.pii :as pii]))
 
-(deftest match-pii-candidate
+(deftest ^:unit match-pii-candidate
   (testing "match-pii-candidate matches valid DOI."
     (fake/with-fake-http ["https://api.crossref.org/v1/works"
                           {:status 200

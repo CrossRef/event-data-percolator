@@ -3,7 +3,7 @@
             [org.httpkit.fake :as fake]
             [event-data-percolator.matchers.doi-url :as doi-url]))
 
-(deftest match-doi-url-candidate
+(deftest ^:unit match-doi-url-candidate
   (testing "match-doi-url-candidate matches valid DOI."
     (fake/with-fake-http ["https://doi.org/10.5555/12345678" {:status 303 :headers {:location "http://psychoceramics.labs.crossref.org/10.5555-12345678.html"}}]
       (let [result (doi-url/match-doi-url-candidate {:value "https://doi.org/10.5555/12345678"} nil)]

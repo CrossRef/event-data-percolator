@@ -4,7 +4,7 @@
 
 (def domain-set #{"example.com" "example.net"})
 
-(deftest process-url-observation
+(deftest ^:unit process-url-observation
   (testing "URL DOIs on doi.org can be matched"
     (let [result (url/process-url-observation {:type "url" :input-url "https://doi.org/10.5555/1111"} domain-set)]
       (is (= result {:type "url"
