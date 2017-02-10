@@ -42,15 +42,15 @@
   (assoc observation :error :unrecognised-observation-type))
 
 (defn process-observation
-  [observation domain-set]
+  [observation duplicate? domain-set]
+  "Process an observation, extracting candidates unless it's part of a duplicate action."
   ; Choose a dispatch function or pass-through if unrecognised-observation-type.
-  (let [duplicate? (boolean (:duplicate observation))
-        sensitive? (:sensitive observation)
+  (let [sensitive? (:sensitive observation)
         typ (:type observation)
         ; How to process this? If it's a duplicate, pass through and don't do anything.
         ; Otherwise choose the right processing function, or 'unrecognised'.
         f (if duplicate?
-              identity
+              (fn [observation _] observation)
               (process-types typ unrecognised-observation-type))
         
         processed (f observation domain-set)

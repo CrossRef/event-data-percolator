@@ -58,7 +58,7 @@
   "Dedupe actions in an input bundle.
   Step 3 in docs."
   [bundle]
-  (map-actions action/dedupe-action bundle))
+  (map-actions #(action/dedupe-action % (:id bundle)) bundle))
 
 (defn candidates
   "Produce candidates in input bundle.

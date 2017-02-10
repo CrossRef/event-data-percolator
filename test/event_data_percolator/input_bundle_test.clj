@@ -207,9 +207,9 @@
   (testing "End-to-end processing of Input Bundle should result in an Evidence Record with Events and HTTP tracing."
     ; A single redirect so that we can demonstrate that the trace is captured.
     (fake/with-fake-http ["http://article.com/article/22222" {:status 303 :headers {:location "http://article.com/article/22222-X"}}
-                          "http://article.com/article/22222-X" {:status 200 :body "<html><head><meta name='dc.identifier' content='https://doi.org/10.5555/1234568'></head></html>"}
+                          "http://article.com/article/22222-X" {:status 200 :body "<html><head><meta name='dc.identifier' content='https://doi.org/10.5555/12345678'></head></html>"}
 
-                          "https://doi.org/10.5555/1234568" {:status 303 :headers {:location "http://article.com/article/22222-X"}}
+                          "https://doi.org/10.5555/12345678" {:status 303 :headers {:location "http://article.com/article/22222-X"}}
 
                           ; This one throws a timeout error, which should be reported
                           "http://article.com/article/XXXXX" (fn [a b c] (throw (new org.httpkit.client.TimeoutException "I got bored")))]
@@ -242,3 +242,100 @@
         ; The rest of the pieces are tested above.
         (is (= 1 (-> result :pages first :actions first :events count)) "One event should be found")
         (is (-> result :id))))))
+
+
+(deftest ^:unit deduplication-single-bundle
+  (testing "Duplicates can be detected within a input-bundle"
+    (fake/with-fake-http ["https://doi.org/10.5555/12345678" {:status 303 :headers {:location "http://article.com/article/22222-X"}}]
+      (let [domain-list #{}
+            ; We get an input-bundle with the same action duplicated (by its ID) on the same page, and also on another page.
+            input-bundle {:pages [
+                           {:actions [
+                             {:url "http://example.com/page/11111"
+                              :id "99999"
+                              :occurred-at "2017-05-02T00:00:00.000Z"
+                              :observations [
+                                {:type "plaintext"
+                                 :input-content "10.5555/12345678"}]}
+                           {:url "http://example.com/page/11111"
+                              :id "99999"
+                              :occurred-at "2017-05-02T00:00:00.000Z"
+                              :observations [
+                                {:type "plaintext"
+                                 :input-content "10.5555/12345678"}]}]}
+                            {:actions [
+                             {:url "http://example.com/page/11111"
+                              :id "99999"
+                              :occurred-at "2017-05-02T00:00:00.000Z"
+                              :observations [
+                                {:type "plaintext"
+                                 :input-content "10.5555/12345678"}]}]}]}
+            
+            result (input-bundle/process input-bundle "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)
+
+            input-bundle-id (:id result)
+
+            ; A duplicate record, built from the action ID and the input bundle ID. We'll expect to see this.
+            ; This has string keys because it's fetched back from serialized storage.
+            expected-duplicate {"evidence-record-id" input-bundle-id "action-id" "99999"}]
+
+      (is input-bundle-id "Input bundle ID should always be set.")
+      (is (-> result :pages first :actions first :duplicate nil?) "First action not marked as duplicate")
+
+      (is (= (-> result :pages first :actions second :duplicate) expected-duplicate) "Second action in first page marked as duplicate, with the same evidence record id")
+      (is (= (-> result :pages second :actions first :duplicate) expected-duplicate) "Third action (in second page) marked as duplicate, with the same evidence record id")
+
+      (is (-> result :pages first :actions first :processed-observations first :candidates not-empty) "First action isn't a duplicate, so should have candidates")
+      (is (-> result :pages first :actions second :processed-observations first :candidates empty?) "Second action is a duplicate, so should not have candidates")
+      (is (-> result :pages second :actions first :processed-observations first :candidates empty?) "Third action is a duplicate, so should not have candidates")
+
+
+      (is (-> result :pages first :actions first :matches not-empty) "First action isn't a duplicate, so should have matches")
+      (is (-> result :pages first :actions second :matches empty?) "Second action is a duplicate, so should not have matches")
+      (is (-> result :pages second :actions first :matches empty?) "Third action is a duplicate, so should not have matches")
+
+      (is (-> result :pages first :actions first :events not-empty) "First action isn't a duplicate, so should have events")
+      (is (-> result :pages first :actions second :events empty?) "Second action is a duplicate, so should not have events")
+      (is (-> result :pages second :actions first :events empty?) "Third action is a duplicate, so should not have events")))))
+        
+(deftest ^:unit deduplication-across-bundles
+  ; This is the most likely case.
+  (testing "Duplicates can be detected between a input-bundles"
+    (fake/with-fake-http ["https://doi.org/10.5555/12345678" {:status 303 :headers {:location "http://article.com/article/22222-X"}}]
+      (let [domain-list #{}
+            ; We submit the same input bundle twice. 
+            input-bundle {:pages [
+                           {:actions [
+                             {:url "http://example.com/page/11111"
+                              :id "88888"
+                              :occurred-at "2017-05-02T00:00:00.000Z"
+                              :observations [
+                                {:type "plaintext"
+                                 :input-content "10.5555/12345678"}]}]}]}
+            
+            result-1 (input-bundle/process input-bundle "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)
+            result-2 (input-bundle/process input-bundle "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)
+
+            input-bundle-id-1 (:id result-1)
+            input-bundle-id-2 (:id result-2)
+
+            ; A duplicate record, built from the action ID and the input bundle ID. We'll expect to see this.
+            ; This has string keys because it's fetched back from serialized storage.
+            expected-duplicate {"evidence-record-id" input-bundle-id-1 "action-id" "88888"}]
+
+      (is input-bundle-id-1 "Input bundle ID should always be set.")
+      (is input-bundle-id-2 "Input bundle ID should always be set.")
+      (is (not= input-bundle-id-1 input-bundle-id-2) "Input bundles should be given different IDs")
+
+      (is (-> result-1 :pages first :actions first :duplicate nil?) "Action in first bundle not marked as duplicate")
+      (is (= (-> result-2 :pages first :actions first :duplicate) expected-duplicate) "Action in second bundle not marked as duplicate, with ID of first bundle.")
+
+      
+      (is (-> result-1 :pages first :actions first :processed-observations first :candidates not-empty) "First bundle action isn't a duplicate, so should have candidates")
+      (is (-> result-2 :pages first :actions first :processed-observations first :candidates empty?) "Second bundle action is a duplicate, so should not have candidates")
+
+      (is (-> result-1 :pages first :actions first :matches not-empty) "First bundle action isn't a duplicate, so should have matches")
+      (is (-> result-2 :pages first :actions second :matches empty?) "Second bundle action is a duplicate, so should not have matches")
+
+      (is (-> result-1 :pages first :actions first :events not-empty) "First bundle action isn't a duplicate, so should have events")
+      (is (-> result-2 :pages first :actions second :events empty?) "Second bundle action is a duplicate, so should not have events")))))

@@ -8,6 +8,7 @@
           "subj": {"title": "this is my title one"},
           "url": "http://example.com/page-one",
           "relation-type-id": "mentions",
+          "occurred-at": "2017-01-01",
           "id": "11111",
           "observations": [
             {
@@ -16,7 +17,7 @@
             },
             {
               "type": "url",
-              "input-url": "https://figshare.com/articles/A_Modeler_s_Tale/3423371/1"
+              "input-url": "http://psychoceramics.labs.crossref.org/10.5555-12345678.html"
             }
           ]
         }
@@ -28,6 +29,7 @@
           "subj": {"title": "this is my title two"},
           "url": "http://example.com/page-two",
           "relation-type-id": "mentions",
+          "occurred-at": "2017-01-01",
           "id": "22222",
           "observations": [
             {
@@ -40,6 +42,7 @@
           "subj": {"title": "this is my title three"},
           "url": "http://example.com/page-three",
           "relation-type-id": "mentions",
+          "occurred-at": "2017-01-01",
           "id": "33333",
           "observations": [
             {
@@ -56,6 +59,7 @@
           "subj": {"title": "this is my title four"},
           "url": "http://example.com/page-four",
           "relation-type-id": "mentions",
+          "occurred-at": "2017-01-01",
           "id": "44444",
           "observations": [
             {

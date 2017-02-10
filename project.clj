@@ -7,7 +7,7 @@
                  [org.clojure/core.cache "0.6.5"]
                  [enlive "1.1.6"]
                  [commons-codec/commons-codec "1.10"]
-                 [event-data-common "0.1.9"]
+                 [event-data-common "0.1.10"]
                  [com.cemerick/url "0.1.1"]
                  [prismatic/schema "1.1.3"]
                  [http-kit.fake "0.2.1"]

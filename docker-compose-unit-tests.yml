@@ -7,7 +7,7 @@ services:
      - ./.m2-cache:/root/.m2
     environment:
      - JWT_SECRETS=TEST,TEST2
-     - STORAGE=redis
+     - STORAGE=memory
      - REDIS_HOST=redis
      - REDIS_PORT=6379
      - REDIS_DB=0
