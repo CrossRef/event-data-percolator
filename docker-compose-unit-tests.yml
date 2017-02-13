@@ -7,10 +7,11 @@ services:
      - ./.m2-cache:/root/.m2
     environment:
      - JWT_SECRETS=TEST,TEST2
-     - STORAGE=memory
+     - DUPLICATE_STORAGE=memory
+     - EVIDENCE_STORAGE=memory
+     - EVENT_BUS_URL_BASE=https://bus.eventdata.crossref.org
      - REDIS_HOST=redis
      - REDIS_PORT=6379
      - REDIS_DB=0
-     - PORT=8005
     command: "lein test :unit"
 

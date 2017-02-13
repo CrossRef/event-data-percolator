@@ -2,7 +2,6 @@
   (:require [clojure.data.json :as json]
             [clojure.tools.logging :as l]
             [event-data-percolator.input-bundle :as input-bundle]
-            [event-data-percolator.util.storage :as storage]
             [event-data-percolator.process :as process]
             [event-data-percolator.queue :as queue]
             [org.httpkit.server :as server]
@@ -69,7 +68,8 @@
                         {:status "Malformed"})))
 
   :post! (fn [ctx]
-    (let [result (process/process-input-bundle (::payload ctx))
+    (let [auth-header (get-in ctx [:request :headers "authorization"])
+          result (process/process-input-bundle {:auth-header auth-header :payload (::payload ctx)})
           serialized-result (json/write-str result)]
       {::serialized-result serialized-result}))
 
@@ -98,7 +98,10 @@
                         {:status "Malformed"})))
 
   :post! (fn [ctx]
-           (queue/enqueue (::payload ctx) process/input-bundle-queue-name)
+           ; Carry the auth header through so we can pass it onto the event bus downstream.
+           (let [auth-header (get-in ctx [:request :headers "authorization"])]
+             (queue/enqueue {:auth-header auth-header
+                             :payload (::payload ctx)} process/input-bundle-queue-name))
            true)
 
   :handle-created (fn [ctx]

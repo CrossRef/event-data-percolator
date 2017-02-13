@@ -15,11 +15,11 @@
 
 (def action-dedupe-store
   (delay
-    (condp = (:storage env "s3")
+    (condp = (:duplicate-storage env "s3")
       ; Memory for unit testing ONLY.
       "memory" (memory/build)
       ; Redis can be used for component testing ONLY. Reuse the redis connection.
-      "s3" (s3/build (:s3-key env) (:s3-secret env) (:s3-region-name env) (:s3-bucket-name env)))))
+      "s3" (s3/build (:s3-key env) (:s3-secret env) (:duplicate-region-name env) (:duplicate-bucket-name env)))))
 
 (defn into-map [f coll]
   (into {} (map (juxt identity f)) coll))
@@ -69,7 +69,7 @@
   [input-bundle action match]
   ; Provide default subject metadata if not supplied.
   (let [subj (merge {:url (:url action)} (:subj action {}))]
-    {:uuid (str (UUID/randomUUID))
+    {:id (str (UUID/randomUUID))
      :source_token (:source-token input-bundle)
      :subj_id (:url action)
      :obj_id (:match match)
@@ -77,7 +77,8 @@
      :source_id (:source-id input-bundle)
      :action (:action-type action "add")
      :occurred_at (str (:occurred-at action))
-     :subj subj}))
+     :subj subj
+     :evidence-record (:url input-bundle)}))
 
 (defn create-events-for-action
   "Return a seq of Events generated from the Action"

@@ -16,6 +16,7 @@
         (is (:timestamp result) "Timestamp applied")
         (is (.startsWith (:id result) "20170502") "Should start with date prefix.")
         (is (= (.length (:id result)) 44) "Should have trailing UUID")
+        (is (:url result) "URL should be set")
         (is (= (:timestamp result) "2017-05-02T00:00:00.000Z") "Should have full ISO8601 timestamp.")))))
 
 (deftest ^:unit candidates
@@ -147,7 +148,7 @@
         (is (= (->> events (map :action) set) #{"add"}) "Events each have default 'add' action, taken from the match.")
         (is (= (->> events (map :subj) set) #{{:url "http://example.com" :title "My example Subject" :custom "value"}}) "Custom subject metadata via subj is merged with URL.")
         (is (= (->> events (map :relation_type_id) set) #{"contemplates"}) "relation_type_id should be taken from the actions")
-        (is (= (->> events (map :uuid) set count) 2) "Each event has a different ID.")
+        (is (= (->> events (map :id) set count) 2) "Each event has a different ID.")
         (is (= (->> events (map :timestamp) set) #{nil}) "Events do not have timestamps (though the Evidence Record does). They are assigned downstream when accepted by the Event Bus.")))))
 
 (deftest ^:unit extract-all-events
@@ -158,29 +159,29 @@
           {:pages
             ; Page 1
             [{:actions
-             [{:events
-               ; Action 1.1
-               [{:uuid "11111" :and :other-fields}
-                {:uuid "22222" :and :other-fields}]}
+             [{; Action 1.1
+               :events
+               [{:id "11111" :and :other-fields}
+                {:id "22222" :and :other-fields}]}
                ; Action 1.2
                {:events
-               [{:uuid "33333" :and :other-fields}
-                {:uuid "44444" :and :other-fields}]}]}
+               [{:id "33333" :and :other-fields}
+                {:id "44444" :and :other-fields}]}]}
              ; Page 2
              {:actions
               ; Action 2.1
              [{:events
-               [{:uuid "55555" :and :other-fields}
-                {:uuid "66666" :and :other-fields}]}]}]}
+               [{:id "55555" :and :other-fields}
+                {:id "66666" :and :other-fields}]}]}]}
 
         result (input-bundle/extract-all-events output-bundle)]
 
-      (is (= (set result) #{{:uuid "11111" :and :other-fields}
-                            {:uuid "22222" :and :other-fields}
-                            {:uuid "33333" :and :other-fields}
-                            {:uuid "44444" :and :other-fields}
-                            {:uuid "55555" :and :other-fields}
-                            {:uuid "66666" :and :other-fields}})
+      (is (= (set result) #{{:id "11111" :and :other-fields}
+                            {:id "22222" :and :other-fields}
+                            {:id "33333" :and :other-fields}
+                            {:id "44444" :and :other-fields}
+                            {:id "55555" :and :other-fields}
+                            {:id "66666" :and :other-fields}})
           "Events collected from all pages and all actions."))))
 
 (deftest ^:unit map-actions

@@ -279,12 +279,21 @@ This should be run with Docker Swarm for load-balancing, service discovery and f
 
 Config via environment variables
 
- - S3_KEY
- - S3_SECRET
- - S3_REGION_NAME
- - S3_ACTION_BUCKET_NAME
- - PORT
- - JWT_SECRETS
+ - `S3_KEY`
+ - `S3_SECRET`
+ - `S3_REGION_NAME`
+ - `S3_ACTION_BUCKET_NAME`
+ - `PORT`
+ - `JWT_SECRETS`
+ - `ARTIFACT_BASE` - URL base of bucket where artifact registry is hosted, e.g. `http://event-data-artifact-prod.s3.amazonaws.com/`
+ - `DUPLICATE_STORAGE` - one of `memory` for testing or `s3` for production
+ - `DUPLICATE_BUCKET_NAME` - when s3, name of bucket where duplicate information is stored
+ - `DUPLICATE_BUCKET_REGION`
+ - `EVIDENCE_STORAGE` - one of `memory` for testing or `s3` for production
+ - `EVIDENCE_BUCKET_NAME` - when s3, name of bucket where evidence records should be stored
+ - `EVIDENCE_BUCKET_REGION`
+ - `EVIDENCE_URL_BASE` - URL base where evidence registry is hosted, e.g. `https://evidence.eventdata.crossref.org/`
+ - `EVENT_BUS_URL_BASE` - URL base where the event bus is hosted. e.g. `https://bus.eventdata.crossref.org`
 
 ## Demo
 
@@ -296,15 +305,18 @@ Background:
 
 Then:
 
-     curl http://localhost:8005/input/diagnostic --verbose --data @demo/demo.json --header "Content-type: application/json" -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyIxIjoiMSIsInN1YiI6Indpa2lwZWRpYSJ9.w7zV2vtKNzrNDfgr9dfRpv6XYnspILRli_V5vd1J29Q" | jq .
+     curl http://localhost:8006/input/diagnostic --verbose --data @demo/demo.json --header "Content-type: application/json" -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyIxIjoiMSIsInN1YiI6Indpa2lwZWRpYSJ9.w7zV2vtKNzrNDfgr9dfRpv6XYnspILRli_V5vd1J29Q" | jq .
 
 ### Full pipeline
 
-Three background processes: 
+Set up all three services (accept, process, push) in addition to a status service, an event bus and a live demo.
 
-     time docker-compose  -f docker-compose-demo.yml run -w /usr/src/app  -p 8005:8005 demo lein run accept
-     time docker-compose  -f docker-compose-demo.yml run -w /usr/src/app  -p 8005:8005 demo lein run process
-     time docker-compose  -f docker-compose-demo.yml run -w /usr/src/app  -p 8005:8005 demo lein run push
+     docker-compose -f docker-compose-demo.yml up accept
+
+Tail logs:
+
+     docker-compose -f docker-compose-demo.yml logs -f
+
 
 Then:
 

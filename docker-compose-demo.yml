@@ -3,8 +3,7 @@ services:
   redis:
     image: redis
 
-
-  ebdstatus:
+  ebstatus:
     image: crossref/event-data-status:0.1.2
     expose:
      - "8003"
@@ -20,32 +19,117 @@ services:
      - JWT_SECRETS=TEST,TEST2
     command: "lein run"
 
-  demo:
+  livedemo:
+    image: crossref/event-data-live-demo:0.1.2
+    expose:
+     - "8101"
+    ports:
+     - "8101:8101"
+    depends_on:
+     - redis
+     - ebstatus
+    environment:
+     - REDIS_HOST=redis
+     - REDIS_PORT=6379
+     - REDIS_DB=0
+     - STATUS_SERVICE=http://ebstatus:8003
+     - PORT=8101
+     - JWT_SECRETS=TEST,TEST2
+    command: "lein run"
+
+  bus:
+    image: crossref/event-data-event-bus:0.1.9
+    expose:
+     - "8002"
+    ports:
+     - "8002:8002"
+    volumes:
+     - ./.m2-cache:/home/deploy/.m2
+    depends_on:
+     - redis
+     - ebstatus
+    environment:
+     - REDIS_HOST=redis
+     - REDIS_PORT=6379
+     - REDIS_DB=0
+     - JWT_SECRETS=TEST,TEST2
+     - STORAGE=redis
+     - PORT=8002
+     - STATUS_SERVICE=http://ebstatus:8003
+     - BROADCAST-LIVEDEMO-JWT=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyIxIjoiMSIsInN1YiI6Indpa2lwZWRpYSJ9.w7zV2vtKNzrNDfgr9dfRpv6XYnspILRli_V5vd1J29Q
+     - BROADCAST-LIVEDEMO-ENDPOINT=http://livedemo:8101/events
+     - BROADCAST-LIVEDEMO-NAME=live-demo
+     - BROADCAST-LIVEDEMO-TYPE=live
+    command: "lein run"
+
+  accept:
     build: .
     expose:
-     - "8005"
+     - "8006"
     ports:
-     - "8005:8005"
+     - "8006:8006"
     volumes:
      - .:/usr/src/app
      - ./.m2-cache:/root/.m2
     depends_on:
      - redis
-     - ebdstatus
+     - ebstatus
+     - process
+     - push
+     - livedemo
+     - bus
     environment:
      - JWT_SECRETS=TEST,TEST2
-     - STORAGE=memory
+     - DUPLICATE_STORAGE=memory
+     - EVIDENCE_STORAGE=memory
      - REDIS_HOST=redis
      - REDIS_PORT=6379
      - REDIS_DB=0
-     - PORT=8005
-     - STATUS_SERVICE=http://ebdstatus:8003
+     - PORT=8006
+     - STATUS_SERVICE=http://ebstatus:8003
      - ARTIFACT_BASE=http://event-data-artifact-prod.s3.amazonaws.com/
      - S3_KEY=${S3_KEY}
      - S3_SECRET=${S3_SECRET}
      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
      - S3_REGION_NAME=${S3_REGION_NAME}
-    command: "lein run"
+    command: "lein run accept"
 
+  process:
+    build: .
+    volumes:
+     - .:/usr/src/app
+     - ./.m2-cache:/root/.m2
+    depends_on:
+     - redis
+     - ebstatus
+    environment:
+     - JWT_SECRETS=TEST,TEST2
+     - DUPLICATE_STORAGE=memory
+     - EVIDENCE_STORAGE=memory
+     - REDIS_HOST=redis
+     - REDIS_PORT=6379
+     - REDIS_DB=0
+     - STATUS_SERVICE=http://ebstatus:8003
+     - ARTIFACT_BASE=http://event-data-artifact-prod.s3.amazonaws.com/
+    command: "lein run process"
 
+  push:
+    build: .
+    volumes:
+     - .:/usr/src/app
+     - ./.m2-cache:/root/.m2
+    depends_on:
+     - redis
+     - ebstatus
+    environment:
+     - JWT_SECRETS=TEST,TEST2
+     - STORAGE=memory
+     - EVIDENCE_STORAGE=memory
+     - REDIS_HOST=redis
+     - REDIS_PORT=6379
+     - REDIS_DB=0
+     - STATUS_SERVICE=http://ebstatus:8003
+     - ARTIFACT_BASE=http://event-data-artifact-prod.s3.amazonaws.com/
+     - EVENT_BUS_URL_BASE=http://bus:8002
+    command: "lein run push"
 

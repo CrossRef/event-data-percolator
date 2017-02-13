@@ -1,9 +1,9 @@
 (ns event-data-percolator.input-bundle
   "Process and Input Bundle."
   (:require [event-data-percolator.action :as action]
-            [event-data-percolator.util.storage :as storage]
             [clj-time.core :as clj-time]
             [clj-time.format :as clj-time-format]
+            [config.core :refer [env]]
             [schema.core :as s])
   (:import [java.util UUID]))
 
@@ -26,6 +26,15 @@
                         (s/optional-key :input-content) s/Str
                         (s/optional-key :input-url) s/Str
                         }]}]}]})
+
+(def evidence-url-prefix
+  "Prefix where records are stored."
+  "evidence/")
+
+(defn generate-url
+  "Generate a URL for the Evidence Record (where it will be accessible)"
+  [id]
+  (str (:evidence-url-base env) "/" evidence-url-prefix id))
 
 (defn validation-errors
   "Return validation errors, or nil on success."
@@ -52,7 +61,10 @@
              (clj-time-format/unparse date-format now)
              (UUID/randomUUID))
         now-str (str now)]
-    (assoc bundle :id id :timestamp now-str)))
+    (assoc bundle
+      :id id
+      :timestamp now-str
+      :url (generate-url id))))
 
 (defn dedupe-actions
   "Dedupe actions in an input bundle.
