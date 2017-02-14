@@ -146,7 +146,7 @@
         (is (= (->> events (map :source_id) set) #{"THE_SOURCE_NAME"}) "Events each have correct (same) source_id, taken from the bundle.")
         (is (= (->> events (map :occurred_at) set) #{"2017-05-02T00:00:00.000Z"}) "Events each have correct (same) occurred_at, taken from the Action.")
         (is (= (->> events (map :action) set) #{"add"}) "Events each have default 'add' action, taken from the match.")
-        (is (= (->> events (map :subj) set) #{{:url "http://example.com" :title "My example Subject" :custom "value"}}) "Custom subject metadata via subj is merged with URL.")
+        (is (= (->> events (map :subj) set) #{{:pid "http://example.com" :title "My example Subject" :custom "value"}}) "Custom subject metadata via subj is merged with URL.")
         (is (= (->> events (map :relation_type_id) set) #{"contemplates"}) "relation_type_id should be taken from the actions")
         (is (= (->> events (map :id) set count) 2) "Each event has a different ID.")
         (is (= (->> events (map :timestamp) set) #{nil}) "Events do not have timestamps (though the Evidence Record does). They are assigned downstream when accepted by the Event Bus.")))))
@@ -228,7 +228,7 @@
             
             result (input-bundle/process input-bundle "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)]
         
-        (is (= (-> result :artifacts :domain-set-artifact-version)
+        (is (= (-> result :percolator :artifacts :domain-set-artifact-version)
                 "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417")
             "Domain list artifact version should be correctly set.")
 

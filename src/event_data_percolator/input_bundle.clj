@@ -13,7 +13,7 @@
 (def bundles-schema
   {:source-token s/Str
    :source-id s/Str
-   (s/optional-key :artifacts) s/Any
+   (s/optional-key :agent) s/Any
    :pages
    [{:actions
      [{:url s/Str
@@ -89,7 +89,7 @@
   [bundle]
   (map-actions (partial action/create-events-for-action bundle) bundle))
 
-(def demo-domain-set #{"example.com" "figshare.com" })
+(def percolator-version (System/getProperty "event-data-percolator.version"))
 
 (defn process
   [bundle domain-artifact-version domain-set]
@@ -102,7 +102,8 @@
             dedupe-actions
             (candidates domain-set)
             (match web-trace-atom)
-            (assoc-in [:artifacts :domain-set-artifact-version] domain-artifact-version)
+            (assoc-in [:percolator :artifacts :domain-set-artifact-version] domain-artifact-version)
+            (assoc-in [:percolator :software-version] percolator-version)
             events)
         ; There are lazy sequences in here. Force the entire structure to be realized.
         ; This is necessary because the web-trace-atom's value is observed at this point,

@@ -68,7 +68,12 @@
 (defn create-event-from-match
   [input-bundle action match]
   ; Provide default subject metadata if not supplied.
-  (let [subj (merge {:url (:url action)} (:subj action {}))]
+  (let [subj (merge {:pid (:url action)} (:subj action {}))
+        ; For the obj, include the DOI URL as :pid,
+        ; but also include the input URL as the :url
+        obj (merge {:pid (:match match)
+                    :url (or (:input-url match)
+                             (:match match))} (:obj action {}))]
     {:id (str (UUID/randomUUID))
      :source_token (:source-token input-bundle)
      :subj_id (:url action)
@@ -78,6 +83,7 @@
      :action (:action-type action "add")
      :occurred_at (str (:occurred-at action))
      :subj subj
+     :obj obj
      :evidence-record (:url input-bundle)}))
 
 (defn create-events-for-action
