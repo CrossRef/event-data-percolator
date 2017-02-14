@@ -1,6 +1,6 @@
 # Event Data Percolator
 
-<img src="doc/percolator-render.svg" style="float: right; width: 150px">
+<img src="doc/percolator-render.png" style="float: right">
 
 The Event Data Percolator identifies and extracts Events from inputs fed to it by Agents. It takes Input Bundles from Agents and creates Evidence Records and Events, and sends them to the Evidence Registry and Event Bus respectively. 
 
