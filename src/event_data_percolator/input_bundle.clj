@@ -22,7 +22,7 @@
        :id s/Str
        :subj s/Any
        :observations [{:type s/Str
-                        (s/optional-key :sensitive?) s/Bool
+                        (s/optional-key :sensitive) s/Bool
                         (s/optional-key :input-content) s/Str
                         (s/optional-key :input-url) s/Str
                         }]}]}]})
