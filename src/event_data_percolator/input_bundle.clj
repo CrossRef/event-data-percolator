@@ -14,18 +14,25 @@
   {:source-token s/Str
    :source-id s/Str
    (s/optional-key :agent) s/Any
+   ; Extra per-bundle info.
+   (s/optional-key :extra) s/Any
    :pages
-   [{:actions
-     [{:url s/Str
+   [{; Extra per-page info.
+     (s/optional-key :extra) s/Any
+     :actions
+     [{; Extra per-action info.
+       (s/optional-key :extra) s/Any
+       :url s/Str
        :relation-type-id s/Str
        :occurred-at s/Str
        :id s/Str
        :subj s/Any
        :observations [{:type s/Str
-                        (s/optional-key :sensitive) s/Bool
-                        (s/optional-key :input-content) s/Str
-                        (s/optional-key :input-url) s/Str
-                        }]}]}]})
+                       ; Extra per-observation info.
+                       (s/optional-key :extra) s/Any
+                       (s/optional-key :sensitive) s/Bool
+                       (s/optional-key :input-content) s/Str
+                       (s/optional-key :input-url) s/Str}]}]}]})
 
 (def evidence-url-prefix
   "Prefix where records are stored."
