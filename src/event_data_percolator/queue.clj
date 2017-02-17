@@ -9,8 +9,8 @@
             [event-data-common.storage.redis :as redis]
             [overtone.at-at :as at-at]
             [event-data-common.status :as status])
-  (:import
-           [java.net URL MalformedURLException InetAddress])
+  (:import [java.net URL MalformedURLException InetAddress]
+           [redis.clients.jedis.exceptions JedisConnectionException])
   (:gen-class))
 
 (def redis-prefix
@@ -37,19 +37,27 @@
   If output-queue-name supplied, push results onto that.
   See http://redis.io/commands/rpoplpush for reliable queue pattern."
   [queue-name function done-queue-name]
-  (with-open [redis-connection (redis/get-connection (:pool @redis-store) @redis-db-number)]
-    (let [working-queue-key-name (str queue-name "-working")]
-      (loop []
-        (let [item-str (.brpoplpush redis-connection queue-name working-queue-key-name 0)
-              item (json/read-str item-str :key-fn keyword)
-              result (function item)
-              result-json (when result (json/write-str result))]
-          ; Once this is done successfully remove from the working queue.
-          (when result
-            (.lrem redis-connection working-queue-key-name 0 item-str)
-            (when done-queue-name
-              (.rpush redis-connection done-queue-name (into-array [result-json])))))
-        (recur)))))
+  ; If there's a time-out re-connect. This could happen if there's a long time gap between inputs.
+  (loop []
+    (try 
+      (log/info "Queue listen (re)connect")
+      (with-open [redis-connection (redis/get-connection (:pool @redis-store) @redis-db-number)]
+        (let [working-queue-key-name (str queue-name "-working")]
+          (loop []
+            (let [item-str (.brpoplpush redis-connection queue-name working-queue-key-name 0)
+                  item (json/read-str item-str :key-fn keyword)
+                  result (function item)
+                  result-json (when result (json/write-str result))]
+              ; Once this is done successfully remove from the working queue.
+              (when result
+                (log/info "Processed item from queue")
+                (.lrem redis-connection working-queue-key-name 0 item-str)
+                (when done-queue-name
+                  (.rpush redis-connection done-queue-name (into-array [result-json])))))
+            (recur))))
+      (catch JedisConnectionException ex
+        (log/info "Timeout getting queue, re-starting.")))
+      (recur)))
 
 
 (def schedule-pool (at-at/mk-pool))
@@ -63,7 +71,7 @@
         (with-open [redis-connection (redis/get-connection (:pool @redis-store) @redis-db-number)]
           (.set redis-connection "PERCOLATOR_HEARTBEAT" "1")
           (.get redis-connection "PERCOLATOR_HEARTBEAT")
-          (status/send! (status/send! "percolator" "queue-heartbeat" "tick" 1)))
+          (status/send! "percolator" "queue-heartbeat" "tick" 1))
          (catch Exception e (log/error "Error with Redis queue heartbeat:" (.getMessage e))))
     schedule-pool))
 

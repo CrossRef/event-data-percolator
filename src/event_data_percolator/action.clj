@@ -71,8 +71,12 @@
   (let [subj (merge {:pid (:url action)} (:subj action {}))
         ; For the obj, include the DOI URL as :pid,
         ; but also include the input URL as the :url
+        ; if it wasn't a URL, include the PID as the URL.
+        obj-url (when (and (#{:landing-page-url :shortdoi-url :doi-url} (:type match))
+                           (:value match))
+                  (:value match))
         obj (merge {:pid (:match match)
-                    :url (or (:input-url match)
+                    :url (or obj-url
                              (:match match))} (:obj action {}))]
     {:id (str (UUID/randomUUID))
      :source_token (:source-token input-bundle)

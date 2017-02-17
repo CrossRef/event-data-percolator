@@ -13,7 +13,7 @@
 
           object-url "http://psychoceramics.labs.crossref.org/12345"
           object-doi "https://dx.doi.org/10.5555/12345678"
-          match {:input-url object-url :match object-doi}
+          match {:type :landing-page-url :value object-url :match object-doi}
           input-action {:url subject-url
                         :occurred-at "2016-02-05"
                         :relation-type-id "cites"
@@ -40,12 +40,12 @@
 ; and those that were referenced directly with the DOI.
 (deftest create-event-from-match-subj-urls
   (let [; A match where there was an input-url
-        match1 {:input-url "http://psychoceramics.labs.crossref.org/12345"
-               :match "https://dx.doi.org/10.5555/12345678"}
+        match1 {:value "http://psychoceramics.labs.crossref.org/12345"
+                :type :landing-page-url
+                :match "https://dx.doi.org/10.5555/12345678"}
 
         ; A match where there wasn't.
-        match2 {:input-text "The text is irrelevant"
-                :match "https://dx.doi.org/10.5555/12345678"}
+        match2 {:match "https://dx.doi.org/10.5555/12345678"}
 
         input-action {:url "https://blog.com/1234"
                       :occurred-at "2016-02-05"
