@@ -1,6 +1,6 @@
 (ns event-data-percolator.server
   (:require [clojure.data.json :as json]
-            [clojure.tools.logging :as l]
+            [clojure.tools.logging :as log]
             [event-data-percolator.input-bundle :as input-bundle]
             [event-data-percolator.process :as process]
             [event-data-percolator.queue :as queue]
@@ -18,6 +18,7 @@
             [clojure.java.io :refer [reader input-stream]]
             [event-data-common.jwt :as jwt]
             [event-data-common.date :as date]
+            [overtone.at-at :as at-at]
             [event-data-common.status :as status])
   (:import
            [java.net URL MalformedURLException InetAddress])
@@ -87,17 +88,22 @@
                 (-> ctx :request :jwt-claims))
 
   :malformed? (fn [ctx]
+                (status/send! "percolator" "input" "received" 1)
                 (let [payload (try (-> ctx :request :body reader (json/read :key-fn keyword)) (catch Exception _ nil))
                       schema-errors (input-bundle/validation-errors payload)]
                   [schema-errors {::payload payload ::schema-errors schema-errors}]))
 
   :handle-malformed (fn [ctx]
+                      (log/info "POST Malformed")
+                      (status/send! "percolator" "input" "malformed" 1)
                       (json/write-str (if-let [schema-errors (::schema-errors ctx)]
                         {:status "Malformed"
                          :schema-errors (str schema-errors)}
                         {:status "Malformed"})))
 
   :post! (fn [ctx]
+           (log/info "POST OK")
+           (status/send! "percolator" "input" "ok" 1)
            ; Carry the auth header through so we can pass it onto the event bus downstream.
            (let [auth-header (get-in ctx [:request :headers "authorization"])]
              (queue/enqueue {:auth-header auth-header
@@ -120,11 +126,13 @@
        (jwt/wrap-jwt (:jwt-secrets env))
        (middleware-content-type/wrap-content-type))))
 
+(def schedule-pool (at-at/mk-pool))
 
 (defn run-server []
   (let [port (Integer/parseInt (:port env))]
-    ; (l/info "Start heartbeat")
-    ; (at-at/every 10000 #(status/send! "event-bus" "heartbeat" "tick" 1) schedule-pool)
+    (log/info "Start heartbeat")
+    (at-at/every 10000 #(status/send! "percolator" "heartbeat" "tick" 1) schedule-pool)
+    (queue/start-heartbeat)
 
-    (l/info "Start server on " port)
+    (log/info "Start server on " port)
     (server/run-server @app {:port port})))

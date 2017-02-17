@@ -1,13 +1,14 @@
 (ns event-data-percolator.queue
   "Queue incoming input packages and outgoing data."
   (:require [clojure.data.json :as json]
-            [clojure.tools.logging :as l]
+            [clojure.tools.logging :as log]
             [config.core :refer [env]]
             [clj-time.core :as clj-time]
             [clj-time.format :as clj-time-format]
             [clj-time.coerce :as clj-time-coerce]
             [event-data-common.storage.redis :as redis]
-            )
+            [overtone.at-at :as at-at]
+            [event-data-common.status :as status])
   (:import
            [java.net URL MalformedURLException InetAddress])
   (:gen-class))
@@ -49,4 +50,20 @@
             (when done-queue-name
               (.rpush redis-connection done-queue-name (into-array [result-json])))))
         (recur)))))
+
+
+(def schedule-pool (at-at/mk-pool))
+
+(defn start-heartbeat
+  "Schedule a heartbeat to check on the Redis connection "
+  []
+    ; Send a heartbeat every second via pubsub. Log if there was an error sending it.
+    (at-at/every 1000
+      #(try
+        (with-open [redis-connection (redis/get-connection (:pool @redis-store) @redis-db-number)]
+          (.set redis-connection "PERCOLATOR_HEARTBEAT" "1")
+          (.get redis-connection "PERCOLATOR_HEARTBEAT")
+          (status/send! (status/send! "percolator" "queue-heartbeat" "tick" 1)))
+         (catch Exception e (log/error "Error with Redis queue heartbeat:" (.getMessage e))))
+    schedule-pool))
 

@@ -11,7 +11,8 @@
             [event-data-common.storage.store :as store]
             [clojure.core.memoize :as memo]
             [clojure.data.json :as json]
-            [org.httpkit.client :as client]))
+            [org.httpkit.client :as client]
+            [event-data-common.status :as status]))
 
 (def input-bundle-queue-name "input-bundle")
 (def output-bundle-queue-name "output-bundle")
@@ -30,6 +31,7 @@
   "Return tuple of [version-url, domain-list-set]"
   []
   (log/info "Retrieving domain list artifact")
+  (status/send! "percolator" "artifact" "fetch" 1)
   ; Fetch the cached copy of the domain list.
   (let [domain-list-artifact-version (artifact/fetch-latest-version-link domain-list-artifact-name)
         ; ~ 5KB string, set of ~ 8000
@@ -48,6 +50,7 @@
   [{payload :payload auth-header :auth-header}]
   ; Fetch the cached copy of the domain list.
   (log/info "Process input bundle" (:id payload))
+  (status/send! "percolator" "input" "process" 1)
   (let [[domain-list-artifact-version domain-list] (cached-domain-list)]
     {:auth-header auth-header :payload (input-bundle/process payload domain-list-artifact-version domain-list)}))
 
@@ -71,8 +74,8 @@
   "This is called as a queue-processing function."
   [{payload :payload auth-header :auth-header}]
   
-  (log/info "PAYLOAD" payload)
   (log/info "Pushing output bundle" (:id payload))
+  (status/send! "percolator" "output" "sent" 1)
 
   (let [payload-json (json/write-str payload) 
         storage-key (str input-bundle/evidence-url-prefix (:id payload))
@@ -84,6 +87,7 @@
       ; Send all events.
     (doseq [event events]
       (log/info "Sending event: " (:id event))
+      (status/send! "percolator" "output-event" "sent" 1)
 
       (backoff/try-backoff
           ; Exception thrown if not 200 or 201, also if some other exception is thrown during the client posting.
