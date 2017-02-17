@@ -58,6 +58,7 @@
   "Run processing input bundles from the input queue, place on output queue. Block."
   []
   (log/info "Start process queue")
+  (queue/start-heartbeat)
   (queue/process-queue input-bundle-queue-name process-input-bundle output-bundle-queue-name))
 
 
@@ -111,5 +112,6 @@
 (defn run-push
   "Push output bundles from output queue. Block."
   []
+  (queue/start-heartbeat)
   (log/info "Start push queue")
   (queue/process-queue output-bundle-queue-name push-output-bundle nil))
