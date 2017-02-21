@@ -29,36 +29,61 @@
   [input-bundle queue-name]
   (let [json (json/write-str input-bundle)]
     (with-open [redis-connection (redis/get-connection (:pool @redis-store) @redis-db-number)]
-      (.lpush redis-connection queue-name (into-array [json])))))
+      (.lpush redis-connection queue-name (into-array [json]))
+      (log/info "Enqueue to " queue-name "length now" (.llen redis-connection queue-name)))))
 
-(defn process-queue
-  "Process a named queue, blocking infinitely.
+(defn process-queue-item
+  "Process a single item from a named queue, blocking indefinitely.
   Save work-in-progress (or failed items) on a working queue.
   If output-queue-name supplied, push results onto that.
   See http://redis.io/commands/rpoplpush for reliable queue pattern."
   [queue-name function done-queue-name]
   ; If there's a time-out re-connect. This could happen if there's a long time gap between inputs.
-  (loop []
+  (let [working-queue-key-name (str queue-name "-working")]
+    (log/info "Queue listen:" queue-name)
+    ; Catch Redis connection issues.
     (try 
-      (log/info "Queue listen (re)connect")
       (with-open [redis-connection (redis/get-connection (:pool @redis-store) @redis-db-number)]
-        (let [working-queue-key-name (str queue-name "-working")]
-          (loop []
-            (let [item-str (.brpoplpush redis-connection queue-name working-queue-key-name 0)
-                  item (json/read-str item-str :key-fn keyword)
+        (try
+          ; Take value from input queue, push it to working queue. If processing fails, it will remain on working queue.
+          ; BRPOPLPUSH can return null. Skip if it does.
+          (when-let [item-str (.brpoplpush redis-connection queue-name working-queue-key-name 0)]
+            (log/info "Got item from" queue-name
+                      "length now" (.llen redis-connection queue-name)
+                      "working queue length now" (.llen redis-connection working-queue-key-name))
+
+            (let [item (json/read-str item-str :key-fn keyword)
                   result (function item)
                   result-json (when result (json/write-str result))]
-              ; Once this is done successfully remove from the working queue.
-              (when result
-                (log/info "Processed item from queue")
-                (.lrem redis-connection working-queue-key-name 0 item-str)
-                (when done-queue-name
-                  (.rpush redis-connection done-queue-name (into-array [result-json])))))
-            (recur))))
-      (catch JedisConnectionException ex
-        (log/info "Timeout getting queue, re-starting.")))
-      (recur)))
+              
+              (when-not result
+                (log/error "Null result returned!"))
 
+              (when result
+                (log/info "Processed item from queue" queue-name
+                          "length now" (.llen redis-connection queue-name)
+                          "working queue length now" (.llen redis-connection working-queue-key-name))
+
+                ; The original may have timed out by now, depending on how long it took to process.
+                (with-open [new-redis-connection (redis/get-connection (:pool @redis-store) @redis-db-number)]
+                  (.lrem new-redis-connection working-queue-key-name 0 item-str)
+
+                  (when done-queue-name
+                    (.rpush redis-connection done-queue-name (into-array [result-json])))))))
+
+          (catch Exception ex
+            (log/error "Exception processing queue message:" (.getMessage ex)))))
+
+    (catch JedisConnectionException ex
+      (log/info "Timeout getting queue, re-starting."))
+    (catch Exception ex
+      (log/error "Unhandled exception in queue processing:" (.getMessage ex))))))
+
+(defn process-queue
+  [queue-name function done-queue-name]
+  (loop []
+    (process-queue-item queue-name function done-queue-name)
+    (recur)))
 
 (def schedule-pool (at-at/mk-pool))
 

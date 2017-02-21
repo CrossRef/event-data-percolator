@@ -1,9 +1,10 @@
 (ns event-data-percolator.process
   "Top level process inputs."
   (:require [event-data-percolator.queue :as queue]
+            [event-data-percolator.input-bundle :as input-bundle]
+            [event-data-percolator.action :as action]
             [clojure.tools.logging :as log]
             [config.core :refer [env]]
-            [event-data-percolator.input-bundle :as input-bundle]
             [event-data-common.backoff :as backoff]
             [event-data-common.storage.s3 :as s3]
             [event-data-common.artifact :as artifact]
@@ -79,13 +80,14 @@
   (status/send! "percolator" "output" "sent" 1)
 
   (let [payload-json (json/write-str payload) 
-        storage-key (str input-bundle/evidence-url-prefix (:id payload))
+        evidence-record-id (:id payload)
+        storage-key (str input-bundle/evidence-url-prefix evidence-record-id)
         events (input-bundle/extract-all-events payload)]
     
     (log/info "Got output bundle id" (:id payload))
-    (log/info "Sending " (count events) "events")
 
-      ; Send all events.
+    ; Send all events.
+    (log/info "Sending " (count events) "events")
     (doseq [event events]
       (log/info "Sending event: " (:id event))
       (status/send! "percolator" "output-event" "sent" 1)
@@ -105,7 +107,11 @@
 
   ; Store record
   (log/info "Store Evidence Record" (:id payload))
-  (store/set-string @evidence-store storage-key payload-json))
+  (store/set-string @evidence-store storage-key payload-json)
+
+  ; If everything went ok, save Actions for deduplication.
+  (log/info "Setting deduplication info for")
+  (action/store-action-duplicates payload))
 
   true)
 

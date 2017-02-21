@@ -4,7 +4,8 @@
   (:require [clojure.test :refer :all]
             [clj-time.core :as clj-time]
             [org.httpkit.fake :as fake]
-            [event-data-percolator.input-bundle :as input-bundle]))
+            [event-data-percolator.input-bundle :as input-bundle]
+            [event-data-percolator.action :as action]))
 
 (deftest ^:unit id-and-timestamp
   (testing "id-and-timestamp should add timestamp and ID based on the time."
@@ -245,59 +246,6 @@
         (is (-> result :id))))))
 
 
-(deftest ^:unit deduplication-single-bundle
-  (testing "Duplicates can be detected within a input-bundle"
-    (fake/with-fake-http ["https://doi.org/10.5555/12345678" {:status 303 :headers {:location "http://article.com/article/22222-X"}}]
-      (let [domain-list #{}
-            ; We get an input-bundle with the same action duplicated (by its ID) on the same page, and also on another page.
-            input-bundle {:pages [
-                           {:actions [
-                             {:url "http://example.com/page/11111"
-                              :id "99999"
-                              :occurred-at "2017-05-02T00:00:00.000Z"
-                              :observations [
-                                {:type "plaintext"
-                                 :input-content "10.5555/12345678"}]}
-                           {:url "http://example.com/page/11111"
-                              :id "99999"
-                              :occurred-at "2017-05-02T00:00:00.000Z"
-                              :observations [
-                                {:type "plaintext"
-                                 :input-content "10.5555/12345678"}]}]}
-                            {:actions [
-                             {:url "http://example.com/page/11111"
-                              :id "99999"
-                              :occurred-at "2017-05-02T00:00:00.000Z"
-                              :observations [
-                                {:type "plaintext"
-                                 :input-content "10.5555/12345678"}]}]}]}
-            
-            result (input-bundle/process input-bundle "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)
-
-            input-bundle-id (:id result)
-
-            ; A duplicate record, built from the action ID and the input bundle ID. We'll expect to see this.
-            ; This has string keys because it's fetched back from serialized storage.
-            expected-duplicate {"evidence-record-id" input-bundle-id "action-id" "99999"}]
-
-      (is input-bundle-id "Input bundle ID should always be set.")
-      (is (-> result :pages first :actions first :duplicate nil?) "First action not marked as duplicate")
-
-      (is (= (-> result :pages first :actions second :duplicate) expected-duplicate) "Second action in first page marked as duplicate, with the same evidence record id")
-      (is (= (-> result :pages second :actions first :duplicate) expected-duplicate) "Third action (in second page) marked as duplicate, with the same evidence record id")
-
-      (is (-> result :pages first :actions first :processed-observations first :candidates not-empty) "First action isn't a duplicate, so should have candidates")
-      (is (-> result :pages first :actions second :processed-observations first :candidates empty?) "Second action is a duplicate, so should not have candidates")
-      (is (-> result :pages second :actions first :processed-observations first :candidates empty?) "Third action is a duplicate, so should not have candidates")
-
-
-      (is (-> result :pages first :actions first :matches not-empty) "First action isn't a duplicate, so should have matches")
-      (is (-> result :pages first :actions second :matches empty?) "Second action is a duplicate, so should not have matches")
-      (is (-> result :pages second :actions first :matches empty?) "Third action is a duplicate, so should not have matches")
-
-      (is (-> result :pages first :actions first :events not-empty) "First action isn't a duplicate, so should have events")
-      (is (-> result :pages first :actions second :events empty?) "Second action is a duplicate, so should not have events")
-      (is (-> result :pages second :actions first :events empty?) "Third action is a duplicate, so should not have events")))))
         
 (deftest ^:unit deduplication-across-bundles
   ; This is the most likely case.
@@ -315,6 +263,10 @@
                                  :input-content "10.5555/12345678"}]}]}]}
             
             result-1 (input-bundle/process input-bundle "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)
+            
+            ; Now save the action IDs. This is normally triggered in 'push'.
+            push-output-bundle-result (action/store-action-duplicates result-1)
+
             result-2 (input-bundle/process input-bundle "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)
 
             input-bundle-id-1 (:id result-1)

@@ -54,7 +54,7 @@ A Reddit trigger is a search query for a domain. The API will return a list of p
 
 ## Deduplication
 
-An Action must have an ID. This is different to the finished Event ID. The Percolator will only process a trigger once, and if it is subsequently asked to process it, it will politely decline, including a "duplicate" field which includes the date and Evidence Record ID that the Event previously occurred on.
+An Action must have an ID. This is different to the finished Event ID. The Percolator will only process a trigger once, and if it is subsequently asked to process it, it will politely decline, including a "duplicate" field which includes the date and Evidence Record ID that the Event previously occurred on. Duplicates *within* an Evidence bundle are not detected. Don't send them.
 
 The interpretation and formulation of the ID is up to the Agent:
 
@@ -287,7 +287,7 @@ Config via environment variables
  - `S3_ACTION_BUCKET_NAME`
  - `PORT`
  - `JWT_SECRETS`
- - `ARTIFACT_BASE` - URL base of bucket where artifact registry is hosted, e.g. `http://event-data-artifact-prod.s3.amazonaws.com/`
+ - `ARTIFACT_BASE` - URL base of bucket where artifact registry is hosted without slash, e.g. `http://event-data-artifact-prod.s3.amazonaws.com`
  - `DUPLICATE_STORAGE` - one of `memory` for testing or `s3` for production
  - `DUPLICATE_BUCKET_NAME` - when s3, name of bucket where duplicate information is stored
  - `DUPLICATE_BUCKET_REGION`

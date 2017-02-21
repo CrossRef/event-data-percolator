@@ -1,6 +1,7 @@
 (ns event-data-percolator.process-test
   "Tests for top-level process functions."
   (:require [event-data-percolator.process :as process]
+            [event-data-percolator.action :as action]
             [clojure.test :refer :all]
             [clojure.data.json :as json]
             [config.core :refer [env]]
@@ -22,17 +23,20 @@
             ; Page 1
             [{:actions
              [{; Action 1.1
+               :id "ACTION-1.1"
                :events
                [{:id "11111" :and :other-fields}
                 {:id "22222" :and :other-fields}]}
                ; Action 1.2
-               {:events
+               {:id "ACTION-1.2"
+                :events
                [{:id "33333" :and :other-fields}
                 {:id "44444" :and :other-fields}]}]}
              ; Page 2
              {:actions
               ; Action 2.1
-             [{:events
+             [{:id "ACTION-2.1"
+              :events
                [{:id "55555" :and :other-fields}
                 {:id "66666" :and :other-fields}]}]}]}
 
@@ -41,6 +45,8 @@
           responses (atom [])]
 
     (fake/with-fake-http [
+        #"http://status.eventdata.crossref.org/.*" {:status 201 :body "OKAY"}
+
         "https://bus.eventdata.crossref.org/events"
         (fn [orig-fn opts callback] 
           ; Increment counter.
@@ -73,6 +79,22 @@
         (is (.contains 
               (-> process/evidence-store deref :data deref (get "evidence/EVIDENCE_ID_1234"))
               "44444")
+            "Evidence storage contains the new evidence record"))
+
+      (testing "push-output-bundle should update action IDs in storage"
+        (is (.contains 
+              (-> action/action-dedupe-store deref :data deref (get "action/ACTION-1.1"))
+              "ACTION-1.1")
+            "Evidence storage contains the new evidence record")
+
+        (is (.contains 
+              (-> action/action-dedupe-store deref :data deref (get "action/ACTION-1.2"))
+              "ACTION-1.2")
+            "Evidence storage contains the new evidence record")
+
+        (is (.contains 
+              (-> action/action-dedupe-store deref :data deref (get "action/ACTION-2.1"))
+              "ACTION-2.1")
             "Evidence storage contains the new evidence record"))))))
 
 
@@ -90,6 +112,8 @@
           responses (atom [])]
 
     (fake/with-fake-http [
+        #"http://status.eventdata.crossref.org/.*" {:status 201 :body "OKAY"}
+
         "https://bus.eventdata.crossref.org/events"
         (fn [orig-fn opts callback] 
           ; Increment counter.

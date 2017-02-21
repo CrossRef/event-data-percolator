@@ -27,6 +27,7 @@
 (defn dedupe-action
   "Take an Action, decorate with 'duplicate' field.
    If there's duplicate information (a chunk of JSON representing a previous Evidence Record), associate it with the Action, otherwise pass it through.
+   The store is updated with the values in the 'push' process.
    Step 3 from docs."
   [action evidence-record-id]
 
@@ -34,9 +35,6 @@
         k (str "action/" id)
         duplicate-info (store/get-string @action-dedupe-store k)
         duplicate-info-parsed (when duplicate-info (json/read-str duplicate-info))]
-
-    (when-not duplicate-info
-      (store/set-string @action-dedupe-store k (json/write-str {:evidence-record-id evidence-record-id :action-id id})))
 
     (if duplicate-info-parsed
       (assoc action :duplicate duplicate-info-parsed)
@@ -95,3 +93,10 @@
   [input-bundle action]
   (assoc action
     :events (map (partial create-event-from-match input-bundle action) (:matches action))))
+
+(defn store-action-duplicates
+  "Save all action IDs from a bundle into duplicate records. Called on 'push'."
+  [bundle]
+  (let [actions (mapcat :actions (:pages bundle))]
+    (doseq [action actions]
+      (store/set-string @action-dedupe-store (str "action/" (:id action)) (json/write-str {:evidence-record-id (:id bundle) :action-id (:id action)})))))
