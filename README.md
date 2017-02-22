@@ -294,7 +294,7 @@ Config via environment variables
  - `EVIDENCE_STORAGE` - one of `memory` for testing or `s3` for production
  - `EVIDENCE_BUCKET_NAME` - when s3, name of bucket where evidence records should be stored
  - `EVIDENCE_BUCKET_REGION`
- - `EVIDENCE_URL_BASE` - URL base where evidence registry is hosted, e.g. `https://evidence.eventdata.crossref.org/`
+ - `EVIDENCE_URL_BASE` - URL base where evidence registry is hosted, e.g. `https://evidence.eventdata.crossref.org`
  - `EVENT_BUS_URL_BASE` - URL base where the event bus is hosted. e.g. `https://bus.eventdata.crossref.org`
 
 ## Demo

@@ -20,6 +20,7 @@
    :pages
    [{; Extra per-page info.
      (s/optional-key :extra) s/Any
+     (s/optional-key :url) s/Str
      :actions
      [{; Extra per-action info.
        (s/optional-key :extra) s/Any
