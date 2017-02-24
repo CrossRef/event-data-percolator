@@ -87,7 +87,7 @@ services:
      - REDIS_DB=0
      - PORT=8006
      - STATUS_SERVICE=http://ebstatus:8003
-     - ARTIFACT_BASE=http://event-data-artifact-prod.s3.amazonaws.com/
+     - ARTIFACT_BASE=https://artifact.eventdata.crossref.org
      - S3_KEY=${S3_KEY}
      - S3_SECRET=${S3_SECRET}
      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
@@ -110,7 +110,7 @@ services:
      - REDIS_PORT=6379
      - REDIS_DB=0
      - STATUS_SERVICE=http://ebstatus:8003
-     - ARTIFACT_BASE=http://event-data-artifact-prod.s3.amazonaws.com/
+     - ARTIFACT_BASE=https://artifact.eventdata.crossref.org
     command: "lein run process"
 
   push:
@@ -129,7 +129,7 @@ services:
      - REDIS_PORT=6379
      - REDIS_DB=0
      - STATUS_SERVICE=http://ebstatus:8003
-     - ARTIFACT_BASE=http://event-data-artifact-prod.s3.amazonaws.com/
+     - ARTIFACT_BASE=https://artifact.eventdata.crossref.org
      - EVENT_BUS_URL_BASE=http://bus:8002
     command: "lein run push"
 

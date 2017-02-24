@@ -1,16 +1,16 @@
-(defproject event-data-percolator "0.1.6"
+(defproject event-data-percolator "0.1.7"
   :description "Event Data Percolator"
   :url "http://eventdata.crossref.org/"
   :license {:name "MIT License"
             :url "https://opensource.org/licenses/MIT"}
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/core.cache "0.6.5"]
-                 [event-data-common "0.1.15"]
+                 [event-data-common "0.1.16"]
                  [enlive "1.1.6"]
                  [commons-codec/commons-codec "1.10"]
-                 [event-data-common "0.1.10"]
                  [com.cemerick/url "0.1.1"]
                  [prismatic/schema "1.1.3"]
+                 [clj-http "2.3.0"]
                  [http-kit.fake "0.2.1"]
                  [org.clojure/data.json "0.2.6"]
                  [crossref-util "0.1.10"]
@@ -32,8 +32,9 @@
                  [redis.clients/jedis "2.8.0"]
                  [metosin/scjsv "0.4.0"]
                  [com.amazonaws/aws-java-sdk "1.11.61"]
+
                  ; Required for AWS, but not fetched.
-                 [org.apache.httpcomponents/httpclient "4.5.2"]
+                 [org.apache.httpcomponents/httpclient "4.5.3"] ; Reqired for TLS SNI.
                  [org.apache.commons/commons-io "1.3.2"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.apache.logging.log4j/log4j-core "2.6.2"]
