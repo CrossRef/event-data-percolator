@@ -23,3 +23,4 @@
                           "https://doi.org/10.5555/1234" {:status 404}]
       (let [result (plain-doi/match-plain-doi-candidate {:value "10.5555/12345678"} nil)]
         (is (= result {:value "10.5555/12345678", :match nil}))))))
+

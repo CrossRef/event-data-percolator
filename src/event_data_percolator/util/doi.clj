@@ -21,8 +21,7 @@
                       (str "https://doi.org/" doi)
                       {:follow-redirects false}))
         status (:status response)
-        redirect-header (-> response :headers :location)]
-        
+        redirect-header (-> response :headers :location)]      
       (cond
         (:error response) nil
 
@@ -46,6 +45,19 @@
         resolved
         (resolve-doi original)))
     (resolve-doi original)))
+
+(defn drop-right-char
+  "Drop a character from the right of a string.
+   If a surrogate pair is found, drop the pair."
+  [input]
+  (let [len (.length input)
+        last-i (dec len)
+        last-last-i (dec last-i)]
+    (if (Character/isSurrogate (.charAt ^String input last-i))
+      (if (Character/isSurrogate (.charAt ^String input last-last-i))
+        (.substring input 0 last-last-i)
+        (.substring input 0 last-i))
+    (.substring input 0 last-i))))
 
 (def max-drops 5)
 (defn validate-doi-dropping
@@ -76,4 +88,4 @@
               clean-doi))
           clean-doi)
         
-        (recur (inc i) (.substring doi 0 (- (.length doi) 1)))))))
+        (recur (inc i) (drop-right-char doi))))))

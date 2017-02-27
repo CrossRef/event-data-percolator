@@ -21,3 +21,21 @@
       (is (= (doi/resolve-doi-maybe-escaped "10.1007%2Fs00423-015-1364-1")
                "10.1007/s00423-015-1364-1")
           "Works with upper case escaped slash."))))
+
+
+; Regression for https://github.com/CrossRef/event-data-percolator/issues/27
+(deftest ^:unit drop-right-char-surrogates
+  (is (=
+        (doi/drop-right-char "10.1007/s12520-015-0279-7😀")
+        "10.1007/s12520-015-0279-7")
+    "When there's a surrogate pair, remove both.")
+
+  (is (=
+        (doi/drop-right-char (.substring "10.1007/s12520-015-0279-7😀" 0 26))
+        "10.1007/s12520-015-0279-7")
+    "When there's a dangling surrogate, remove it.")
+
+  (is (=
+        (doi/drop-right-char "10.1007/s12520-015-0279-7")
+        "10.1007/s12520-015-0279-")
+      "Normal strings, right character dropped."))
