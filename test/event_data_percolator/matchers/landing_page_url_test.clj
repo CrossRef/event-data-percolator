@@ -31,37 +31,48 @@
         (let [result (landing-page-url/try-from-get-params input)]
           (is (= result nil)))))))
 
-(deftest ^:unit try-doi-from-url-text
+(deftest ^:unit try-doi-from-url-text-extra
   (testing "URL with embedded DOI plus text."
-    (fake/with-fake-http ["https://doi.org/10.5235/219174411798862578" (ok "http://www.nomos-elibrary.de/index.php?doi=10.5235/219174411798862578")]
+    (fake/with-fake-http ["https://doi.org/10.5235/219174411798862578" (ok "http://www.nomos-elibrary.de/index.php?doi=10.5235/219174411798862578")
+                          #"https://doi.org/10.5235/219174411798862578/.*" (not-found)]
       (is (= (landing-page-url/try-doi-from-url-text "http://www.nomos-elibrary.de/10.5235/219174411798862578/criminal-law-issues-in-the-case-law-of-the-european-court-of-justice-a-general-overview-jahrgang-1-2011-heft-2")
-             "https://doi.org/10.5235/219174411798862578"))))
+             "https://doi.org/10.5235/219174411798862578")))))
 
+(deftest ^:unit try-doi-from-url-text-not-exist
   (testing "URL with embedded DOI plus text BUT the DOI doesn't exist!"
-    (fake/with-fake-http ["https://doi.org/10.5235/219174411798862578" (not-found)
-                          "https://doi.org/10.5235/219174411798862578/criminal-law-issues-in-the-case-law-of-the-european-court-of-justice-a-general-overview-jahrgang-1-2011-heft-2" (not-found)]
+    (fake/with-fake-http ["https://doi.org/10.5235/219174411798862XXX" (not-found)
+                          #"https://doi.org/10.5235/.*" (not-found)
+                          "https://doi.org/10.5235/219174411798862XXX/criminal-law-issues-in-the-case-law-of-the-european-court-of-justice-a-general-overview-jahrgang-1-2011-heft-2" (not-found)]
       (is (= (landing-page-url/try-doi-from-url-text "http://www.nomos-elibrary.de/10.5235/219174411798862578/criminal-law-issues-in-the-case-law-of-the-european-court-of-justice-a-general-overview-jahrgang-1-2011-heft-2")
-             nil))))
+             nil)))))
 
+(deftest ^:unit try-doi-from-url-text-jsessionid
   (testing "URL with SICI DOI plus jsessionid"
-    (fake/with-fake-http ["https://doi.org/10.1002/1521-3951(200009)221:1<453::AID-PSSB453>3.0.CO;2-Q" (ok "http://doi.wiley.com/10.1002/1521-3951%28200009%29221%3A1%3C453%3A%3AAID-PSSB453%3E3.0.CO%3B2-Q")]
+    (fake/with-fake-http ["https://doi.org/10.1002/1521-3951(200009)221:1<453::AID-PSSB453>3.0.CO;2-Q" (ok "http://doi.wiley.com/10.1002/1521-3951%28200009%29221%3A1%3C453%3A%3AAID-PSSB453%3E3.0.CO%3B2-Q")
+                          ; stuff that we may look for after the end of the legit DOI
+                          ; NB regex escaped
+                          #"https://doi.org/10.1002/1521-3951\(200009\)221:1<453::AID-PSSB453>3.0.CO;2-Q/.*" (not-found)]
       (is (= (landing-page-url/try-doi-from-url-text "http://onlinelibrary.wiley.com/doi/10.1002/1521-3951(200009)221:1<453::AID-PSSB453>3.0.CO;2-Q/abstract;jsessionid=FAD5B5661A7D092460BEEDA0D55204DF.f02t01")
-             "https://doi.org/10.1002/1521-3951(200009)221:1<453::aid-pssb453>3.0.co;2-q"))))
+             "https://doi.org/10.1002/1521-3951(200009)221:1<453::aid-pssb453>3.0.co;2-q")))))
 
+(deftest ^:unit try-doi-from-url-text-slash-extras
   (testing "URL with embedded DOI and slash-delimited extras."
-    (fake/with-fake-http ["https://doi.org/10.7815/ijorcs.21.2011.012/arul-anitha" (not-found)
-                          "https://doi.org/10.7815%2Fijorcs.21.2011.012%2Farul-anitha" (not-found)
-                          "https://doi.org/10.7815/ijorcs.21.2011.012" (ok "http://www.ijorcs.org/manuscript/id/12/doi:10.7815/ijorcs.21.2011.012/arul-anitha/network-security-using-linux-intrusion-detection-system")]
+    (fake/with-fake-http [#"https://doi.org/10.7815/ijorcs.21.2011.012/arul-.*" (not-found)
+                           
+                           
+                           "https://doi.org/10.7815%2Fijorcs.21.2011.012%2Farul-anitha" (not-found)
+                           "https://doi.org/10.7815/ijorcs.21.2011.012" (ok "http://www.ijorcs.org/manuscript/id/12/doi:10.7815/ijorcs.21.2011.012/arul-anitha/network-security-using-linux-intrusion-detection-system")]
       (is (= (landing-page-url/try-doi-from-url-text "http://www.ijorcs.org/manuscript/id/12/doi:10.7815/ijorcs.21.2011.012/arul-anitha/network-security-using-linux-intrusion-detection-system")
-             "https://doi.org/10.7815/ijorcs.21.2011.012"))))
+             "https://doi.org/10.7815/ijorcs.21.2011.012")))))
 
+(deftest ^:unit try-doi-from-url-text-url-escape
   (testing "URL with embedded URL-escaped DOI."
     (fake/with-fake-http ["https://doi.org/10.1007%2Fs00423-015-1364-1" (ok "http://link.springer.com/10.1007/s00423-015-1364-1")
                           "https://doi.org/10.1007/s00423-015-1364-1" (ok "http://link.springer.com/10.1007/s00423-015-1364-1")]
       (is (= (landing-page-url/try-doi-from-url-text "http://link.springer.com/article/10.1007%2Fs00423-015-1364-1")
              "https://doi.org/10.1007/s00423-015-1364-1")))))
 
-(deftest ^:unit try-pii-from-url-text
+(deftest ^:unit try-pii-from-url-text-pii
   (testing "Extant PII can be extracted and matched"
     (fake/with-fake-http ["https://api.crossref.org/v1/works"
                           {:status 200
@@ -114,6 +125,12 @@
       (is (= (landing-page-url/try-fetched-page-metadata "http://jnci.oxfordjournals.org/content/108/6/djw160.full" nil)
               "https://doi.org/10.1093/jnci/djw160")))))
   
-; Tests for overall multi-strategy.
-
-; TODO
+; Regression test for https://github.com/CrossRef/event-data-percolator/issues/29
+(deftest ^:unit qmark-in-query-param
+  (testing "try-doi-from-url-text should extract DOI from a URL string that contains a query parameter"
+    (fake/with-fake-http [; This first URL was getting called. Now shouldn't be, but left as an illustration.
+                          "https://doi.org/10.1007/s11906-017-0700-y?platform=hootsuite" (ok "https://example.com")
+                          "https://doi.org/10.1007/s11906-017-0700-y" (ok "https://example.com")]
+      (let [result (landing-page-url/try-doi-from-url-text "http://link.springer.com/article/10.1007/s11906-017-0700-y?platform=hootsuite")]
+        (is (= result "https://doi.org/10.1007/s11906-017-0700-y")
+            "Question mark character should not be included in DOI")))))

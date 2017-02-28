@@ -53,8 +53,7 @@
 
         candidates (distinct (concat last-slash first-slash semicolon hashchar question-mark amp-mark))
 
-        extant (keep doi/resolve-doi-maybe-escaped candidates)]
-
+        extant (keep doi/validate-doi-dropping candidates)]
     (-> extant first normalize-doi-if-exists)))
 
 (defn try-pii-from-url-text

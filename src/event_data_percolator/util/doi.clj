@@ -6,6 +6,7 @@
             [crossref.util.doi :as crdoi]))
 
 (def doi-re #"(10\.\d{4,9}/[^\s]+)")
+(def doi-escaped-re #"(10\.\d{4,9}%2[Ff][^\s]+)")
 (def shortdoi-re #"(?:(?:(?:dx.)?doi.org/)|10/)(?:info:doi/|urn:|doi:)?([a-zA-Z0-9]+)")
 
 (defn try-hostname
@@ -61,7 +62,8 @@
 
 (def max-drops 5)
 (defn validate-doi-dropping
-  "For a given suspected DOI or shortDOI, validate that it exists, possibly chopping some of the end off to get there."
+  "For a given suspected DOI or shortDOI, validate that it exists, possibly chopping some of the end off to get there.
+   This is the function you want for validating a questionable DOI."
   [doi]
   (loop [i 0
          doi doi]
@@ -71,7 +73,7 @@
             (nil? doi)
             (< (.length doi) i)
             ; The shortDOI regular expression is rather liberal, but it is what it is.
-            (not (or (re-matches doi-re doi) (re-matches shortdoi-re doi))))
+            (not (or (re-matches doi-re doi) (re-matches doi-escaped-re doi) (re-matches shortdoi-re doi))))
       ; Stop recursion.
       nil
       ; Or try this substring.
