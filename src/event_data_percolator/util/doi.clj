@@ -3,7 +3,8 @@
   (:import [java.net URL URLEncoder URLDecoder])
   (:require [org.httpkit.client :as http]
             [robert.bruce :refer [try-try-again]]
-            [crossref.util.doi :as crdoi]))
+            [crossref.util.doi :as crdoi]
+            [clojure.data.json :as json]))
 
 (def doi-re #"(10\.\d{4,9}/[^\s]+)")
 (def doi-escaped-re #"(10\.\d{4,9}%2[Ff][^\s]+)")
@@ -17,23 +18,24 @@
 (defn resolve-doi
   "Resolve and validate a DOI or ShortDOI, expressed as not-URL form. May or may not be URLEscaped. Return the DOI."
   [doi]
-  (let [response @(try-try-again {:sleep 500 :tries 2}
+  (let [is-short-doi (not (re-matches #"^10\.\d+/.*" doi))
+        ; if it looks like a full DOI, look that up. It it looks like a handle, different syntax.
+        input-handle (if is-short-doi
+                          (str "10/" doi)
+                          doi)
+        response @(try-try-again {:sleep 500 :tries 2}
                     #(http/get
-                      (str "https://doi.org/" doi)
-                      {:follow-redirects false}))
+                      (str "https://doi.org/api/handles/" input-handle)
+                      {:as :text}))
         status (:status response)
-        redirect-header (-> response :headers :location)]      
-      (cond
-        (:error response) nil
-
-        ; If it's a shortDOI it will redirect to the real one. Use this.
-        (= (try-hostname redirect-header) "doi.org") (crdoi/non-url-doi redirect-header)
-
-        ; If it's a real DOI it will return a 30x. 
-        (= (quot status 100) 3) (crdoi/non-url-doi doi)
-
-        ; If it's not anything then don't return anything.
-        :default nil)))
+        body (when (= 200 status)
+               (-> response :body (json/read-str :key-fn keyword)))
+        ; Either get the validated handle, or for a short DOI, the DOI it's aliased to.
+        handle (when body
+                 (if is-short-doi
+                   (->> body :values (filter #(= (:type %) "HS_ALIAS")) first :data :value)
+                   (:handle body)))]        
+    handle))
 
 (defn resolve-doi-maybe-escaped
   "Try to resolve a possibly URL-encoded DOI. If it can be decoded and still resolve, return it decoded."

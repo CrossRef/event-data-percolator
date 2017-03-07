@@ -111,11 +111,11 @@
                                                     (map #(.text %))))
                                                 interested-tag-text)
 
-          interested-values (concat interested-attr-values interested-text-values)
+          interested-values (distinct (concat interested-attr-values interested-text-values))
 
           ; Try to normalize by removing recognised prefixes, then resolve
           extant (keep (comp doi/resolve-doi-maybe-escaped crdoi/non-url-doi) interested-values)]
-
+  
       (-> extant first normalize-doi-if-exists))))
 
 (defn try-fetched-page-metadata

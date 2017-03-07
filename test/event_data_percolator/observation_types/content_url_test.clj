@@ -2,7 +2,8 @@
   "Tests for content-url. This defers to other types for the content, there are individual tests for those."
   (:require [clojure.test :refer :all]
             [event-data-percolator.observation-types.content-url :as content-url]
-            [org.httpkit.fake :as fake]))
+            [org.httpkit.fake :as fake]
+            [event-data-percolator.test-util :as util]))
 
 (deftest ^:unit url-valid
   (testing "url-valid? should return true for good URLs and false for invalid urls"

@@ -4,8 +4,10 @@
   (:require [clojure.test :refer :all]
             [clj-time.core :as clj-time]
             [org.httpkit.fake :as fake]
+            [clojure.data.json :as json]
             [event-data-percolator.input-bundle :as input-bundle]
-            [event-data-percolator.action :as action]))
+            [event-data-percolator.action :as action]
+            [event-data-percolator.test-util :as util]))
 
 (deftest ^:unit id-and-timestamp
   (testing "id-and-timestamp should add timestamp and ID based on the time."
@@ -55,14 +57,14 @@
 
 (defn doi-ok
   "Fake OK return from DOI proxy."
-  [url]
-  {:status 303 :headers {:location url}})
+  [handle]
+  {:status 200 :body (json/write-str {"handle" handle})})
 
 (deftest ^:unit match
   (testing "match should transform candidates, but leave structure intact"
     ; DOI resolver consulted to check existence of DOIs.
-    (fake/with-fake-http ["https://doi.org/10.5555/11111" (doi-ok "http://example.com/abcdefg")
-                          "https://doi.org/10.5555/22222" (doi-ok "http://example.com/hijklmn")]
+    (fake/with-fake-http ["https://doi.org/api/handles/10.5555/11111" (util/doi-ok "10.5555/11111")
+                          "https://doi.org/api/handles/10.5555/22222" (util/doi-ok "10.5555/22222")]
       
       (let [; Input bundle that came out of candidates.
             input-bundle {:pages [{:actions
@@ -211,7 +213,7 @@
     (fake/with-fake-http ["http://article.com/article/22222" {:status 303 :headers {:location "http://article.com/article/22222-X"}}
                           "http://article.com/article/22222-X" {:status 200 :body "<html><head><meta name='dc.identifier' content='https://doi.org/10.5555/12345678'></head></html>"}
 
-                          "https://doi.org/10.5555/12345678" {:status 303 :headers {:location "http://article.com/article/22222-X"}}
+                          "https://doi.org/api/handles/10.5555/12345678" (util/doi-ok "10.5555/12345678")
 
                           ; This one throws a timeout error, which should be reported
                           "http://article.com/article/XXXXX" (fn [a b c] (throw (new org.httpkit.client.TimeoutException "I got bored")))]
@@ -250,7 +252,7 @@
 (deftest ^:unit deduplication-across-bundles
   ; This is the most likely case.
   (testing "Duplicates can be detected between a input-bundles"
-    (fake/with-fake-http ["https://doi.org/10.5555/12345678" {:status 303 :headers {:location "http://article.com/article/22222-X"}}]
+    (fake/with-fake-http ["https://doi.org/api/handles/10.5555/12345678" (doi-ok "10.5555/12345678")]
       (let [domain-list #{}
             ; We submit the same input bundle twice. 
             input-bundle {:pages [

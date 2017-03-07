@@ -5,7 +5,8 @@
             [clojure.test :refer :all]
             [clojure.data.json :as json]
             [config.core :refer [env]]
-            [org.httpkit.fake :as fake]))
+            [org.httpkit.fake :as fake]
+            [event-data-percolator.test-util :as util]))
 
 
 (def auth-header "Bearer AUTH_TOKEN")

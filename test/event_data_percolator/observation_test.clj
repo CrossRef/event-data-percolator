@@ -1,7 +1,8 @@
 (ns event-data-percolator.observation-test
   "Most of the observation functions are tested via input-bundle-test"
   (:require [event-data-percolator.observation :as observation]
-            [clojure.test :refer :all]))
+            [clojure.test :refer :all]
+            [event-data-percolator.test-util :as util]))
 
 (def valid-candidate
   "A valid candidate that's used against positive and negative tests, so we know it's the same one each time."

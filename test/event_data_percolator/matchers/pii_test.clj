@@ -2,7 +2,8 @@
   (:require [clojure.test :refer :all]
             [clojure.data.json :as json]
             [org.httpkit.fake :as fake]
-            [event-data-percolator.matchers.pii :as pii]))
+            [event-data-percolator.matchers.pii :as pii]
+            [event-data-percolator.test-util :as util]))
 
 (deftest ^:unit match-pii-candidate
   (testing "match-pii-candidate matches valid DOI."
@@ -11,9 +12,7 @@
                            :headers {:content-type "application/json"}
                            :body (json/write-str {:message {:items [{:DOI "10.5555/12345678"}]}})}
 
-                          "https://doi.org/10.5555/12345678"
-                          {:status 303
-                           :headers {:location "http://psychoceramics.labs.crossref.org/10.5555-12345678.html"}}]
+                          "https://doi.org/api/handles/10.5555/12345678" (util/doi-ok "10.5555/12345678")]
       (let [result (pii/match-pii-candidate {:value "S232251141300001-2"} nil)]
         (is (= result {:value "S232251141300001-2", :match "https://doi.org/10.5555/12345678"})))))
 
@@ -33,7 +32,6 @@
                            :headers {:content-type "application/json"}
                            :body (json/write-str {:message {:items [{:DOI "10.5555/12345678"}]}})}
 
-                          "https://doi.org/10.5555/12345678"
-                          {:status 404}]
+                          "https://doi.org/api/handles/10.5555/12345678" (util/doi-not-found)]
       (let [result (pii/match-pii-candidate {:value "S232251141300001-2"} nil)]
         (is (= result {:value "S232251141300001-2", :match nil}))))))

@@ -3,7 +3,8 @@
   (:require [clojure.test :refer :all]
             [clj-time.core :as clj-time]
             [org.httpkit.fake :as fake]
-            [event-data-percolator.action :as action]))
+            [event-data-percolator.action :as action]
+            [event-data-percolator.test-util :as util]))
 
 (deftest create-event-from-match
   (testing "create-event-from-match can build an Event from an Action"
