@@ -11,13 +11,13 @@
 
 (def auth-header "Bearer AUTH_TOKEN")
 
-(deftest env-pre
+(deftest ^:unit env-pre
   (testing "Environment variables set as expected")
   (is (= "https://bus.eventdata.crossref.org" (:event-bus-url-base env)) "Config check for expected event bus endpoint")
   (is (= "memory" (:evidence-storage env)) "Config check EVIDENCE_STORAGE is in-memory")
   (is (= event-data-percolator.input-bundle/evidence-url-prefix "evidence/") "Evidence URL prefix constant should be as expected in later tests."))
 
-(deftest push-output-bundle
+(deftest ^:unit push-output-bundle
     (let [payload
           {:id "EVIDENCE_ID_1234"
             :pages
@@ -99,7 +99,7 @@
             "Evidence storage contains the new evidence record"))))))
 
 
-(deftest push-output-bundle-failure
+(deftest ^:unit push-output-bundle-failure
   (testing "push-output-bundle should retry sending on initial failure"
     ; A single event in this one.
     (let [payload

@@ -5,7 +5,7 @@
             :url "https://opensource.org/licenses/MIT"}
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/core.cache "0.6.5"]
-                 [event-data-common "0.1.16"]
+                 [event-data-common "0.1.18"]
                  [enlive "1.1.6"]
                  [commons-codec/commons-codec "1.10"]
                  [com.cemerick/url "0.1.1"]

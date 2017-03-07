@@ -8,7 +8,7 @@
   [short-doi-url]
   (let [valid-url (try (new URL short-doi-url) (catch Exception _ nil))
         shortdoi-path (when valid-url (.substring (or (.getPath valid-url) "") 1))
-        validated (doi/resolve-doi shortdoi-path)]
+        validated (doi/validate-cached shortdoi-path)]
     (crdoi/normalise-doi validated)))
 
 (defn match-shortdoi-url-candidate

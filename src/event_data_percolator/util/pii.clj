@@ -29,5 +29,5 @@
     ; If so, check that the DOI exists and in the process normalize (don't trust the API's indexed data).
     (when (= 1 (count items))
       (let [possible-doi (get (first items) "DOI")
-            extant-doi (doi/resolve-doi possible-doi)]
+            extant-doi (doi/validate-cached possible-doi)]
         (when extant-doi (crdoi/normalise-doi extant-doi))))))

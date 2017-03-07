@@ -6,7 +6,7 @@
             [event-data-percolator.action :as action]
             [event-data-percolator.test-util :as util]))
 
-(deftest create-event-from-match
+(deftest ^:unit create-event-from-match
   (testing "create-event-from-match can build an Event from an Action"
     (let [source-token "SOURCE_TOKEN"
           subject-url "https://blog.com/1234"
@@ -39,7 +39,7 @@
 
 ; This behaviour allows consumers to tell the difference between DOIs that were matched from an input URL (e.g. landing page)
 ; and those that were referenced directly with the DOI.
-(deftest create-event-from-match-subj-urls
+(deftest ^:unit create-event-from-match-subj-urls
   (let [; A match where there was an input-url
         match1 {:value "http://psychoceramics.labs.crossref.org/12345"
                 :type :landing-page-url

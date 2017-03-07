@@ -6,7 +6,7 @@
 (defn match-plain-doi
   "Return a canonical DOI if this is a valid, extant DOI."
   [plain-doi]
-  (when-let [validated (doi/validate-doi-dropping plain-doi)]
+  (when-let [validated (doi/validate-cached plain-doi)]
     (crdoi/normalise-doi validated)))
 
 (defn match-plain-doi-candidate

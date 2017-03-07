@@ -4,7 +4,9 @@
             [event-data-percolator.matchers.plain-doi :as plain-doi]
             [event-data-percolator.test-util :as util]))
 
-(deftest ^:unit match-plain-doi-candidate
+
+
+(deftest ^:component match-plain-doi-candidate
   (testing "match-plain-doi-candidate matches valid DOI."
     (fake/with-fake-http ["https://doi.org/api/handles/10.5555/12345678" (util/doi-ok "10.5555/12345678")]
       (let [result (plain-doi/match-plain-doi-candidate {:value "10.5555/12345678"} nil)]

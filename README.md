@@ -260,6 +260,14 @@ Each Observation is transformed, retaining its input (in some form) and providin
 
  - `time docker-compose -f docker-compose-unit-tests.yml run -w /usr/src/app test lein test :unit`
 
+### Component tests
+
+These get Redis involved.
+
+ - `time docker-compose -f docker-compose-component-tests.yml run -w /usr/src/app test lein test :component`
+
+
+
 ## Running
 
 There are three processes that should be run. They can be scaled independently. 
@@ -296,6 +304,9 @@ Config via environment variables
  - `EVIDENCE_BUCKET_REGION`
  - `EVIDENCE_URL_BASE` - URL base where evidence registry is hosted, e.g. `https://evidence.eventdata.crossref.org`
  - `EVENT_BUS_URL_BASE` - URL base where the event bus is hosted. e.g. `https://bus.eventdata.crossref.org`
+ - `DOI_CACHE_REDIS_PORT` - Redis connection to store DOI cache. You may want to segregate this
+ - `DOI_CACHE_REDIS_HOST`
+ - `DOI_CACHE_REDIS_DB`
 
 ## Demo
 

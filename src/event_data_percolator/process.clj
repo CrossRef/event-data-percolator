@@ -25,7 +25,6 @@
     (condp = (:evidence-storage env "s3")
       ; Memory for unit testing ONLY.
       "memory" (memory/build)
-      ; Redis can be used for component testing ONLY. Reuse the redis connection.
       "s3" (s3/build (:s3-key env) (:s3-secret env) (:evidence-region-name env) (:evidence-bucket-name env)))))
 
 (defn retrieve-domain-list

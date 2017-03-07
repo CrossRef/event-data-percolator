@@ -9,6 +9,8 @@
             [event-data-percolator.action :as action]
             [event-data-percolator.test-util :as util]))
 
+
+
 (deftest ^:unit id-and-timestamp
   (testing "id-and-timestamp should add timestamp and ID based on the time."
     (clj-time/do-at (clj-time/date-time 2017 5 2)
@@ -60,7 +62,7 @@
   [handle]
   {:status 200 :body (json/write-str {"handle" handle})})
 
-(deftest ^:unit match
+(deftest ^:component match
   (testing "match should transform candidates, but leave structure intact"
     ; DOI resolver consulted to check existence of DOIs.
     (fake/with-fake-http ["https://doi.org/api/handles/10.5555/11111" (util/doi-ok "10.5555/11111")
@@ -207,7 +209,7 @@
                 :actions [":some-dummy-action-object-2"
                           ":some-dummy-action-object-3"]}]})))))
 
-(deftest ^:unit end-to-end-process
+(deftest ^:component end-to-end-process
   (testing "End-to-end processing of Input Bundle should result in an Evidence Record with Events and HTTP tracing."
     ; A single redirect so that we can demonstrate that the trace is captured.
     (fake/with-fake-http ["http://article.com/article/22222" {:status 303 :headers {:location "http://article.com/article/22222-X"}}
@@ -249,7 +251,7 @@
 
 
         
-(deftest ^:unit deduplication-across-bundles
+(deftest ^:component deduplication-across-bundles
   ; This is the most likely case.
   (testing "Duplicates can be detected between a input-bundles"
     (fake/with-fake-http ["https://doi.org/api/handles/10.5555/12345678" (doi-ok "10.5555/12345678")]

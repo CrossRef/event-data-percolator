@@ -2,13 +2,16 @@
   "Convert candidate DOIs into real DOIs."
   (:import [java.net URL URLEncoder URLDecoder])
   (:require [org.httpkit.client :as http]
+            [config.core :refer [env]]
             [robert.bruce :refer [try-try-again]]
             [crossref.util.doi :as crdoi]
+            [event-data-common.storage.store :as store]
+            [event-data-common.storage.redis :as redis]
             [clojure.data.json :as json]))
 
 (def doi-re #"(10\.\d{4,9}/[^\s]+)")
 (def doi-escaped-re #"(10\.\d{4,9}%2[Ff][^\s]+)")
-(def shortdoi-re #"(?:(?:(?:dx.)?doi.org/)|10/)(?:info:doi/|urn:|doi:)?([a-zA-Z0-9]+)")
+(def shortdoi-re #"([a-zA-Z0-9]+)")
 
 (defn try-hostname
   "Try to get a hostname from a URL string."
@@ -64,8 +67,7 @@
 
 (def max-drops 5)
 (defn validate-doi-dropping
-  "For a given suspected DOI or shortDOI, validate that it exists, possibly chopping some of the end off to get there.
-   This is the function you want for validating a questionable DOI."
+  "For a given suspected DOI or shortDOI, validate that it exists, possibly chopping some of the end off to get there."
   [doi]
   (loop [i 0
          doi doi]
@@ -73,7 +75,7 @@
     ; The API will return 200 for e.g. "10.", so don't try and feed it things like that.
     (if (or (= i max-drops)
             (nil? doi)
-            (< (.length doi) i)
+            (< (.length doi) 3)
             ; The shortDOI regular expression is rather liberal, but it is what it is.
             (not (or (re-matches doi-re doi) (re-matches doi-escaped-re doi) (re-matches shortdoi-re doi))))
       ; Stop recursion.
@@ -93,3 +95,41 @@
           clean-doi)
         
         (recur (inc i) (drop-right-char doi))))))
+
+(def redis-db-number (delay (Integer/parseInt (get env :doi-cache-redis-db "0"))))
+
+(def redis-cache-store
+  (delay (redis/build "doi-cache:" (:doi-cache-redis-host env) (Integer/parseInt (:doi-cache-redis-port env)) @redis-db-number)))
+
+; These can be reset by component tests.
+(def success-expiry-seconds
+  "Expire cache 180 days after first retrieved, if it worked."
+  (atom (* 60 60 24 180)))
+
+(def failure-expiry-seconds
+  "Expire cache 30 days after first retrieved, on failure."
+  (atom (* 60 60 24 30)))
+
+; Set for component tests.
+(def skip-cache (:skip-doi-cache env))
+
+(defn validate-cached
+  "Take a suspected DOI or ShortDOI and return the correct full well-formed, extant DOI.
+   This is the function you want."
+  [suspected-doi]
+  (if skip-cache
+    (validate-doi-dropping suspected-doi)
+    (if-let [cached-result (store/get-string @redis-cache-store suspected-doi)]
+      (if (= cached-result "NULL")
+          nil
+          cached-result)
+      (if-let [result (validate-doi-dropping suspected-doi)]
+        ; success
+        (do
+          (redis/set-string-and-expiry-seconds @redis-cache-store suspected-doi @success-expiry-seconds result)
+          result)
+
+        ; failure
+        (do
+          (redis/set-string-and-expiry-seconds @redis-cache-store suspected-doi @failure-expiry-seconds "NULL")
+          nil)))))

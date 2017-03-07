@@ -23,7 +23,7 @@
   (try
     (let [params (-> url cemerick-url/query->map clojure.walk/keywordize-keys)
           doi-like-values (keep (fn [[k v]] (when (re-matches whole-doi-re v) v)) params)
-          extant (keep doi/resolve-doi-maybe-escaped doi-like-values)]
+          extant (keep doi/validate-cached doi-like-values)]
       (-> extant first normalize-doi-if-exists))
 
     ; Some things look like URLs but turn out not to be.
@@ -53,7 +53,7 @@
 
         candidates (distinct (concat last-slash first-slash semicolon hashchar question-mark amp-mark))
 
-        extant (keep doi/validate-doi-dropping candidates)]
+        extant (keep doi/validate-cached candidates)]
     (-> extant first normalize-doi-if-exists)))
 
 (defn try-pii-from-url-text
@@ -114,7 +114,7 @@
           interested-values (distinct (concat interested-attr-values interested-text-values))
 
           ; Try to normalize by removing recognised prefixes, then resolve
-          extant (keep (comp doi/resolve-doi-maybe-escaped crdoi/non-url-doi) interested-values)]
+          extant (keep (comp doi/validate-cached crdoi/non-url-doi) interested-values)]
   
       (-> extant first normalize-doi-if-exists))))
 

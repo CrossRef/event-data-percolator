@@ -5,7 +5,9 @@
             [event-data-percolator.matchers.doi-url :as doi-url]
             [event-data-percolator.test-util :as util]))
 
-(deftest ^:unit match-doi-url-candidate
+
+
+(deftest ^:component match-doi-url-candidate
   (testing "match-doi-url-candidate matches valid DOI."
     (fake/with-fake-http ["https://doi.org/api/handles/10.5555/12345678" {:status 200 :body (json/write-str {"handle" "10.5555/12345678"})}]
       (let [result (doi-url/match-doi-url-candidate {:value "https://doi.org/10.5555/12345678"} nil)]
