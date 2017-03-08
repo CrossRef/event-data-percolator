@@ -1,6 +1,17 @@
 (ns event-data-percolator.util.web
-  (:require [org.httpkit.client :as http])
-  (:import [org.httpkit ProtocolException]))
+  "Web fetching, Robot respecting."
+  (:require [org.httpkit.client :as http]
+            [clojure.tools.logging :as log]
+            [config.core :refer [env]]
+            [event-data-common.storage.redis :as redis]
+            [event-data-common.storage.store :as store]
+            [org.httpkit.client :as client]
+            [clojure.core.memoize :as memo]
+            [event-data-common.status :as status]
+            [event-data-percolator.consts])
+  (:import [java.net URL]
+           [crawlercommons.robots SimpleRobotRulesParser BaseRobotRules]
+           [org.httpkit ProtocolException]))
 
 (def redirect-depth 4)
 
@@ -11,7 +22,7 @@
   ([url trace-atom]
     (try
       (loop [headers {"Referer" "https://eventdata.crossref.org"
-                        "User-Agent" "CrossrefEventDataBot (eventdata@crossref.org)"}
+                      "User-Agent" event-data-percolator.consts/user-agent-for-robots}
                depth 0
                url url]
           (if (> depth redirect-depth)
@@ -61,5 +72,59 @@
                         (do (swap! trace-atom concat [{:error :unknown :exception-message (.getMessage exception) :url url}])
                          nil))))))
 
+(def redis-db-number (delay (Integer/parseInt (get env :robots-cache-redis-db "0"))))
 
+(def redis-cache-store
+  (delay (redis/build "robot-cache:" (:robots-cache-redis-host env) (Integer/parseInt (:robots-cache-redis-port env)) @redis-db-number)))
 
+; These can be reset by component tests.
+(def expiry-seconds
+  "Expire cache 7 days after first retrieved."
+  (atom (* 60 60 24 7)))
+
+(defn fetch-robots-cached
+  "Return robots file. Return nil if it doesn't exist."
+  [robots-file-url]
+  (if-let [cached-result (store/get-string @redis-cache-store robots-file-url)]
+    (if (= cached-result "NULL")
+        nil
+        cached-result)
+    (let [result (:body (fetch robots-file-url))]
+      (redis/set-string-and-expiry-seconds @redis-cache-store robots-file-url @expiry-seconds (or result "NULL"))
+      result)))
+
+(def parser (new SimpleRobotRulesParser))
+
+(defn parse-rules
+  [robots-file-url file-content]
+  (.parseContent parser robots-file-url (.getBytes file-content "UTF-8") "text/plain" event-data-percolator.consts/user-agent))
+
+(defn get-rules
+  "Get a Robot Rules object for the given robots.txt file url. Or nil if there aren't any."
+  [robots-file-url]
+  (when-let [file-content (fetch-robots-cached robots-file-url)]
+    (parse-rules robots-file-url file-content)))
+
+; The robots files are cached in Redis, but must be re-parsed. Keep track of the thousand-odd most visited sites.
+(def get-rules-cached
+  (memo/lu get-rules :lu/threshold 1024))
+
+(defn allowed?
+  [url-str]
+  (let [robots-file-url (new URL (new URL url-str) "/robots.txt")
+        rules (get-rules-cached (str robots-file-url))]
+    ; If there's no robots file, proceed.
+    (if-not rules
+      true
+      (.isAllowed rules url-str))))
+
+(defn fetch-respecting-robots
+  [url trace-atom]
+
+  (let [allowed (allowed? url)]
+    (if-not allowed
+      (do
+        (when trace-atom
+          (swap! trace-atom concat [{:error :robots-forbidden :url url}]))
+        nil)
+      (fetch url trace-atom))))

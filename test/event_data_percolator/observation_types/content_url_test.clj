@@ -18,17 +18,17 @@
 
 (deftest ^:unit process-content-url-observation
   (testing "process-content-url-observation should set error when URL isn't allowed"
-    (let [result (content-url/process-content-url-observation {:input-url nil} #{"example.com"})]
+    (let [result (content-url/process-content-url-observation {:input-url nil} #{"example.com"} (atom []))]
       (is (:error result))))
 
   (testing "process-content-url-observation should set error when URL can't be retrieved"
     (fake/with-fake-http ["http://cannot-be-retrieved.com/abc" {:status 404}]
-      (let [result (content-url/process-content-url-observation {:input-url "http://cannot-be-retrieved.com/abc"} #{"cannot-be-retrieved.com"})]
+      (let [result (content-url/process-content-url-observation {:input-url "http://cannot-be-retrieved.com/abc"} #{"cannot-be-retrieved.com"} (atom []))]
         (is (:error result)))))
 
   (testing "process-content-url-observation should set candidates on match where there are matches"
     (fake/with-fake-http ["http://can-be-retrieved.com/abc" "Webpage content 10.5555/12345678"]
-      (let [result (content-url/process-content-url-observation {:input-url "http://can-be-retrieved.com/abc"} #{"can-be-retrieved.com"})]
+      (let [result (content-url/process-content-url-observation {:input-url "http://can-be-retrieved.com/abc"} #{"can-be-retrieved.com"} (atom []))]
         (is (nil? (:error result)))
 
         ; Simplest possible thing that returns candidates (actually passed all the way through to plain-text).

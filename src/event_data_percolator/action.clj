@@ -44,10 +44,10 @@
   "Step Process all the observations of an Action to generate Candidates. Collect Candidates.
    If it's a duplicate action, the candidate extractor won't run.
    Step 4 from docs."
-  [action domain-set]
+  [action domain-set  web-trace-atom]
   (let [observations (:observations action)
         duplicate? (:duplicate action)
-        processed-observations (map #(observation/process-observation % duplicate? domain-set) observations)]
+        processed-observations (map #(observation/process-observation % duplicate? domain-set web-trace-atom) observations)]
     (-> action
         (assoc :processed-observations processed-observations)
         (dissoc :observations))))

@@ -40,7 +40,7 @@
 
 (defn process-plaintext-content-observation
   "Process an observation of type plaintext-content."
-  [observation landing-page-domain-set]
+  [observation landing-page-domain-set web-trace-atom]
   (let [input (:input-content observation "")
         possible-urls (possible-urls-from-text input)
 

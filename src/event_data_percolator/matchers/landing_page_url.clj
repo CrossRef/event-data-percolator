@@ -5,6 +5,9 @@
             [crossref.util.doi :as crdoi]
             [event-data-percolator.util.doi :as doi]
             [event-data-percolator.util.pii :as pii]
+            [event-data-common.storage.store :as store]
+            [event-data-common.storage.redis :as redis]
+            [config.core :refer [env]]
             [robert.bruce :refer [try-try-again]]
             [cemerick.url :as cemerick-url])
   (:import [java.net URL]
@@ -120,7 +123,45 @@
 
 (defn try-fetched-page-metadata
   [url web-trace-atom]
-  (-> url (web/fetch web-trace-atom) :body try-fetched-page-metadata-content))
+  (-> url (web/fetch-respecting-robots web-trace-atom) :body try-fetched-page-metadata-content))
+
+(def redis-db-number (delay (Integer/parseInt (get env :landing-page-cache-redis-db "0"))))
+
+(def redis-cache-store
+  (delay (redis/build "landing-page-cache:" (:landing-page-cache-redis-host env) (Integer/parseInt (:landing-page-cache-redis-port env)) @redis-db-number)))
+
+; These can be reset by component tests.
+(def success-expiry-seconds
+  "Expire cache 30 days after first retrieved, if it worked."
+  (atom (* 60 60 24 30)))
+
+(def failure-expiry-seconds
+  "Expire cache 10 days after first retrieved, on failure."
+  (atom (* 60 60 24 10)))
+
+; Set for component tests.
+(def skip-cache (:skip-landing-page-cache env))
+ 
+; This one function is responsible for all outgoing web traffic. Cache its results.
+; Other results are derived algorithmically, so there's no use caching those.
+(defn try-fetched-page-metadata-cached
+  [url web-trace-atom]
+  (if skip-cache
+    (try-fetched-page-metadata url web-trace-atom)
+    (if-let [cached-result (store/get-string @redis-cache-store url)]
+      (if (= cached-result "NULL")
+          nil
+          cached-result)
+      (if-let [result (try-fetched-page-metadata url web-trace-atom)]
+        ; success
+        (do
+          (redis/set-string-and-expiry-seconds @redis-cache-store url @success-expiry-seconds result)
+          result)
+
+        ; failure
+        (do
+          (redis/set-string-and-expiry-seconds @redis-cache-store url @failure-expiry-seconds "NULL")
+          nil)))))
 
 (defn unchunk [s]
   (when (seq s)
@@ -136,7 +177,7 @@
     (try-from-get-params url)
     (try-doi-from-url-text url)
     (try-pii-from-url-text url)
-    (try-fetched-page-metadata url web-trace-atom)))
+    (try-fetched-page-metadata-cached url web-trace-atom)))
 
 (defn match-landing-page-url-candidate
   [candidate web-trace-atom]

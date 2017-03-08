@@ -38,11 +38,11 @@
 
 (defn unrecognised-observation-type
   "An observation processor for unrecognised types. Just pass through and set unrecognised flag."
-  [observation domain-list]
+  [observation domain-list web-trace-atom]
   (assoc observation :error :unrecognised-observation-type))
 
 (defn process-observation
-  [observation duplicate? domain-set]
+  [observation duplicate? domain-set web-trace-atom]
   "Process an observation, extracting candidates unless it's part of a duplicate action."
   ; Choose a dispatch function or pass-through if unrecognised-observation-type.
   (let [sensitive? (:sensitive observation)
@@ -50,10 +50,10 @@
         ; How to process this? If it's a duplicate, pass through and don't do anything.
         ; Otherwise choose the right processing function, or 'unrecognised'.
         f (if duplicate?
-              (fn [observation _] observation)
+              (fn [observation _ _] observation)
               (process-types typ unrecognised-observation-type))
         
-        processed (f observation domain-set)
+        processed (f observation domain-set web-trace-atom)
 
         ; Now assign common hash, and remove sensitive info if required.
         result (postflight-process processed sensitive?)]

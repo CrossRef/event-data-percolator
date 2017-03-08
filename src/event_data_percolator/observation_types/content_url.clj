@@ -17,14 +17,14 @@
     (boolean valid)))
 
 (defn process-content-url-observation
-  [observation landing-page-domain-set]
+  [observation landing-page-domain-set web-trace-atom]
   (let [input (:input-url observation "")
         valid? (url-valid? input)
-        content (when valid? (web/fetch input))]
+        content (when valid? (web/fetch-respecting-robots input web-trace-atom))]
     (if-not content
       (assoc observation :error :failed-fetch-url)
       (let [; Attach content then pass the thing to the HTML processor for heavy lifting.
             new-observation (assoc observation :input-content (:body content))
-            html-observations (html/process-html-content-observation new-observation landing-page-domain-set)]
+            html-observations (html/process-html-content-observation new-observation landing-page-domain-set web-trace-atom)]
         html-observations))))
 

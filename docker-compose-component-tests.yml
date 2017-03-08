@@ -21,6 +21,13 @@ services:
      - DOI_CACHE_REDIS_HOST=redis
      - DOI_CACHE_REDIS_DB=5
      - SKIP_DOI_CACHE=TRUE
+     - LANDING_PAGE_CACHE_REDIS_PORT=6379
+     - LANDING_PAGE_CACHE_REDIS_HOST=redis
+     - LANDING_PAGE_CACHE_REDIS_DB=6
+     - SKIP_LANDING_PAGE_CACHE=TRUE
+     - ROBOTS_CACHE_REDIS_PORT=6379
+     - ROBOTS_CACHE_REDIS_HOST=redis
+     - ROBOTS_CACHE_REDIS_DB=7
     depends_on:
      - redis
     command: "lein test :unit"

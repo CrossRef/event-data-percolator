@@ -25,13 +25,13 @@
 
 (defn process-html-content-observation
   "Process an observation of type html-content."
-  [observation landing-page-domain-set]
+  [observation landing-page-domain-set web-trace-atom]
   (let [input (:input-content observation "")
         candidate-urls (links-from-html input)
         text (plaintext-from-html input)
 
         ; Get all the candidates from the plaintext view.
-        plaintext-candidates (:candidates (plaintext/process-plaintext-content-observation (assoc observation :input-content text) landing-page-domain-set))
+        plaintext-candidates (:candidates (plaintext/process-plaintext-content-observation (assoc observation :input-content text) landing-page-domain-set web-trace-atom))
 
         ; Then merge new candidates.
         candidates (concat plaintext-candidates

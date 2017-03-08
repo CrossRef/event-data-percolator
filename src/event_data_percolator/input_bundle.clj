@@ -85,9 +85,9 @@
 (defn candidates
   "Produce candidates in input bundle.
   Step 4 in docs."
-  [bundle domain-set]
+  [bundle domain-set web-trace-atom]
   (log/info "Candidates in " (:id bundle))
-  (map-actions #(action/process-observations-candidates % domain-set) bundle))
+  (map-actions #(action/process-observations-candidates % domain-set web-trace-atom) bundle))
 
 (defn match
   "Match candidates in input bundle.
@@ -113,7 +113,7 @@
             bundle
             id-and-timestamp
             dedupe-actions
-            (candidates domain-set)
+            (candidates domain-set web-trace-atom)
             (match web-trace-atom)
             (assoc-in [:percolator :artifacts :domain-set-artifact-version] domain-artifact-version)
             (assoc-in [:percolator :software-version] percolator-version)

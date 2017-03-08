@@ -6,28 +6,28 @@
 
 (deftest ^:unit process-plaintext-content-observation
   (testing "Plain DOIs can be extracted from text"
-    (let [result (plaintext/process-plaintext-content-observation {:type "html" :input-content "the quick brown 10.5555/1111 jumps"} domain-set)]
+    (let [result (plaintext/process-plaintext-content-observation {:type "html" :input-content "the quick brown 10.5555/1111 jumps"} domain-set (atom []))]
       (is (= result {:type "html"
                      :input-content "the quick brown 10.5555/1111 jumps"
                      :candidates [{:value "10.5555/1111" :type :plain-doi}]})
           "One plain DOI candidate returned.")))
  
   (testing "ShortDOI URL DOIs can be extracted from text"
-    (let [result (plaintext/process-plaintext-content-observation {:type "html" :input-content "this is a shortdoi http://doi.org/abcd"} domain-set)]
+    (let [result (plaintext/process-plaintext-content-observation {:type "html" :input-content "this is a shortdoi http://doi.org/abcd"} domain-set (atom []))]
       (is (= result {:type "html"
                      :input-content "this is a shortdoi http://doi.org/abcd"
                      :candidates [{:value "http://doi.org/abcd" :type :shortdoi-url}]})
           "One ShortDOI URL candidate found when unlinked")))
 
   (testing "PIIs can be extracted from text"
-    (let [result (plaintext/process-plaintext-content-observation {:type "html" :input-content "this is my PII S232251141300001-2 there"} domain-set)]
+    (let [result (plaintext/process-plaintext-content-observation {:type "html" :input-content "this is my PII S232251141300001-2 there"} domain-set (atom []))]
       (is (= result {:type "html"
                      :input-content "this is my PII S232251141300001-2 there"
                      :candidates [{:value "S232251141300001-2" :type :pii}]})
           "PII candidate found in text")))
 
   (testing "Landing Page URLs can be extracted from text"
-    (let [result (plaintext/process-plaintext-content-observation {:type "html" :input-content "one two three http://example.com/four five http://ignore.com/four"} domain-set)]
+    (let [result (plaintext/process-plaintext-content-observation {:type "html" :input-content "one two three http://example.com/four five http://ignore.com/four"} domain-set (atom []))]
       (is (= result {:type "html"
                      :input-content "one two three http://example.com/four five http://ignore.com/four"
                      :candidates [{:value "http://example.com/four" :type :landing-page-url}]})

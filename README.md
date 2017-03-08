@@ -307,6 +307,12 @@ Config via environment variables
  - `DOI_CACHE_REDIS_PORT` - Redis connection to store DOI cache. You may want to segregate this
  - `DOI_CACHE_REDIS_HOST`
  - `DOI_CACHE_REDIS_DB`
+ - `LANDING_PAGE_CACHE_REDIS_PORT` - Redis connection to store Landing page -> DOI cache. You may want to segregate this
+ - `LANDING_PAGE_CACHE_REDIS_HOST`
+ - `LANDING_PAGE_CACHE_REDIS_DB`
+ - `ROBOTS_CACHE_REDIS_PORT` - Redis connection to store robots.txt cache. You may want to segregate this
+ - `ROBOTS_CACHE_REDIS_HOST`
+ - `ROBOTS_CACHE_REDIS_DB`
 
 ## Demo
 

@@ -7,6 +7,7 @@
                  [org.clojure/core.cache "0.6.5"]
                  [event-data-common "0.1.18"]
                  [enlive "1.1.6"]
+                 [org.clojure/core.memoize "0.5.8"]
                  [commons-codec/commons-codec "1.10"]
                  [com.cemerick/url "0.1.1"]
                  [prismatic/schema "1.1.3"]
@@ -32,13 +33,15 @@
                  [redis.clients/jedis "2.8.0"]
                  [metosin/scjsv "0.4.0"]
                  [com.amazonaws/aws-java-sdk "1.11.61"]
-
+                 [com.github.crawler-commons/crawler-commons "0.7"]
+                 
                  ; Required for AWS, but not fetched.
                  [org.apache.httpcomponents/httpclient "4.5.3"] ; Reqired for TLS SNI.
                  [org.apache.commons/commons-io "1.3.2"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.apache.logging.log4j/log4j-core "2.6.2"]
-                 [org.slf4j/slf4j-simple "1.7.21"]]
+                 [org.slf4j/slf4j-simple "1.7.21"]
+]
   :main ^:skip-aot event-data-percolator.core
   :target-path "target/%s"
   :plugins [[jonase/eastwood "0.2.3"]

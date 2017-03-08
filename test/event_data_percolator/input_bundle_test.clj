@@ -41,7 +41,7 @@
                                  :input-url "http://doi.org/10.5555/22222"}]}]}]}
             
             ; Supply empty domain list as we're not testing landing page extraction.
-            result (input-bundle/candidates input-bundle #{})]
+            result (input-bundle/candidates input-bundle #{} (atom []))]
         (is (= result {:pages [{:actions
                                 [{:unrelated :junk
                                   :url "http://example.com"
