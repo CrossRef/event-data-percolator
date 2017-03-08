@@ -80,7 +80,8 @@
             (log/error "Exception processing queue message:" (.getMessage ex)))))
 
     (catch JedisConnectionException ex
-      (log/info "Timeout getting queue, re-starting."))
+      (log/info "Timeout getting queue, re-starting.")
+      (Thread/sleep 10000))
     (catch Exception ex
       (log/error "Unhandled exception in queue processing:" (.getMessage ex))))))
 

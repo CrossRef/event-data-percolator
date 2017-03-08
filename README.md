@@ -313,6 +313,7 @@ Config via environment variables
  - `ROBOTS_CACHE_REDIS_PORT` - Redis connection to store robots.txt cache. You may want to segregate this
  - `ROBOTS_CACHE_REDIS_HOST`
  - `ROBOTS_CACHE_REDIS_DB`
+ - `PROCESS_CONCURRENCY` - number of threads when processing. Default is 10.
 
 ## Demo
 

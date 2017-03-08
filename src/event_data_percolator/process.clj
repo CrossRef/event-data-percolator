@@ -4,6 +4,7 @@
             [event-data-percolator.input-bundle :as input-bundle]
             [event-data-percolator.action :as action]
             [clojure.tools.logging :as log]
+            [clojure.core.async :refer [thread go alts! buffer chan <!! >!! >! <! timeout alts!! close!]]
             [config.core :refer [env]]
             [event-data-common.backoff :as backoff]
             [event-data-common.storage.s3 :as s3]
@@ -54,10 +55,12 @@
   (let [[domain-list-artifact-version domain-list] (cached-domain-list)]
     {:auth-header auth-header :payload (input-bundle/process payload domain-list-artifact-version domain-list)}))
 
+(def process-concurrency
+  (delay (Integer/parseInt (:process-concurrency env "10"))))
+
 (defn run-process
   "Run processing input bundles from the input queue, place on output queue. Block."
   []
-  
   (log/info "Registering shutdown hook...")
   (.addShutdownHook
       (Runtime/getRuntime)
@@ -78,8 +81,15 @@
 
   (log/info "Start process queue")
   (queue/start-heartbeat)
-  (queue/process-queue input-bundle-queue-name process-input-bundle output-bundle-queue-name))
+  (let [threads (map (fn [thread-number]
+                       (log/info "Starting processing thread number" thread-number)
+                       (thread (queue/process-queue input-bundle-queue-name process-input-bundle output-bundle-queue-name)))
+                     (range @process-concurrency))]
 
+    ; Wait for any threads to exit. They shoudln't.
+    (alts!! threads)
+
+    (log/warn "One thread died, exiting.")))
 
 (def retries
   "Try to deliver this many times downstream."
