@@ -57,6 +57,25 @@
 (defn run-process
   "Run processing input bundles from the input queue, place on output queue. Block."
   []
+  
+  (log/info "Registering shutdown hook...")
+  (.addShutdownHook
+      (Runtime/getRuntime)
+      (new Thread
+        (try
+        (fn []
+          (log/info "Shutdown hook started")
+          (let [stopped-signal (promise)]
+            ; Pass the promise to queue processing. 
+            (reset! queue/stopped-signal stopped-signal)
+
+            ; It will deliver when it's ready.
+            (log/info "Waiting for queue processing to stop...")
+            (deref stopped-signal)
+            (log/info "Queue processing happily stopped.")
+            (log/info "Shutdown hook finished gracefully.")))
+        (catch Exception ex (.printStackTrace ex)))))
+
   (log/info "Start process queue")
   (queue/start-heartbeat)
   (queue/process-queue input-bundle-queue-name process-input-bundle output-bundle-queue-name))
@@ -114,9 +133,29 @@
 
   true)
 
+
+
 (defn run-push
   "Push output bundles from output queue. Block."
   []
+  ; Shutdown hook stops queue ingestion, waits for the processing to finish.
+  ; Of course, it could just be SIGKILLED, which would mean we had left-over processing in the working queue.
+  (log/info "Registering shutdown hook...")
+  (.addShutdownHook
+      (Runtime/getRuntime)
+      (new Thread
+        (fn []
+          (log/info "Shutdown hook started")
+          (let [stopped-signal (promise)]
+            ; Pass the promise to queue processing. 
+            (reset! queue/stopped-signal stopped-signal)
+
+            ; It will deliver when it's ready.
+            (log/info "Waiting for queue processing to stop...")
+            (deref stopped-signal)
+            (log/info "Queue processing happily stopped.")
+            (log/info "Shutdown hook finished gracefully.")))))
+
   (queue/start-heartbeat)
   (log/info "Start push queue")
   (queue/process-queue output-bundle-queue-name push-output-bundle nil))

@@ -13,6 +13,11 @@
            [redis.clients.jedis.exceptions JedisConnectionException])
   (:gen-class))
 
+
+; To co-ordinate graceful shutdown. Set to an empty promise. 
+; When non-nil, queue should stop and deliver promise to signal it's over.
+(def stopped-signal (atom nil))
+
 (def redis-prefix
   "Unique prefix applied to every key."
   "edb:q")
@@ -83,7 +88,15 @@
   [queue-name function done-queue-name]
   (loop []
     (process-queue-item queue-name function done-queue-name)
-    (recur)))
+    ; Stop signal is normally an atom containing nil.
+    ; When we get the shutdown signal, set this to a promise. Deliver the promise here to say that we've happily stopped.
+    ; If we get a timeout during `process-queue-item`, we're either waiting for a queue item to come in (no harm done) or
+    ; processing took too long and was skilled.
+    (if-not @stopped-signal
+      (recur)
+      (do
+        (log/info "Queue stopped")
+        (deliver @stopped-signal true)))))
 
 (def schedule-pool (at-at/mk-pool))
 
@@ -99,4 +112,3 @@
           (status/send! "percolator" "queue-heartbeat" "tick" 1))
          (catch Exception e (log/error "Error with Redis queue heartbeat:" (.getMessage e))))
     schedule-pool))
-
