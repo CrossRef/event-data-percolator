@@ -26,7 +26,7 @@
         input-handle (if is-short-doi
                           (str "10/" doi)
                           doi)
-        response @(try-try-again {:sleep 500 :tries 2}
+        response @(try-try-again {:sleep 5000 :tries 2}
                     #(http/get
                       (str "https://doi.org/api/handles/" input-handle)
                       {:as :text}))
@@ -46,8 +46,8 @@
   (if
     ; %2F is the URL-encoded slash which is present in every DOI.
     (and original (re-find #"%2[Ff]" original))
-    (let [decoded (URLDecoder/decode original "UTF-8")]
-      (if-let [resolved (resolve-doi decoded)]
+    (let [decoded (try (URLDecoder/decode original "UTF-8") (catch java.lang.IllegalArgumentException _ nil))]
+      (if-let [resolved (when decoded (resolve-doi decoded))]
         resolved
         (resolve-doi original)))
     (resolve-doi original)))

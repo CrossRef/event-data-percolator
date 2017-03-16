@@ -8,8 +8,10 @@
             [clj-time.coerce :as clj-time-coerce]
             [event-data-common.storage.redis :as redis]
             [overtone.at-at :as at-at]
+            [robert.bruce :refer [try-try-again]]
             [event-data-common.status :as status])
   (:import [java.net URL MalformedURLException InetAddress]
+           [java.io StringWriter PrintWriter]
            [redis.clients.jedis.exceptions JedisConnectionException])
   (:gen-class))
 
@@ -58,7 +60,8 @@
                       "working queue length now" (.llen redis-connection working-queue-key-name))
 
             (let [item (json/read-str item-str :key-fn keyword)
-                  result (function item)
+                  ; Something might fail. Give it a chance to re-try immediately.
+                  result (try-try-again {:sleep 5000 :tries 3} (function item))
                   result-json (when result (json/write-str result))]
               
               (when-not result
@@ -77,7 +80,10 @@
                     (.rpush redis-connection done-queue-name (into-array [result-json])))))))
 
           (catch Exception ex
-            (log/error "Exception processing queue message:" (.getMessage ex)))))
+            (with-open [writer (new StringWriter)
+                        print-writer (new PrintWriter writer)]
+              (.printStackTrace ex print-writer)
+              (log/error "Exception processing queue message:" (.toString print-writer))))))
 
     (catch JedisConnectionException ex
       (log/info "Timeout getting queue, re-starting.")

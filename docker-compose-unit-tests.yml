@@ -14,5 +14,8 @@ services:
      - REDIS_HOST=redis
      - REDIS_PORT=6379
      - REDIS_DB=0
+     - SKIP_DOI_CACHE=TRUE
+     - SKIP_LANDING_PAGE_CACHE=TRUE
+     - SKIP_ROBOTS_CACHE=TRUE
     command: "lein test :unit"
 

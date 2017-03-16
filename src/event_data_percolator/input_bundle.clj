@@ -68,6 +68,7 @@
   (let [now (clj-time/now)
         id (str
              (clj-time-format/unparse date-format now)
+             "-" (:source-id bundle) "-"
              (UUID/randomUUID))
         now-str (str now)]
     (assoc bundle

@@ -14,13 +14,14 @@
 (deftest ^:unit id-and-timestamp
   (testing "id-and-timestamp should add timestamp and ID based on the time."
     (clj-time/do-at (clj-time/date-time 2017 5 2)
-      (let [bundle {:some :thing}
+      (let [bundle {:some :thing :source-id "my-source"}
             result (input-bundle/id-and-timestamp bundle)]
         (is (:some result) "Original bundle data preserved.")
         (is (:id result) "ID applied")
         (is (:timestamp result) "Timestamp applied")
         (is (.startsWith (:id result) "20170502") "Should start with date prefix.")
-        (is (= (.length (:id result)) 44) "Should have trailing UUID")
+        (is (= (.length (:id result)) 55) "Should have trailing UUID")
+        (is (.contains (:id result) "my-source") "Should have contain source ID")
         (is (:url result) "URL should be set")
         (is (= (:timestamp result) "2017-05-02T00:00:00.000Z") "Should have full ISO8601 timestamp.")))))
 

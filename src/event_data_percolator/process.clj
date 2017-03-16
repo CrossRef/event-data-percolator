@@ -14,7 +14,8 @@
             [clojure.core.memoize :as memo]
             [clojure.data.json :as json]
             [org.httpkit.client :as client]
-            [event-data-common.status :as status]))
+            [event-data-common.status :as status]
+            [robert.bruce :refer [try-try-again]]))
 
 (def input-bundle-queue-name "input-bundle")
 (def output-bundle-queue-name "output-bundle")

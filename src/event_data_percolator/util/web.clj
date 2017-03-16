@@ -15,6 +15,8 @@
 
 (def redirect-depth 4)
 
+(def skip-cache (:skip-robots-cache env))
+
 (defn fetch
   "Fetch the content at a URL as a string, following redirects and accepting cookies.
    Take an optional atom to which sequences of urls and status codes will be appended."
@@ -72,10 +74,8 @@
                         (do (swap! trace-atom concat [{:error :unknown :exception-message (.getMessage exception) :url url}])
                          nil))))))
 
-(def redis-db-number (delay (Integer/parseInt (get env :robots-cache-redis-db "0"))))
-
 (def redis-cache-store
-  (delay (redis/build "robot-cache:" (:robots-cache-redis-host env) (Integer/parseInt (:robots-cache-redis-port env)) @redis-db-number)))
+  (delay (redis/build "robot-cache:" (:robots-cache-redis-host env) (Integer/parseInt (:robots-cache-redis-port env)) (Integer/parseInt (:robots-cache-redis-db env "0")))))
 
 ; These can be reset by component tests.
 (def expiry-seconds
@@ -84,14 +84,16 @@
 
 (defn fetch-robots-cached
   "Return robots file. Return nil if it doesn't exist."
-  [robots-file-url]
-  (if-let [cached-result (store/get-string @redis-cache-store robots-file-url)]
-    (if (= cached-result "NULL")
-        nil
-        cached-result)
-    (let [result (:body (fetch robots-file-url))]
-      (redis/set-string-and-expiry-seconds @redis-cache-store robots-file-url @expiry-seconds (or result "NULL"))
-      result)))
+  [robots-file-url]  
+  (if skip-cache
+    (:body (fetch robots-file-url))
+    (if-let [cached-result (store/get-string @redis-cache-store robots-file-url)]
+      (if (= cached-result "NULL")
+          nil
+          cached-result)
+      (let [result (:body (fetch robots-file-url))]
+        (redis/set-string-and-expiry-seconds @redis-cache-store robots-file-url @expiry-seconds (or result "NULL"))
+        result))))
 
 (def parser (new SimpleRobotRulesParser))
 

@@ -28,6 +28,7 @@ services:
      - ROBOTS_CACHE_REDIS_PORT=6379
      - ROBOTS_CACHE_REDIS_HOST=redis
      - ROBOTS_CACHE_REDIS_DB=7
+     - SKIP_ROBOTS_CACHE=TRUE
     depends_on:
      - redis
     command: "lein test :unit"
