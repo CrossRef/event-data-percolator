@@ -22,6 +22,7 @@
    Take an optional atom to which sequences of urls and status codes will be appended."
   ([url] (fetch url nil))
   ([url trace-atom]
+    (status/add! "percolator" "web-fech" "request" 1)
     (try
       (loop [headers {"Referer" "https://eventdata.crossref.org"
                       "User-Agent" event-data-percolator.consts/user-agent-for-robots}
@@ -43,6 +44,9 @@
                                              :error (cond
                                                (instance? org.httpkit.client.TimeoutException error) :timeout-error
                                                :default :unknown-error)}])))
+              (if (#{200 401} (:status result))
+                (status/add! "percolator" "web-fech" "ok" 1)
+                (status/add! "percolator" "web-fech" "fail" 1))
 
               (condp = (:status result)
                 200 result
@@ -114,11 +118,15 @@
 (defn allowed?
   [url-str]
   (let [robots-file-url (new URL (new URL url-str) "/robots.txt")
-        rules (get-rules-cached (str robots-file-url))]
-    ; If there's no robots file, proceed.
-    (if-not rules
-      true
-      (.isAllowed rules url-str))))
+        rules (get-rules-cached (str robots-file-url))
+        ; If there's no robots file, proceed.
+        allowed (if-not rules true (.isAllowed rules url-str))]
+
+    (if allowed 
+      (status/add! "percolator" "robot" "allowed" 1)
+      (status/add! "percolator" "robot" "not-allowed" 1))
+
+    allowed))
 
 (defn fetch-respecting-robots
   [url trace-atom]

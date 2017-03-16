@@ -68,7 +68,7 @@
           
                       (let [item (json/read-str item-str :key-fn keyword)
                             ; Something might fail. Give it a chance to re-try immediately.
-                            result (try-try-again {:sleep 5000 :tries 3} (function item))
+                            result (try-try-again {:sleep 5000 :tries 3} #(function item))
                             result-json (when result (json/write-str result))]
                         
                         (when-not result
@@ -88,12 +88,14 @@
                               (.rpush redis-connection done-queue-name (into-array [result-json]))))))))
 
           (catch Exception ex
-            (with-open [string-writer (new StringWriter)
-                        print-writer (new PrintWriter string-writer)]
-              ; Send to string for logging and STDERR.
-              (.printStackTrace ex print-writer)
-              (.printStackTrace ex)
-              (log/error "Exception processing queue message:" (.toString string-writer))))))
+            (when-not ex (log/error "Exception processing queue message but got nil exception."))
+            (when ex
+              (with-open [string-writer (new StringWriter)
+                          print-writer (new PrintWriter string-writer)]
+                ; Send to string for logging and STDERR.
+                (.printStackTrace ex print-writer)
+                (.printStackTrace ex)
+                (log/error "Exception processing queue message:" (.toString string-writer)))))))
 
     (catch JedisConnectionException ex
       (log/info "Timeout getting queue, re-starting.")

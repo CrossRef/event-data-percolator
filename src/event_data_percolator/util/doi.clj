@@ -7,6 +7,8 @@
             [crossref.util.doi :as crdoi]
             [event-data-common.storage.store :as store]
             [event-data-common.storage.redis :as redis]
+            [clojure.tools.logging :as log]
+            [event-data-common.status :as status]
             [clojure.data.json :as json]))
 
 (def doi-re #"(10\.\d{4,9}/[^\s]+)")
@@ -21,6 +23,8 @@
 (defn resolve-doi
   "Resolve and validate a DOI or ShortDOI, expressed as not-URL form. May or may not be URLEscaped. Return the DOI."
   [doi]
+
+  (status/add! "percolator" "doi-api" "request" 1)
   (let [is-short-doi (not (re-matches #"^10\.\d+/.*" doi))
         ; if it looks like a full DOI, look that up. It it looks like a handle, different syntax.
         input-handle (if is-short-doi
@@ -35,9 +39,14 @@
                (-> response :body (json/read-str :key-fn keyword)))
         ; Either get the validated handle, or for a short DOI, the DOI it's aliased to.
         handle (when body
+                 (status/add! "percolator" "doi-api" "match" 1)
                  (if is-short-doi
                    (->> body :values (filter #(= (:type %) "HS_ALIAS")) first :data :value)
-                   (:handle body)))]        
+                   (:handle body)))]
+
+      (when-not body 
+        (status/add! "percolator" "doi-api" "no-match" 1))
+
     handle))
 
 (defn resolve-doi-maybe-escaped
