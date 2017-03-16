@@ -37,6 +37,7 @@
   (let [json (json/write-str input-bundle)]
     (with-open [redis-connection (redis/get-connection (:pool @redis-store) @redis-db-number)]
       (.lpush redis-connection queue-name (into-array [json]))
+      (status/add! "percolator" queue-name "queue-enqueue" 1)
       (log/info "Enqueue to " queue-name "length now" (.llen redis-connection queue-name)))))
 
 (defn process-queue-item
@@ -55,35 +56,44 @@
           ; Take value from input queue, push it to working queue. If processing fails, it will remain on working queue.
           ; BRPOPLPUSH can return null. Skip if it does.
           (when-let [item-str (.brpoplpush redis-connection queue-name working-queue-key-name 0)]
-            (log/info "Got item from" queue-name
-                      "length now" (.llen redis-connection queue-name)
-                      "working queue length now" (.llen redis-connection working-queue-key-name))
-
-            (let [item (json/read-str item-str :key-fn keyword)
-                  ; Something might fail. Give it a chance to re-try immediately.
-                  result (try-try-again {:sleep 5000 :tries 3} (function item))
-                  result-json (when result (json/write-str result))]
-              
-              (when-not result
-                (log/error "Null result returned!"))
-
-              (when result
-                (log/info "Processed item from queue" queue-name
-                          "length now" (.llen redis-connection queue-name)
-                          "working queue length now" (.llen redis-connection working-queue-key-name))
-
-                ; The original may have timed out by now, depending on how long it took to process.
-                (with-open [new-redis-connection (redis/get-connection (:pool @redis-store) @redis-db-number)]
-                  (.lrem new-redis-connection working-queue-key-name 0 item-str)
-
-                  (when done-queue-name
-                    (.rpush redis-connection done-queue-name (into-array [result-json])))))))
+            (let [queue-length (.llen redis-connection queue-name)
+                  working-queue-length (.llen redis-connection working-queue-key-name)]
+          
+                      (status/replace! "percolator" queue-name "queue-length" queue-length)
+                      (status/replace! "percolator" working-queue-key-name "queue-length" working-queue-length)
+          
+                      (log/info "Got item from" queue-name
+                                "length now" queue-length
+                                "working queue length now" working-queue-length)
+          
+                      (let [item (json/read-str item-str :key-fn keyword)
+                            ; Something might fail. Give it a chance to re-try immediately.
+                            result (try-try-again {:sleep 5000 :tries 3} (function item))
+                            result-json (when result (json/write-str result))]
+                        
+                        (when-not result
+                          (log/error "Null result returned!"))
+          
+                        (when result
+                          (log/info "Processed item from queue" queue-name
+                                    "length now" (.llen redis-connection queue-name)
+                                    "working queue length now" (.llen redis-connection working-queue-key-name))
+                          (status/add! "percolator" queue-name "queue-processed" 1)
+          
+                          ; The original may have timed out by now, depending on how long it took to process.
+                          (with-open [new-redis-connection (redis/get-connection (:pool @redis-store) @redis-db-number)]
+                            (.lrem new-redis-connection working-queue-key-name 0 item-str)
+          
+                            (when done-queue-name
+                              (.rpush redis-connection done-queue-name (into-array [result-json]))))))))
 
           (catch Exception ex
-            (with-open [writer (new StringWriter)
-                        print-writer (new PrintWriter writer)]
+            (with-open [string-writer (new StringWriter)
+                        print-writer (new PrintWriter string-writer)]
+              ; Send to string for logging and STDERR.
               (.printStackTrace ex print-writer)
-              (log/error "Exception processing queue message:" (.toString print-writer))))))
+              (.printStackTrace ex)
+              (log/error "Exception processing queue message:" (.toString string-writer))))))
 
     (catch JedisConnectionException ex
       (log/info "Timeout getting queue, re-starting.")
