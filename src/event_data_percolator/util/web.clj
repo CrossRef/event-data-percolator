@@ -22,7 +22,7 @@
    Take an optional atom to which sequences of urls and status codes will be appended."
   ([url] (fetch url nil))
   ([url trace-atom]
-    (status/add! "percolator" "web-fech" "request" 1)
+    (status/add! "percolator" "web-fetch" "request" 1)
     (try
       (loop [headers {"Referer" "https://eventdata.crossref.org"
                       "User-Agent" event-data-percolator.consts/user-agent-for-robots}
@@ -45,8 +45,8 @@
                                                (instance? org.httpkit.client.TimeoutException error) :timeout-error
                                                :default :unknown-error)}])))
               (if (#{200 401} (:status result))
-                (status/add! "percolator" "web-fech" "ok" 1)
-                (status/add! "percolator" "web-fech" "fail" 1))
+                (status/add! "percolator" "web-fetch" "ok" 1)
+                (status/add! "percolator" "web-fetch" "fail" 1))
 
               (condp = (:status result)
                 200 result

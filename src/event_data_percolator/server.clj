@@ -94,7 +94,6 @@
                   [schema-errors {::payload payload ::schema-errors schema-errors}]))
 
   :handle-malformed (fn [ctx]
-                      (log/info "POST Malformed")
                       (status/send! "percolator" "input" "malformed" 1)
                       (json/write-str (if-let [schema-errors (::schema-errors ctx)]
                         {:status "Malformed"
@@ -102,7 +101,6 @@
                         {:status "Malformed"})))
 
   :post! (fn [ctx]
-           (log/info "POST OK")
            (status/send! "percolator" "input" "ok" 1)
            ; Carry the auth header through so we can pass it onto the event bus downstream.
            (let [auth-header (get-in ctx [:request :headers "authorization"])]

@@ -128,6 +128,6 @@
         (with-open [redis-connection (redis/get-connection (:pool @redis-store) @redis-db-number)]
           (.set redis-connection "PERCOLATOR_HEARTBEAT" "1")
           (.get redis-connection "PERCOLATOR_HEARTBEAT")
-          (status/send! "percolator" "queue-heartbeat" "tick" 1))
+          (status/add! "percolator" "queue-heartbeat" "tick" 1))
          (catch Exception e (log/error "Error with Redis queue heartbeat:" (.getMessage e))))
     schedule-pool))

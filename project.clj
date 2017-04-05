@@ -1,4 +1,4 @@
-(defproject event-data-percolator "0.1.13"
+(defproject event-data-percolator "0.1.14"
   :description "Event Data Percolator"
   :url "http://eventdata.crossref.org/"
   :license {:name "MIT License"
@@ -41,8 +41,7 @@
                  [org.apache.commons/commons-io "1.3.2"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.apache.logging.log4j/log4j-core "2.6.2"]
-                 [org.slf4j/slf4j-simple "1.7.21"]
-]
+                 [org.slf4j/slf4j-simple "1.7.21"]]
   :main ^:skip-aot event-data-percolator.core
   :target-path "target/%s"
   :plugins [[jonase/eastwood "0.2.3"]
