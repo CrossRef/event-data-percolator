@@ -14,6 +14,7 @@
 (def bundles-schema
   {:source-token s/Str
    :source-id s/Str
+   (s/optional-key :license) s/Str
    (s/optional-key :agent) s/Any
    ; Extra per-bundle info.
    (s/optional-key :extra) s/Any

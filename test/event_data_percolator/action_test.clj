@@ -35,7 +35,48 @@
       (is (= (-> result :subj :pid) subject-url)  "Subject URL should be taken from the Action")
       (is (= (-> result :obj :pid) object-doi) "The match DOI should be included as the obj metadata PID ")
       (is (= (-> result :obj :url) object-url) "The match input URL should be included as the obj metadata PID")
-      (is (= (:relation_type_id result) "cites") "Relation type id is taken from the Action"))))
+      (is (= (:relation_type_id result) "cites") "Relation type id is taken from the Action")))
+
+  (testing "create-event-from-match adds license field if present"
+    (let [source-token "SOURCE_TOKEN"
+          subject-url "https://blog.com/1234"
+          source-id "SOURCE_ID"
+
+          object-url "http://psychoceramics.labs.crossref.org/12345"
+          object-doi "https://dx.doi.org/10.5555/12345678"
+          match {:type :landing-page-url :value object-url :match object-doi}
+          input-action {:url subject-url
+                        :occurred-at "2016-02-05"
+                        :relation-type-id "cites"
+                        :processed-observations [{:match match}]}
+          
+          input-bundle {:source-token source-token
+                        :source-id source-id
+                        :pages [{:actions [input-action]}]
+                        :license "https://creativecommons.org/publicdomain/zero/1.0/"}
+
+          result (action/create-event-from-match input-bundle input-action match)]
+      (is (= (:license result) "https://creativecommons.org/publicdomain/zero/1.0/") "License field present")))
+
+  (testing "create-event-from-match does not add license field if not present"
+    (let [source-token "SOURCE_TOKEN"
+          subject-url "https://blog.com/1234"
+          source-id "SOURCE_ID"
+
+          object-url "http://psychoceramics.labs.crossref.org/12345"
+          object-doi "https://dx.doi.org/10.5555/12345678"
+          match {:type :landing-page-url :value object-url :match object-doi}
+          input-action {:url subject-url
+                        :occurred-at "2016-02-05"
+                        :relation-type-id "cites"
+                        :processed-observations [{:match match}]}
+          
+          input-bundle {:source-token source-token
+                        :source-id source-id
+                        :pages [{:actions [input-action]}]}
+
+          result (action/create-event-from-match input-bundle input-action match)]
+      (is (not (contains? result :license)) "License field not present (not just nil)"))))
 
 ; This behaviour allows consumers to tell the difference between DOIs that were matched from an input URL (e.g. landing page)
 ; and those that were referenced directly with the DOI.

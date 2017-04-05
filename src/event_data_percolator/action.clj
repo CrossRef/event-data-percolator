@@ -75,18 +75,21 @@
                   (:value match))
         obj (merge {:pid (:match match)
                     :url (or obj-url
-                             (:match match))} (:obj action {}))]
-    {:id (str (UUID/randomUUID))
-     :source_token (:source-token input-bundle)
-     :subj_id (:url action)
-     :obj_id (:match match)
-     :relation_type_id (:relation-type-id action)
-     :source_id (:source-id input-bundle)
-     :action (:action-type action "add")
-     :occurred_at (str (:occurred-at action))
-     :subj subj
-     :obj obj
-     :evidence-record (:url input-bundle)}))
+                             (:match match))} (:obj action {}))
+        base-event {:id (str (UUID/randomUUID))
+                    :source_token (:source-token input-bundle)
+                    :subj_id (:url action)
+                    :obj_id (:match match)
+                    :relation_type_id (:relation-type-id action)
+                    :source_id (:source-id input-bundle)
+                    :action (:action-type action "add")
+                    :occurred_at (str (:occurred-at action))
+                    :subj subj
+                    :obj obj
+                    :evidence-record (:url input-bundle)}
+
+        with-license (if-let [license (:license input-bundle)] (assoc base-event :license license) base-event)]
+      with-license))
 
 (defn create-events-for-action
   "Return a seq of Events generated from the Action"
