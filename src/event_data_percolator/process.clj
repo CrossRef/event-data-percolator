@@ -111,13 +111,15 @@
   (let [payload-json (json/write-str payload) 
         evidence-record-id (:id payload)
         storage-key (str input-bundle/evidence-url-prefix evidence-record-id)
-        events (input-bundle/extract-all-events payload)]
+        events (input-bundle/extract-all-events payload)
+        extra-events (:extra-events payload)
+        all-events (concat events extra-events)]
     
     (log/info "Got output bundle id" (:id payload))
 
     ; Send all events.
-    (log/info "Sending " (count events) "events")
-    (doseq [event events]
+    (log/info "Sending " (count events) "detected and " (count extra-events) "extra Events")
+    (doseq [event all-events]
       (log/info "Sending event: " (:id event))
       (status/send! "percolator" "output-event" "sent" 1)
 

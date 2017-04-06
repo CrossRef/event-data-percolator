@@ -15,9 +15,15 @@
   {:source-token s/Str
    :source-id s/Str
    (s/optional-key :license) s/Str
+
    (s/optional-key :agent) s/Any
+   
    ; Extra per-bundle info.
    (s/optional-key :extra) s/Any
+
+   ; Any extra events that the Agent wants to include.
+   (s/optional-key :extra-events) s/Any
+   
    :pages
    [{; Extra per-page info.
      (s/optional-key :extra) s/Any
@@ -99,10 +105,12 @@
   (map-actions #(action/match-candidates % web-trace-atom) bundle))
 
 (defn events
-  "Generate an Event for each candidate match."
+  "Generate an Event for each candidate match, update extra Events."
   [bundle]
   (log/info "Events in " (:id bundle))
-  (map-actions (partial action/create-events-for-action bundle) bundle))
+  (->> bundle
+      (map-actions (partial action/create-events-for-action bundle))
+      action/update-extra-events))
 
 (def percolator-version (System/getProperty "event-data-percolator.version"))
 

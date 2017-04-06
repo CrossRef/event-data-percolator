@@ -114,12 +114,21 @@ The end-to-end workflow is as follows. Each is a discrete, self-contained step.
  
  ### Input Package
  
- Required fields:
+Required fields:
 
  - `source-name` - the name of the source, e.g. `wikipedia`.
  - `source-token` - the unique ID of the agent collecting data.
  - `pages` - list of page objects
- 
+
+Optional fields:
+ - `license` - a license URL, attached to each Event
+ - `extra-events` - a list of extra events. These need only have the following fields. Other fields will be automatically added.
+  - subj_id
+  - obj_id
+  - relation_type_id
+  - occurred_at
+
+
 Other fields may be supplied by the Agent if required, and will be carried through.
  
 ## Bundle Format

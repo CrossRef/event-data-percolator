@@ -109,3 +109,40 @@
       (is (= (-> result2 :obj :url) "https://dx.doi.org/10.5555/12345678")))))
 
 
+
+
+(deftest ^:unit update-extra-events
+  (testing "update-extra-events should incorporate all the required values from the Input Bundle to make a valid event"
+    (let [bundle {:url "http://example.com/evidence-record-1"
+                  :license "http://example.com/license"
+                  :source-token "THE_SOURCE_TOKEN"
+                  :source-id "THE_SOURCE_ID"
+                  :extra-events [
+                    {:obj_id "https://example.com/1",
+                     :occurred_at "2017-04-01T00:33:21Z",
+                     :subj_id "https://example.com/1/version/2",
+                     :relation_type_id "is_version_of"}
+                    {:obj_id "https://example.com/2",
+                     :occurred_at "2017-04-01T00:33:21Z",
+                     :subj_id "https://example.com/2/version/2",
+                     :relation_type_id "is_version_of"}]}
+          result (action/update-extra-events bundle)
+
+          result-extra-events (:extra-events result)]
+
+        (is (= (count result-extra-events) 2) "Both Events carried through")
+        (is (-> result-extra-events first :id) "ID added")
+        (is (-> result-extra-events second :id) "ID added")
+        
+        (is (= (-> result-extra-events first :subj_id) "https://example.com/1/version/2"))
+        (is (= (-> result-extra-events first :obj_id) "https://example.com/1"))
+        
+        (is (= (-> result-extra-events second :subj_id) "https://example.com/2/version/2"))
+        (is (= (-> result-extra-events second :obj_id) "https://example.com/2"))
+
+        (is (= (-> result-extra-events first :evidence-record) "http://example.com/evidence-record-1"))
+        (is (= (-> result-extra-events second :evidence-record) "http://example.com/evidence-record-1"))
+
+        (is (= (-> result-extra-events first :license) "http://example.com/license"))
+        (is (= (-> result-extra-events second :license) "http://example.com/license")))))
+

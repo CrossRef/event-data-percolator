@@ -97,6 +97,24 @@
   (assoc action
     :events (map (partial create-event-from-match input-bundle action) (:matches action))))
 
+(defn update-extra-event
+  [input-bundle event]
+  (let [base-event (merge {:evidence-record (:url input-bundle)
+                           :id (str (UUID/randomUUID))
+                           :source_token (:source-token input-bundle)
+                           :source_id (:source-id input-bundle)
+                           :action "add"}
+                          event)
+        with-license (if-let [license (:license input-bundle)]
+                       (assoc base-event :license license) base-event)]
+    with-license))
+
+(defn update-extra-events
+  "If there are any extra Events, add the requisite fields."
+  [input-bundle]
+  (assoc input-bundle
+    :extra-events (map (partial update-extra-event input-bundle) (:extra-events input-bundle))))
+
 (defn store-action-duplicates
   "Save all action IDs from a bundle into duplicate records. Called on 'push'."
   [bundle]
