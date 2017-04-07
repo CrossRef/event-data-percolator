@@ -122,13 +122,7 @@ Required fields:
 
 Optional fields:
  - `license` - a license URL, attached to each Event
- - `extra-events` - a list of extra events. These need only have the following fields. Other fields will be automatically added.
-  - subj_id
-  - obj_id
-  - relation_type_id
-  - occurred_at
-
-
+ 
 Other fields may be supplied by the Agent if required, and will be carried through.
  
 ## Bundle Format
@@ -174,6 +168,14 @@ Required fields:
  - `observations` - list of Observation objects
  - `id` - unique ID for Action
  - `url` - the URL for the Action. Translated in to the `subj_id` field in the Event.
+
+Optional:
+
+ - `extra-events` - a list of extra Events. Sent *only* if the Action matches. These need only have the following fields. Other fields will be automatically added.
+   - subj_id
+   - obj_id
+   - relation_type_id
+   - occurred_at
 
 Optional Fields:
 

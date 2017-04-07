@@ -91,13 +91,8 @@
         with-license (if-let [license (:license input-bundle)] (assoc base-event :license license) base-event)]
       with-license))
 
-(defn create-events-for-action
-  "Return a seq of Events generated from the Action"
-  [input-bundle action]
-  (assoc action
-    :events (map (partial create-event-from-match input-bundle action) (:matches action))))
-
-(defn update-extra-event
+(defn create-event-from-extra-event
+  "Given an extra Event in an Action, expand it to include the full compliment of fields."
   [input-bundle event]
   (let [base-event (merge {:evidence-record (:url input-bundle)
                            :id (str (UUID/randomUUID))
@@ -109,11 +104,15 @@
                        (assoc base-event :license license) base-event)]
     with-license))
 
-(defn update-extra-events
-  "If there are any extra Events, add the requisite fields."
-  [input-bundle]
-  (assoc input-bundle
-    :extra-events (map (partial update-extra-event input-bundle) (:extra-events input-bundle))))
+(defn create-events-for-action
+  "Update action to include a seq of Events generated from observations in the Action. Plus extra-events if included, and if there were any matches."
+  [input-bundle action]
+  
+  (let [events-from-matches (map (partial create-event-from-match input-bundle action) (:matches action))
+        events-from-extras (when (not-empty (:matches action)) (map (partial create-event-from-extra-event input-bundle) (:extra-events action)))
+        events (concat events-from-matches events-from-extras)]
+  (assoc action
+    :events events)))
 
 (defn store-action-duplicates
   "Save all action IDs from a bundle into duplicate records. Called on 'push'."

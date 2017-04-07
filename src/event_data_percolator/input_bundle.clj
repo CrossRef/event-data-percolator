@@ -20,10 +20,7 @@
    
    ; Extra per-bundle info.
    (s/optional-key :extra) s/Any
-
-   ; Any extra events that the Agent wants to include.
-   (s/optional-key :extra-events) s/Any
-   
+  
    :pages
    [{; Extra per-page info.
      (s/optional-key :extra) s/Any
@@ -36,6 +33,8 @@
        :occurred-at s/Str
        :id s/Str
        :subj s/Any
+       ; Extra Events that are only carried through if observations match.
+       (s/optional-key :extra-events) s/Any
        :observations [{:type s/Str
                        ; Extra per-observation info.
                        (s/optional-key :extra) s/Any
@@ -109,8 +108,7 @@
   [bundle]
   (log/info "Events in " (:id bundle))
   (->> bundle
-      (map-actions (partial action/create-events-for-action bundle))
-      action/update-extra-events))
+      (map-actions (partial action/create-events-for-action bundle))))
 
 (def percolator-version (System/getProperty "event-data-percolator.version"))
 

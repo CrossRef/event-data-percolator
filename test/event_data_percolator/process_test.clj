@@ -20,11 +20,7 @@
 (deftest ^:unit push-output-bundle
     (let [payload
           {:id "EVIDENCE_ID_1234"
-            ; originally sent by the Agent
-            :extra-events [{:id "99999" :and :other-fields}
-                           {:id "88888" :and :other-fields}]
-
-            :pages
+           :pages
             ; Page 1
             [{:actions
              [{; Action 1.1
@@ -61,7 +57,7 @@
       (let [result (process/push-output-bundle input)]
 
       (testing "push-output-bundle should send evens with the auth header"
-        (is (= 8 (count @responses)) "Eight events in a payload means eight successful POSTs")
+        (is (= 6 (count @responses)) "Six events in a payload means eight successful POSTs")
 
         (doseq [response @responses]
           (is (= (:headers response) {"Content-Type" "application/json", "Authorization" "Bearer AUTH_TOKEN"}) "Auth header should be carried through and content type set correctly.")
@@ -74,10 +70,7 @@
             "{\"id\":\"33333\",\"and\":\"other-fields\"}"
             "{\"id\":\"44444\",\"and\":\"other-fields\"}"
             "{\"id\":\"55555\",\"and\":\"other-fields\"}"
-            "{\"id\":\"66666\",\"and\":\"other-fields\"}"
-            ; and these two from the extra-events
-            "{\"id\":\"99999\",\"and\":\"other-fields\"}"
-            "{\"id\":\"88888\",\"and\":\"other-fields\"}"})
+            "{\"id\":\"66666\",\"and\":\"other-fields\"}"})
           "All indidual events should have been sent"))
 
 

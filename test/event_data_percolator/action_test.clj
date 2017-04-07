@@ -109,40 +109,131 @@
       (is (= (-> result2 :obj :url) "https://dx.doi.org/10.5555/12345678")))))
 
 
+(deftest create-events-for-action
+  (testing "When there are are extra Events but there was no match, no Events should be emitted."
+    (let [extra-events [{:obj_id "https://example.com/1",
+                         :occurred_at "2017-04-01T00:33:21Z",
+                         :subj_id "https://example.com/1/version/2",
+                         :relation_type_id "is_version_of"}
+                        {:obj_id "https://example.com/2",
+                         :occurred_at "2017-04-01T00:33:21Z",
+                         :subj_id "https://example.com/2/version/2",
+                         :relation_type_id "is_version_of"}]
+
+          input-action {:url "https://blog.com/1234"
+                        :occurred-at "2016-02-05"
+                        :relation-type-id "cites"
+                        ; no matches
+                        :matches []
+                        :extra-events extra-events}
+         
+          input-bundle {:source-token "SOURCE_TOKEN"
+                        :source-id "SOURCE_ID"
+                        :license "http://example.com/license"
+                        :url "http://example.com/evidence/123456"
+                        :pages [{:actions [input-action]}]}
+
+         result-action (action/create-events-for-action input-bundle input-action)]
+    (is (empty? (:events result-action)) "No Events should have been emitted.")))
+
+  (testing "When there are are extra Events and there was at least one match, those Extra Events should be emitted, with the requisite fields."
+    (let [extra-events [; These Events have minimal fields.
+                        {:obj_id "https://example.com/1",
+                         :occurred_at "2017-04-01T00:33:21Z",
+                         :subj_id "https://example.com/1/version/2",
+                         :relation_type_id "is_version_of"}
+                        {:obj_id "https://example.com/2",
+                         :occurred_at "2017-04-01T00:33:21Z",
+                         :subj_id "https://example.com/2/version/2",
+                         :relation_type_id "is_version_of"}]
+
+          input-action {:url "https://blog.com/1234"
+                        :occurred-at "2016-02-05"
+                        :relation-type-id "cites"
+                        ; one match
+                        :matches [{:value "http://psychoceramics.labs.crossref.org/12345"
+                                  :type :landing-page-url
+                                  :match "https://dx.doi.org/10.5555/12345678"}]
+                        :extra-events extra-events}
+         
+          input-bundle {:source-token "SOURCE_TOKEN"
+                        :source-id "SOURCE_ID"
+                        :license "http://example.com/license"
+                        :url "http://example.com/evidence/123456"
+                        :pages [{:actions [input-action]}]}
+
+         result-action (action/create-events-for-action input-bundle input-action)]
+    (is (= (count (:events result-action)) 3) "Three Events should have been emitted, one from the match and two from the extras.")
+    
+    ; compare with out :id field, that's random.
+    (is (= (set (map #(dissoc % :id) (:events result-action)))
+          #{{:license "http://example.com/license"
+             :obj_id "https://dx.doi.org/10.5555/12345678",
+             :source_token "SOURCE_TOKEN",
+             :occurred_at "2016-02-05",
+             :subj_id "https://blog.com/1234",
+             :action "add",
+             :subj {:pid "https://blog.com/1234"},
+             :source_id "SOURCE_ID",
+             :obj
+             {:pid "https://dx.doi.org/10.5555/12345678",
+              :url "http://psychoceramics.labs.crossref.org/12345"},
+             :evidence-record "http://example.com/evidence/123456",
+             :relation_type_id "cites"}
+
+            ; Emitted ones have :id, :evidence-record, :action, :source-id added 
+            {:license "http://example.com/license"
+             :evidence-record "http://example.com/evidence/123456",
+             :source_token "SOURCE_TOKEN",
+             :source_id "SOURCE_ID",
+             :action "add",
+             :obj_id "https://example.com/1",
+             :occurred_at "2017-04-01T00:33:21Z",
+             :subj_id "https://example.com/1/version/2",
+             :relation_type_id "is_version_of"}
+            {:license "http://example.com/license"
+             :evidence-record "http://example.com/evidence/123456",
+             :source_token "SOURCE_TOKEN",
+             :source_id "SOURCE_ID",
+             :action "add",
+             :obj_id "https://example.com/2",
+             :occurred_at "2017-04-01T00:33:21Z",
+             :subj_id "https://example.com/2/version/2",
+             :relation_type_id "is_version_of"}}))))
+
+  (testing "When there are are no extra Events but there were matches, an Event should be created for each match"
+    (let [input-action {:url "https://blog.com/1234"
+                        :occurred-at "2016-02-05"
+                        :relation-type-id "cites"
+                        ; one match
+                        :matches [{:value "http://psychoceramics.labs.crossref.org/12345"
+                                  :type :landing-page-url
+                                  :match "https://dx.doi.org/10.5555/12345678"}]
+                        ; no extra events
+                        :extra-events []}
+         
+          input-bundle {:source-token "SOURCE_TOKEN"
+                       :source-id "SOURCE_ID"
+                       :license "http://example.com/license"
+                       :url "http://example.com/evidence/123456"
+                       :pages [{:actions [input-action]}]}
+
+         result-action (action/create-events-for-action input-bundle input-action)]
+    (is (= (count (:events result-action)) 1) "One Events should have been emitted, from the match.")
+    (is (= (map #(dissoc % :id) (:events result-action)))
+      [{:license "http://example.com/license"
+        :obj_id "https://dx.doi.org/10.5555/12345678",
+        :source_token "SOURCE_TOKEN",
+        :occurred_at "2016-02-05",
+        :subj_id "https://blog.com/1234",
+        :action "add",
+        :subj {:pid "https://blog.com/1234"},
+        :source_id "SOURCE_ID",
+        :obj
+        {:pid "https://dx.doi.org/10.5555/12345678",
+         :url "http://psychoceramics.labs.crossref.org/12345"},
+        :evidence-record "http://example.com/evidence/123456",
+        :relation_type_id "cites"}]))))
 
 
-(deftest ^:unit update-extra-events
-  (testing "update-extra-events should incorporate all the required values from the Input Bundle to make a valid event"
-    (let [bundle {:url "http://example.com/evidence-record-1"
-                  :license "http://example.com/license"
-                  :source-token "THE_SOURCE_TOKEN"
-                  :source-id "THE_SOURCE_ID"
-                  :extra-events [
-                    {:obj_id "https://example.com/1",
-                     :occurred_at "2017-04-01T00:33:21Z",
-                     :subj_id "https://example.com/1/version/2",
-                     :relation_type_id "is_version_of"}
-                    {:obj_id "https://example.com/2",
-                     :occurred_at "2017-04-01T00:33:21Z",
-                     :subj_id "https://example.com/2/version/2",
-                     :relation_type_id "is_version_of"}]}
-          result (action/update-extra-events bundle)
-
-          result-extra-events (:extra-events result)]
-
-        (is (= (count result-extra-events) 2) "Both Events carried through")
-        (is (-> result-extra-events first :id) "ID added")
-        (is (-> result-extra-events second :id) "ID added")
-        
-        (is (= (-> result-extra-events first :subj_id) "https://example.com/1/version/2"))
-        (is (= (-> result-extra-events first :obj_id) "https://example.com/1"))
-        
-        (is (= (-> result-extra-events second :subj_id) "https://example.com/2/version/2"))
-        (is (= (-> result-extra-events second :obj_id) "https://example.com/2"))
-
-        (is (= (-> result-extra-events first :evidence-record) "http://example.com/evidence-record-1"))
-        (is (= (-> result-extra-events second :evidence-record) "http://example.com/evidence-record-1"))
-
-        (is (= (-> result-extra-events first :license) "http://example.com/license"))
-        (is (= (-> result-extra-events second :license) "http://example.com/license")))))
 
