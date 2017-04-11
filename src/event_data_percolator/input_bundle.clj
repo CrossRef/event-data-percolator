@@ -40,7 +40,8 @@
                        (s/optional-key :extra) s/Any
                        (s/optional-key :sensitive) s/Bool
                        (s/optional-key :input-content) s/Str
-                       (s/optional-key :input-url) s/Str}]}]}]})
+                       (s/optional-key :input-url) s/Str
+                       (s/optional-key :ignore-robots) s/Bool}]}]}]})
 
 (def evidence-url-prefix
   "Prefix where records are stored."

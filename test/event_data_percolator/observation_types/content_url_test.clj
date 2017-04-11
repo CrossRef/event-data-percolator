@@ -36,3 +36,52 @@
                        :input-content "Webpage content 10.5555/12345678"
                        :candidates [{:value "10.5555/12345678", :type :plain-doi}]}))))))
 
+(deftest ^:unit robots-exclusion
+  (testing "Fetch usually respects robots.txt Disallow"
+    (fake/with-fake-http ["http://disallow-robots.com/abc" "Disalowed content 10.5555/12345678"
+                          "http://disallow-robots.com/robots.txt" "User-agent: *\nDisallow: /"]
+      (let [result (content-url/process-content-url-observation
+                     {:input-url "http://disallow-robots.com/abc"} #{} (atom []))]
+
+        ; No candidates should be matched because of robots exclusion.
+        (is (= result {:input-url "http://disallow-robots.com/abc"
+                       :error :failed-fetch-url})
+          "No matches should be made when robots prohibits.")))
+
+  (testing "Fetch usually respects robots.txt Allow"
+    (fake/with-fake-http ["http://allow-robots.com/abc" "Allowed content 10.5555/12345678"
+                          "http://allow-robots.com/robots.txt" "User-agent: *\nAllow: /"]
+      (let [result (content-url/process-content-url-observation
+                     {:input-url "http://allow-robots.com/abc"} #{} (atom []))]
+
+        (is (= result {:input-url "http://allow-robots.com/abc"
+                       :input-content "Allowed content 10.5555/12345678"
+                       :candidates [{:value "10.5555/12345678", :type :plain-doi}]})
+            "Matches should be made when robots allowed request.")))))
+
+  (testing "If :ignore-robots is true then ignore the robots Disallow exclusions"
+    (fake/with-fake-http ["http://disallow-robots.com/abc" "Disallow robots content 10.5555/12345678"
+                          "http://disallow-robots.com/robots.txt" "User-agent: *\nDisallow: /"]
+      (let [result (content-url/process-content-url-observation
+                     {:input-url "http://disallow-robots.com/abc"
+                      :ignore-robots true} #{} (atom []))]
+
+        ; No candidates should be matched because of robots exclusion.
+        (is (= result {:input-url "http://disallow-robots.com/abc"
+                       :input-content "Disallow robots content 10.5555/12345678"
+                       :ignore-robots true
+                       :candidates [{:value "10.5555/12345678", :type :plain-doi}]})
+          "Matches should be made even when robots prohibits."))))
+
+  (testing "If :ignore-robots is true then ignore Allow in the robots"
+    (fake/with-fake-http ["http://allow-robots.com/abc" "Allow robots content 10.5555/12345678"
+                          "http://allow-robots.com/robots.txt" "User-agent: *\nAllow: /"]
+      (let [result (content-url/process-content-url-observation
+                     {:input-url "http://allow-robots.com/abc"
+                      :ignore-robots true} #{} (atom []))]
+
+        (is (= result {:input-url "http://allow-robots.com/abc"
+                       :ignore-robots true
+                       :input-content "Allow robots content 10.5555/12345678"
+                       :candidates [{:value "10.5555/12345678", :type :plain-doi}]})
+            "Matches should be made when robots.txt would allow anyway.")))))

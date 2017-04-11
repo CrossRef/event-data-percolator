@@ -20,11 +20,15 @@
   [observation landing-page-domain-set web-trace-atom]
   (let [input (:input-url observation "")
         valid? (url-valid? input)
-        content (when valid? (web/fetch-respecting-robots input web-trace-atom))]
+        ; The :ignore-robots flag is passed in by Agents that have specific exemptions.
+        ; E.g. Wikipedia sites' API is excluded for general-purpose robots but allowed for our uses.
+        content (when valid?
+                  (if (:ignore-robots observation)
+                    (web/fetch-ignoring-robots input web-trace-atom)
+                    (web/fetch-respecting-robots input web-trace-atom)))]    
     (if-not content
       (assoc observation :error :failed-fetch-url)
       (let [; Attach content then pass the thing to the HTML processor for heavy lifting.
             new-observation (assoc observation :input-content (:body content))
             html-observations (html/process-html-content-observation new-observation landing-page-domain-set web-trace-atom)]
         html-observations))))
-

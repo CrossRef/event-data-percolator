@@ -129,8 +129,8 @@
     allowed))
 
 (defn fetch-respecting-robots
+  "Fetch URL, respecting robots.txt directives for domain."
   [url trace-atom]
-
   (let [allowed (allowed? url)]
     (if-not allowed
       (do
@@ -138,3 +138,10 @@
           (swap! trace-atom concat [{:error :robots-forbidden :url url}]))
         nil)
       (fetch url trace-atom))))
+
+(defn fetch-ignoring-robots
+  "Fetch URL, ignoring any robots.txt directives"
+  [url trace-atom]
+  ; Just an alias, but intentional.
+  (fetch url trace-atom))
+
