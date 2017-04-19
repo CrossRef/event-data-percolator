@@ -11,3 +11,4 @@ COPY project.clj /usr/src/app/project.clj
 
 WORKDIR /usr/src/app
 
+RUN lein deps && lein compile

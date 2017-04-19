@@ -99,10 +99,17 @@
 
 (defn match
   "Match candidates in input bundle.
-  Step 4 in docs."
+  Step 5 in docs."
   [bundle web-trace-atom]
   (log/info "Match in " (:id bundle))
   (map-actions #(action/match-candidates % web-trace-atom) bundle))
+
+(defn dedupe-matches
+  "Dedupe matches WITHIN an action.
+  Step 5.5 in docs."
+  [bundle]
+  (log/info "Dedupe in " (:id bundle))
+  (map-actions action/dedupe-matches bundle))
 
 (defn events
   "Generate an Event for each candidate match, update extra Events."
@@ -124,6 +131,7 @@
             dedupe-actions
             (candidates domain-set web-trace-atom)
             (match web-trace-atom)
+            dedupe-matches
             (assoc-in [:percolator :artifacts :domain-set-artifact-version] domain-artifact-version)
             (assoc-in [:percolator :software-version] percolator-version)
             events)

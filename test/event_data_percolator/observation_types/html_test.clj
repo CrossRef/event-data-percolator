@@ -50,7 +50,7 @@
            (html/links-from-html
              multiple-anchors)))))
 
-(def domain-set #{"example.com" "example.net"})
+(def domain-set #{"example.com" "example.net" "doi.org" "dx.doi.org"})
 
 (deftest ^:unit process-html-content-observation
   (testing "Plain DOIs can be extracted from text nodes"
@@ -77,31 +77,37 @@
     (let [result (html/process-html-content-observation
                    {:type "html" :input-content "<a href='http://doi.org/10.5555/22222'>cliquez ici</a>"}
                    domain-set
-                   (atom []))]
-      (is (= result {:type "html"
-                     :input-content "<a href='http://doi.org/10.5555/22222'>cliquez ici</a>"
-                     :candidates [{:value "http://doi.org/10.5555/22222" :type :doi-url}]})
-          "One DOI URL candidate found when linked.")))
+                   (atom []))
+          expected {:type "html"
+                    :input-content "<a href='http://doi.org/10.5555/22222'>cliquez ici</a>"
+                    :candidates [{:type :landing-page-url, :value "http://doi.org/10.5555/22222"}
+                                 {:type :doi-url, :value "http://doi.org/10.5555/22222"}]}]
+
+      (is (= result expected))))
 
   (testing "ShortDOI URL DOIs can be extracted from text nodes"
     (let [result (html/process-html-content-observation
                    {:type "html" :input-content "<p>http://doi.org/abcd</p>"}
                    domain-set
                    (atom []))]
+
       (is (= result {:type "html"
                      :input-content "<p>http://doi.org/abcd</p>"
-                     :candidates [{:value "http://doi.org/abcd" :type :shortdoi-url}]})
+                     :candidates [{:type :shortdoi-url, :value "http://doi.org/abcd"}
+                                  {:type :landing-page-url, :value "http://doi.org/abcd"}]})
           "One ShortDOI URL candidate found when unlinked")))
 
   (testing "ShortDOI hyperlinked DOIs can be extracted from links"
     (let [result (html/process-html-content-observation
                    {:type "html" :input-content "<a href='http://doi.org/abcd'>short and sweet</a>"}
                    domain-set
-                   (atom []))]
-      (is (= result {:type "html"
+                   (atom []))
+          expected {:type "html"
                      :input-content "<a href='http://doi.org/abcd'>short and sweet</a>"
-                     :candidates [{:value "http://doi.org/abcd" :type :shortdoi-url}]})
-          "One ShortDOI URL candidate found when linked")))
+                     :candidates [{:type :landing-page-url, :value "http://doi.org/abcd"}
+                                  {:type :shortdoi-url, :value "http://doi.org/abcd"}]}]
+
+      (is (= result expected))))
 
   (testing "PIIs can be extracted from text nodes"
     (let [result (html/process-html-content-observation
@@ -133,3 +139,17 @@
                      :input-content "<p> <a href='http://example.com/five'>this</a> <a href='http://ignore.com/four'>ignore me!</a></p>"
                      :candidates [{:value "http://example.com/five" :type :landing-page-url}]})
           "Article landing page from known domain can be extracted from link. Non-matching domains ignored."))))
+
+(deftest ^:unit html-with-duplicates
+  (testing "HTML that contains a DOI in the link and in the text returns one candidate per match type. This will later be de-duped in event-data-percolator.action-test/match-candidates-deupe ."
+    (let [html "<a href='https://doi.org/10.5555/12345678'>10.5555/12345678</a>"
+          result (html/process-html-content-observation
+                   {:type "html" :input-content html}
+                   domain-set
+                   (atom []))]
+      (is (= result {:type "html"
+                     :input-content html
+                     :candidates [{:type :plain-doi :value "10.5555/12345678"}
+                                  {:type :landing-page-url :value "https://doi.org/10.5555/12345678"}
+                                  {:type :doi-url :value "https://doi.org/10.5555/12345678"}]})
+          "Three different kinds of candidates retrieved when DOI is linked and in text."))))

@@ -235,5 +235,34 @@
         :evidence-record "http://example.com/evidence/123456",
         :relation_type_id "cites"}]))))
 
+(deftest dedupe-by-val-substring
+  (testing "dedupe-by-val-substring removes all matches that are a substring of any other in the group."
+    (is (= (action/dedupe-by-val-substring [{:value "1"} {:value "1234"} {:value "12"} {:value "oops"}])
+          [{:value "1234"} {:value "oops"}])
+      "Substrings should be removed. Non-dupes should be untouched")))
 
+(deftest dedupe-matches
+  (testing "When there are duplicate matches that represent the same thing match-candidates should de-duplicate them.
+            See event-data-percolator.observation-types.html-test/html-with-duplicates for when this might occur."
+    (let [input-action {:matches [; This should be removed because the matched DOI is a duplicate of another one and the value is a substring of another.
+                                  {:type :plain-doi :value "10.5555/12345678" :match "https://doi.org/10.5555/12345678"}
+                                  ; This should be removed because the matche DOI is a duplicate of another one, as is the value, and :doi-urls are prioritised.
+                                  {:type :landing-page-url :value "https://doi.org/10.5555/12345678" :match "https://doi.org/10.5555/12345678"}
+                                  ; This should be retained because its' the only one left of the duplicates and it's prioritised.
+                                  {:type :doi-url :value "https://doi.org/10.5555/12345678" :match "https://doi.org/10.5555/12345678"}
+                                  ; This has the same matched DOI, but is different in that it came from a landing page. Should be retained.
+                                  {:type :landing-page-url :value "https://www.example.com/article/123456789" :match "https://doi.org/10.5555/12345678"}
+                                  ; And something that's not a duplicate, so should be retained.
+                                  {:type :doi-url :value "https://doi.org/10.6666/24242424" :match "https://doi.org/10.6666/24242424"}]}
+
+          expected-result {:matches [{:type :doi-url, :value "https://doi.org/10.5555/12345678" :match "https://doi.org/10.5555/12345678"}
+                                     {:type :landing-page-url :value "https://www.example.com/article/123456789" :match "https://doi.org/10.5555/12345678"}
+                                     {:type :doi-url, :value "https://doi.org/10.6666/24242424" :match "https://doi.org/10.6666/24242424"}]}
+
+         result (action/dedupe-matches input-action)]
+      (is (= result expected-result))
+
+      )
+
+    ))
 

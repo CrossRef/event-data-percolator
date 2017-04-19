@@ -95,7 +95,8 @@ The end-to-end workflow is as follows. Each is a discrete, self-contained step.
  - Transform Input Bundle, keeping structure identical
  - For every Action:
      - Collect all of the candidate DOIs and Landing Page URLs
-     - Attempt to convert each one into a DOI
+     - Attempt to convert each one into a DOI 
+ - Also 5.5: Deduplicate matches that identify the same DOI from the same input but via different candidates. E.g. a hyperlinked DOI with the DOI also in the link text.
 
 ### 6. Create Events and Evidence Record
 

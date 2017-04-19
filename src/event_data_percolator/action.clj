@@ -63,6 +63,46 @@
          successful (filter :match matches)]
     (assoc action :matches successful)))
 
+(defn match-weight
+  "Weighting for matches when dedupling and there's a conflict."
+  [match]
+  (condp = (:type match)
+    :doi-url 1 
+    :plain-doi 2
+    :landing-page-url 3
+    10))
+
+(defn dedupe-by-val-substring
+  "Dedupe matches where the value is a subtring of any another action.
+   This is only called in the context of dedupe-matches, where the inputs will already have been deduped by the match"
+  [matches]
+  (remove (fn [match]
+            (some #(and (not= match %)
+                        (> (.indexOf (:value % "") (:value match "")) -1)) matches))
+          matches))
+
+(defn dedupe-matches
+  "Deduplicate matches.
+   Step 5.5 from docs."
+  [action]
+   (let [matches (:matches action)
+
+         ; Dedupe by the :match field (i.e. the matched DOI).
+         groups (vals (group-by :match matches))
+
+         ; Within each group, dedupe by exact value duplicate, e.g. :landing-page-url and :doi-url both say the same URL.
+         minus-exact-dupliates (map (fn [matches]
+                                      (map #(first (sort-by match-weight %)) (vals (group-by :value matches))))
+                                    groups)
+
+         ; Within each group, if one value is a substring of another, exclude it, e.g. :plaintext-doi and :doi-url
+         removing-substrings (map dedupe-by-val-substring minus-exact-dupliates)
+
+         ; Glom groups.
+         all-matches (apply concat removing-substrings)]
+
+    (assoc action :matches all-matches)))
+
 (defn create-event-from-match
   [input-bundle action match]
   ; Provide default subject metadata if not supplied.
