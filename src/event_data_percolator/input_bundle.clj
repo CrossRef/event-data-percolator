@@ -87,34 +87,34 @@
   "Dedupe actions in an input bundle.
   Step 3 in docs."
   [bundle]
-  (log/info "Deduping in " (:id bundle))
+  (log/debug "Deduping in " (:id bundle))
   (map-actions #(action/dedupe-action % (:id bundle)) bundle))
 
 (defn candidates
   "Produce candidates in input bundle.
   Step 4 in docs."
   [bundle domain-set web-trace-atom]
-  (log/info "Candidates in " (:id bundle))
+  (log/debug "Candidates in " (:id bundle))
   (map-actions #(action/process-observations-candidates % domain-set web-trace-atom) bundle))
 
 (defn match
   "Match candidates in input bundle.
   Step 5 in docs."
   [bundle web-trace-atom]
-  (log/info "Match in " (:id bundle))
+  (log/debug "Match in " (:id bundle))
   (map-actions #(action/match-candidates % web-trace-atom) bundle))
 
 (defn dedupe-matches
   "Dedupe matches WITHIN an action.
   Step 5.5 in docs."
   [bundle]
-  (log/info "Dedupe in " (:id bundle))
+  (log/debug "Dedupe in " (:id bundle))
   (map-actions action/dedupe-matches bundle))
 
 (defn events
   "Generate an Event for each candidate match, update extra Events."
   [bundle]
-  (log/info "Events in " (:id bundle))
+  (log/debug "Events in " (:id bundle))
   (->> bundle
       (map-actions (partial action/create-events-for-action bundle))))
 
@@ -140,7 +140,7 @@
         ; so we need to be confident that everything that's going to happen, has happened.
         realized (clojure.walk/postwalk identity result)
         with-trace (assoc realized :web-trace @web-trace-atom)]
-    (log/info "Finished processing" (:id with-trace))
+    (log/debug "Finished processing" (:id with-trace))
     with-trace))
 
 (defn extract-all-events

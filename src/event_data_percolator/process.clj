@@ -51,7 +51,7 @@
 (defn process-input-bundle
   [{payload :payload auth-header :auth-header}]
   ; Fetch the cached copy of the domain list.
-  (log/info "Process input bundle" (:id payload))
+  (log/debug "Process input bundle")
   (status/send! "percolator" "input" "process" 1)
   (let [[domain-list-artifact-version domain-list] (cached-domain-list)]
     {:auth-header auth-header :payload (input-bundle/process payload domain-list-artifact-version domain-list)}))
@@ -132,7 +132,7 @@
           #(log/info "Error sending Evidence Record" (:id event) "with exception" (.getMessage %))
           ; But if terminate is called, that's a serious problem.
           #(log/error "Failed to send event" (:id event) "to downstream")
-          #(log/info "Finished broadcasting" (:id event) "to downstream")))
+          #(log/debug "Finished broadcasting" (:id event) "to downstream")))
 
   ; Store record
   (log/info "Store Evidence Record" (:id payload))

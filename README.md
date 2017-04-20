@@ -333,7 +333,7 @@ Config via environment variables
 
 Background:
 
-     time docker-compose  -f docker-compose-demo.yml run -w /usr/src/app  -p 8005:8005 demo lein run accept
+     time docker-compose  -f docker-compose-demo.yml run -w /usr/src/app  -p 8005:8005 accept lein run accept
 
 Then:
 
