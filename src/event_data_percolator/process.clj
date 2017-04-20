@@ -113,12 +113,11 @@
         storage-key (str input-bundle/evidence-url-prefix evidence-record-id)
         events (input-bundle/extract-all-events payload)]
     
-    (log/info "Got output bundle id" (:id payload))
+    (log/info "Got output bundle id" (:id payload) "with" (count events) "Events")
 
     ; Send all events.
-    (log/info "Sending " (count events) "Events")
     (doseq [event events]
-      (log/info "Sending event: " (:id event))
+      (log/debug "Sending event: " (:id event))
       (status/send! "percolator" "output-event" "sent" 1)
 
       (backoff/try-backoff
@@ -139,7 +138,7 @@
   (store/set-string @evidence-store storage-key payload-json)
 
   ; If everything went ok, save Actions for deduplication.
-  (log/info "Setting deduplication info for" (:id payload))
+  (log/debug "Setting deduplication info for" (:id payload))
   (action/store-action-duplicates payload))
 
   true)
