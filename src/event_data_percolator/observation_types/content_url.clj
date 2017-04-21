@@ -27,7 +27,7 @@
                     (web/fetch-ignoring-robots input web-trace-atom)
                     (web/fetch-respecting-robots input web-trace-atom)))]
     
-    (when-let [newsfeed-links (html/newsfeed-links-from-html (:body content))]
+    (when-let [newsfeed-links (html/newsfeed-links-from-html (:body content) input)]
       (when web-trace-atom
         (swap! web-trace-atom concat (map (fn [link] {:url link :type :newsfeed-url}) newsfeed-links))))
   

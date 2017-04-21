@@ -3,7 +3,8 @@
   (:require [event-data-percolator.observation-types.plaintext :as plaintext]
             [event-data-percolator.observation-types.url :as url])
   (:import [org.jsoup Jsoup]
-           [org.apache.commons.codec.digest DigestUtils]))
+           [org.apache.commons.codec.digest DigestUtils]
+           [java.net URI]))
 
 (defn plaintext-from-html
   "Extract a single plaintext string from text of whole document."
@@ -24,19 +25,25 @@
       (set)))
 
 (defn newsfeed-links-from-html
-  "Extract a seq of all newsfeed links (RSS and Atom) from an HTML document."
-  [html]
-  (when html
-    (let [parsed (Jsoup/parse html)
-          rss-links (->> parsed
-                         (#(.select % "link[type=application/rss+xml]"))
-                         (map #(hash-map :rel (.attr % "rel") :href (.attr % "href")))
-                         (set))
-          atom-links (->> parsed
-                          (#(.select % "link[type=application/atom+xml]"))
-                          (map #(hash-map :rel (.attr % "rel") :href (.attr % "href")))
-                          (set))]
-      (clojure.set/union rss-links atom-links))))
+  "Extract a seq of all newsfeed links (RSS and Atom) from an HTML document.
+   If URLs are relative, resolve them to absolute ones."
+  [html original-url]
+  (try
+    (when html
+      (let [parsed (Jsoup/parse html)
+            base-uri (new URI original-url)
+            rss-links (->> parsed
+                           (#(.select % "link[type=application/rss+xml]"))
+                           (map #(hash-map :rel (.attr % "rel") :href (str (.resolve base-uri (new URI (.attr % "href")))))))
+            atom-links (->> parsed
+                            (#(.select % "link[type=application/atom+xml]"))
+                            (map #(hash-map :rel (.attr % "rel") :href (str (.resolve base-uri (new URI (.attr % "href")))))))
+            all-links (clojure.set/union rss-links atom-links)]
+        (clojure.set/union rss-links atom-links)))
+
+    ; Constructing URIs from inputs may throw IllegalArgumentExceptions, NPE etc.
+    ; This isn't mission-critical, so just ignore.
+    (catch Exception _ nil)))
 
 (defn process-html-content-observation
   "Process an observation of type html-content."
