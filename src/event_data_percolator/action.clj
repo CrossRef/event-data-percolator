@@ -126,7 +126,7 @@
                     :occurred_at (str (:occurred-at action))
                     :subj subj
                     :obj obj
-                    :evidence-record (:url input-bundle)}
+                    :evidence_record (:url input-bundle)}
 
         with-license (if-let [license (:license input-bundle)] (assoc base-event :license license) base-event)]
       with-license))
