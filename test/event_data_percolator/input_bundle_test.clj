@@ -241,9 +241,9 @@
         (is (= (-> result :artifacts :other) :value) "Pre-existing values in artifacts are passed through.")
 
         (is (= (set (:web-trace result))
-                #{{:url "http://article.com/article/22222" :status 303 }
-                  {:url "http://article.com/article/22222-X" :status 200 }
-                  {:url "http://article.com/article/XXXXX" :error :timeout-error}})
+                #{{:type :request :url "http://article.com/article/22222" :status 303 }
+                  {:type :request :url "http://article.com/article/22222-X" :status 200 }
+                  {:type :request :url "http://article.com/article/XXXXX" :error :timeout-error}})
             "All HTTP access should be recorded")
 
         ; The rest of the pieces are tested above.

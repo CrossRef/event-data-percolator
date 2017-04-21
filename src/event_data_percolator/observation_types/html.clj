@@ -23,6 +23,21 @@
       (remove empty?)
       (set)))
 
+(defn newsfeed-links-from-html
+  "Extract a seq of all newsfeed links (RSS and Atom) from an HTML document."
+  [html]
+  (when html
+    (let [parsed (Jsoup/parse html)
+          rss-links (->> parsed
+                         (#(.select % "link[type=application/rss+xml]"))
+                         (map #(hash-map :rel (.attr % "rel") :href (.attr % "href")))
+                         (set))
+          atom-links (->> parsed
+                          (#(.select % "link[type=application/atom+xml]"))
+                          (map #(hash-map :rel (.attr % "rel") :href (.attr % "href")))
+                          (set))]
+      (clojure.set/union rss-links atom-links))))
+
 (defn process-html-content-observation
   "Process an observation of type html-content."
   [observation landing-page-domain-set web-trace-atom]

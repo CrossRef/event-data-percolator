@@ -25,7 +25,12 @@
         content (when valid?
                   (if (:ignore-robots observation)
                     (web/fetch-ignoring-robots input web-trace-atom)
-                    (web/fetch-respecting-robots input web-trace-atom)))]    
+                    (web/fetch-respecting-robots input web-trace-atom)))]
+    
+    (when-let [newsfeed-links (html/newsfeed-links-from-html (:body content))]
+      (when web-trace-atom
+        (swap! web-trace-atom concat (map (fn [link] {:url link :type :newsfeed-url}) newsfeed-links))))
+  
     (if-not content
       (assoc observation :error :failed-fetch-url)
       (let [; Attach content then pass the thing to the HTML processor for heavy lifting.

@@ -153,3 +153,27 @@
                                   {:type :landing-page-url :value "https://doi.org/10.5555/12345678"}
                                   {:type :doi-url :value "https://doi.org/10.5555/12345678"}]})
           "Three different kinds of candidates retrieved when DOI is linked and in text."))))
+
+(def rss-html
+  "A webpage with a number of RSS feeds"
+"<html><link href='https://www.crossref.org/index.xml' rel='feed' type='application/atom+xml' title='Crossref Feed' />
+<link href='https://www.crossref.org/blog/index.xml' rel='alternate' type='application/atom+xml' title='Crossref Blog Feed' />
+<link rel='service.post' type='application/atom+xml' title='russlings - Atom' href='https://www.blogger.com/feeds/10966011/posts/default' />
+<link rel='alternate' type='application/rss+xml' title='The SkeptVet &raquo; Feed' href='http://skeptvet.com/Blog/feed/' />
+<link rel='alternate' type='application/rss+xml' title='The SkeptVet &raquo; Comments Feed' href='http://skeptvet.com/Blog/comments/feed/' />
+<link rel='alternate' type='application/rss+xml' title='The SkeptVet &raquo; Latest Integrative Nonsense from the Integrative Veterinary Care Journal- Spring 2017 Comments Feed' href='http://skeptvet.com/Blog/2017/04/latest-integrative-nonsense-from-the-integrative-veterinary-care-journal-spring-2017/feed/' />
+<link rel='alternate' type='application/rss+xml' title='Companion Animal Psychology - RSS' href='http://www.companionanimalpsychology.com/feeds/posts/default?alt=rss' />
+<link rel='service.post' type='application/atom+xml' title='Companion Animal Psychology - Atom' href='https://www.blogger.com/feeds/4990755601078984403/posts/default' />
+</html>")
+
+(deftest newsfeed-detection
+  (testing "Newsfeeds links are identified and extracted from HTML."
+    (is (= (html/newsfeed-links-from-html rss-html)
+            #{{:rel "alternate", :href "http://www.companionanimalpsychology.com/feeds/posts/default?alt=rss"}
+              {:rel "alternate", :href "http://skeptvet.com/Blog/2017/04/latest-integrative-nonsense-from-the-integrative-veterinary-care-journal-spring-2017/feed/"}
+              {:rel "service.post", :href "https://www.blogger.com/feeds/4990755601078984403/posts/default"}
+              {:rel "alternate", :href "https://www.crossref.org/blog/index.xml"}
+              {:rel "alternate", :href "http://skeptvet.com/Blog/feed/"}
+              {:rel "feed", :href "https://www.crossref.org/index.xml"}
+              {:rel "service.post", :href "https://www.blogger.com/feeds/10966011/posts/default"}
+              {:rel "alternate", :href "http://skeptvet.com/Blog/comments/feed/"}}))))

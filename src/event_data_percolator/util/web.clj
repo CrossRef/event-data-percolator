@@ -39,8 +39,8 @@
               ; Trace. Two kinds of exception handling, the returned error and the try-catch below.
               (when trace-atom
                 (if-not error
-                  (swap! trace-atom concat [{:url url :status (:status result)}])
-                  (swap! trace-atom concat [{:url url
+                  (swap! trace-atom concat [{:url url :type :request :status (:status result)}])
+                  (swap! trace-atom concat [{:url url :type :request
                                              :error (cond
                                                (instance? org.httpkit.client.TimeoutException error) :timeout-error
                                                :default :unknown-error)}])))
@@ -59,23 +59,23 @@
   
       ; On error just return nil, but add exception to trace.
       (catch java.net.URISyntaxException exception (when trace-atom
-                                               (do (swap! trace-atom concat [{:error :url-syntax-error :url url}])
+                                               (do (swap! trace-atom concat [{:error :url-syntax-error :type :request :url url}])
                                                 nil)))
 
       (catch java.net.UnknownHostException exception (when trace-atom
-                                                 (do (swap! trace-atom concat [{:error :unknown-host-error :url url}])
+                                                 (do (swap! trace-atom concat [{:error :unknown-host-error :type :request :url url}])
                                                   nil)))
 
       (catch org.httpkit.client.TimeoutException exception (when trace-atom
-                                                       (do (swap! trace-atom concat [{:error :timeout-error :url url}])
+                                                       (do (swap! trace-atom concat [{:error :timeout-error :type :request :url url}])
                                                         nil)))
 
       (catch org.httpkit.ProtocolException exception (when trace-atom
-                                                       (do (swap! trace-atom concat [{:error :timeout-error :url url}])
+                                                       (do (swap! trace-atom concat [{:error :timeout-error :type :request :url url}])
                                                         nil)))
 
       (catch Exception exception (when trace-atom
-                        (do (swap! trace-atom concat [{:error :unknown :exception-message (.getMessage exception) :url url}])
+                        (do (swap! trace-atom concat [{:error :unknown :exception-message (.getMessage exception) :type :request :url url}])
                          nil))))))
 
 (def redis-cache-store
@@ -135,7 +135,7 @@
     (if-not allowed
       (do
         (when trace-atom
-          (swap! trace-atom concat [{:error :robots-forbidden :url url}]))
+          (swap! trace-atom concat [{:error :robots-forbidden :type :request :url url}]))
         nil)
       (fetch url trace-atom))))
 
