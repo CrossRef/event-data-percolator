@@ -260,9 +260,5 @@
                                      {:type :doi-url, :value "https://doi.org/10.6666/24242424" :match "https://doi.org/10.6666/24242424"}]}
 
          result (action/dedupe-matches input-action)]
-      (is (= result expected-result))
-
-      )
-
-    ))
+      (is (= result expected-result)))))
 
