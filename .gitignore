@@ -11,3 +11,4 @@ pom.xml.asc
 .m2-cache
 .env
 src/scrap.clj
+notes.txt

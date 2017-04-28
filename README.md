@@ -327,6 +327,9 @@ Config via environment variables
  - `ROBOTS_CACHE_REDIS_DB`
  - `PROCESS_CONCURRENCY` - number of threads when processing. Default is 10.
  - `SKIP_LANDING_PAGE_CACHE`
+ - `ACTIVEMQ_USERNAME`
+ - `ACTIVEMQ_PASSWORD`
+ - `ACTIVEMQ_URL`
 ## Demo
 
 ### Diagnostic in-and-out

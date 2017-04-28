@@ -130,7 +130,6 @@
   (let [port (Integer/parseInt (:port env))]
     (log/info "Start heartbeat")
     (at-at/every 10000 #(status/send! "percolator" "heartbeat" "tick" 1) schedule-pool)
-    (queue/start-heartbeat)
 
     (log/info "Start server on " port)
     (server/run-server @app {:port port})))

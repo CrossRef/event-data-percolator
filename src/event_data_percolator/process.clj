@@ -49,6 +49,7 @@
   (memo/ttl retrieve-domain-list {} :ttl/threshold cache-milliseconds))
 
 (defn process-input-bundle
+  "Process an input bundle and place it on the output queue to send."
   [{payload :payload auth-header :auth-header}]
   ; Fetch the cached copy of the domain list.
   (log/debug "Process input bundle")
@@ -56,35 +57,21 @@
   (let [[domain-list-artifact-version domain-list] (cached-domain-list)]
     {:auth-header auth-header :payload (input-bundle/process payload domain-list-artifact-version domain-list)}))
 
+(defn process-input-bundle-and-enqueue
+  [input]
+  (let [result (process-input-bundle input)]
+    (queue/enqueue result output-bundle-queue-name)))
+
 (def process-concurrency
   (delay (Integer/parseInt (:process-concurrency env "10"))))
 
 (defn run-process
   "Run processing input bundles from the input queue, place on output queue. Block."
   []
-  (log/info "Registering shutdown hook...")
-  (.addShutdownHook
-      (Runtime/getRuntime)
-      (new Thread
-        (try
-        (fn []
-          (log/info "Shutdown hook started")
-          (let [stopped-signal (promise)]
-            ; Pass the promise to queue processing. 
-            (reset! queue/stopped-signal stopped-signal)
-
-            ; It will deliver when it's ready.
-            (log/info "Waiting for queue processing to stop...")
-            (deref stopped-signal)
-            (log/info "Queue processing happily stopped.")
-            (log/info "Shutdown hook finished gracefully.")))
-        (catch Exception ex (.printStackTrace ex)))))
-
   (log/info "Start process queue")
-  (queue/start-heartbeat)
   (let [threads (map (fn [thread-number]
                        (log/info "Starting processing thread number" thread-number)
-                       (thread (queue/process-queue input-bundle-queue-name process-input-bundle output-bundle-queue-name)))
+                       (thread (queue/process-queue input-bundle-queue-name process-input-bundle-and-enqueue)))
                      (range @process-concurrency))]
 
     ; Wait for any threads to exit. They shoudln't.
@@ -150,22 +137,6 @@
   []
   ; Shutdown hook stops queue ingestion, waits for the processing to finish.
   ; Of course, it could just be SIGKILLED, which would mean we had left-over processing in the working queue.
-  (log/info "Registering shutdown hook...")
-  (.addShutdownHook
-      (Runtime/getRuntime)
-      (new Thread
-        (fn []
-          (log/info "Shutdown hook started")
-          (let [stopped-signal (promise)]
-            ; Pass the promise to queue processing. 
-            (reset! queue/stopped-signal stopped-signal)
 
-            ; It will deliver when it's ready.
-            (log/info "Waiting for queue processing to stop...")
-            (deref stopped-signal)
-            (log/info "Queue processing happily stopped.")
-            (log/info "Shutdown hook finished gracefully.")))))
-
-  (queue/start-heartbeat)
   (log/info "Start push queue")
-  (queue/process-queue output-bundle-queue-name push-output-bundle nil))
+  (queue/process-queue output-bundle-queue-name push-output-bundle))
