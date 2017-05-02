@@ -161,4 +161,8 @@
   [bundle]
   (let [actions (mapcat :actions (:pages bundle))]
     (doseq [action actions]
-      (store/set-string @action-dedupe-store (str "action/" (:id action)) (json/write-str {:evidence-record-id (:id bundle) :action-id (:id action)})))))
+      ; Action ID might not be set.
+      (when-let [action-id (:id action)]
+        (store/set-string @action-dedupe-store (str "action/" action-id) (json/write-str {:evidence-record-id (:id bundle) :action-id action-id}))))))
+
+
