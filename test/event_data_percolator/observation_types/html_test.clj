@@ -172,13 +172,14 @@
 (deftest newsfeed-detection
   (testing "Newsfeeds links are identified and extracted from HTML. Makes relative URIs absolute."
     (is (= (html/newsfeed-links-from-html rss-html "http://www.example.com/my-blog/page")
-            #{{:rel "alternate", :href "http://example.com/my-blog/page-relatives.xml"}
-              {:rel "alternate", :href "http://example.com/site-relative.xml"}
-              {:rel "alternate", :href "http://www.companionanimalpsychology.com/feeds/posts/default?alt=rss"}
-              {:rel "alternate", :href "http://skeptvet.com/Blog/2017/04/latest-integrative-nonsense-from-the-integrative-veterinary-care-journal-spring-2017/feed/"}
-              {:rel "service.post", :href "https://www.blogger.com/feeds/4990755601078984403/posts/default"}
-              {:rel "alternate", :href "https://www.crossref.org/blog/index.xml"}
-              {:rel "alternate", :href "http://skeptvet.com/Blog/feed/"}
-              {:rel "feed", :href "https://www.crossref.org/index.xml"}
-              {:rel "service.post", :href "https://www.blogger.com/feeds/10966011/posts/default"}
-              {:rel "alternate", :href "http://skeptvet.com/Blog/comments/feed/"}}))))
+           #{{:rel "alternate", :href "http://www.companionanimalpsychology.com/feeds/posts/default?alt=rss"}
+             {:rel "alternate", :href "http://skeptvet.com/Blog/2017/04/latest-integrative-nonsense-from-the-integrative-veterinary-care-journal-spring-2017/feed/"}
+             {:rel "alternate", :href "http://skeptvet.com/Blog/comments/feed/"}
+             {:rel "alternate", :href "http://skeptvet.com/Blog/feed/"}
+             {:rel "feed", :href "http://www.example.com/site-relative.xml"}
+             {:rel "feed", :href "http://www.example.com/my-blog/page-relative.xml"}
+             {:rel "feed", :href "https://www.crossref.org/index.xml"}
+             {:rel "alternate", :href "https://www.crossref.org/blog/index.xml"}
+             {:rel "service.post", :href "https://www.blogger.com/feeds/10966011/posts/default"}
+             {:rel "service.post", :href "https://www.blogger.com/feeds/4990755601078984403/posts/default"}}))))
+

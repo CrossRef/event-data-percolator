@@ -34,12 +34,14 @@
             base-uri (new URI original-url)
             rss-links (->> parsed
                            (#(.select % "link[type=application/rss+xml]"))
-                           (map #(hash-map :rel (.attr % "rel") :href (str (.resolve base-uri (new URI (.attr % "href")))))))
+                           (map #(hash-map :rel (.attr % "rel") :href (str (.resolve base-uri (new URI (.attr % "href"))))))
+                           set)
             atom-links (->> parsed
                             (#(.select % "link[type=application/atom+xml]"))
-                            (map #(hash-map :rel (.attr % "rel") :href (str (.resolve base-uri (new URI (.attr % "href")))))))
+                            (map #(hash-map :rel (.attr % "rel") :href (str (.resolve base-uri (new URI (.attr % "href"))))))
+                            set)
             all-links (clojure.set/union rss-links atom-links)]
-        (clojure.set/union rss-links atom-links)))
+        all-links))
 
     ; Constructing URIs from inputs may throw IllegalArgumentExceptions, NPE etc.
     ; This isn't mission-critical, so just ignore.

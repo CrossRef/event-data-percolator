@@ -329,7 +329,7 @@ Config via environment variables
  - `SKIP_LANDING_PAGE_CACHE`
  - `ACTIVEMQ_USERNAME`
  - `ACTIVEMQ_PASSWORD`
- - `ACTIVEMQ_URL`
+ - `ACTIVEMQ_URL` - e.g. tcp://localhost:61616
 ## Demo
 
 ### Diagnostic in-and-out

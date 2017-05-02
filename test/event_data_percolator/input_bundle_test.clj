@@ -297,3 +297,46 @@
 
       (is (-> result-1 :pages first :actions first :events not-empty) "First bundle action isn't a duplicate, so should have events")
       (is (-> result-2 :pages first :actions second :events empty?) "Second bundle action is a duplicate, so should not have events")))))
+
+
+
+(deftest ^:component action-id-can-be-ommitted
+  (testing "Action IDs can be ommitted if it's sensible to do so, e.g. low chance of collision, very high rate of input per Wikipedia"
+    (fake/with-fake-http ["https://doi.org/api/handles/10.5555/9898989898" (doi-ok "10.5555/9898989898")]
+      (let [domain-list #{}
+            input-bundle {:pages [
+                           {:actions [
+                             ; Same actions in the input bundle. In reality this shouldn't happen, but do it to verify that they aren't deduplicated.
+                             {:url "https://en.wikipedia.org/w/index.php?title=Bus&oldid=776981387"
+                              :occurred-at "2017-05-02T00:00:00.000Z"
+                              :observations [
+                                {:type "plaintext"
+                                 :input-content "10.5555/9898989898"}]}
+                             {:url "https://en.wikipedia.org/w/index.php?title=Bus&oldid=776981387"
+                              :occurred-at "2017-05-02T00:00:00.000Z"
+                              :observations [
+                                {:type "plaintext"
+                                 :input-content "10.5555/9898989898"}]}]}]}
+
+            ; Also send twice.
+            result-1 (input-bundle/process input-bundle "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)
+            
+            ; Now save the action IDs. This is normally triggered in 'push'.
+            push-output-bundle-result (action/store-action-duplicates result-1)
+
+            result-2 (input-bundle/process input-bundle "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)]
+
+      (is (= (dissoc result-1
+               :id
+               :timestamp
+               :url
+               :pages)
+             (dissoc result-2
+               :id
+               :timestamp
+               :url
+               :pages)) "Both results should have been processed to give identical results (except for those fields that are non-deterministic).")
+
+      (is (= (->> result-1 :pages first :actions first :events (map #(dissoc % :id :evidence_record)))
+             (->> result-2 :pages first :actions first :events (map #(dissoc % :id :evidence_record)))) "Events should be the same except for non-deterministic fields.")))))
+

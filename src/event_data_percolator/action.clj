@@ -25,20 +25,22 @@
   (into {} (map (juxt identity f)) coll))
 
 (defn dedupe-action
-  "Take an Action, decorate with 'duplicate' field.
+  "Take an Action, decorate with 'duplicate' field IFF there's an action ID.
    If there's duplicate information (a chunk of JSON representing a previous Evidence Record), associate it with the Action, otherwise pass it through.
    The store is updated with the values in the 'push' process.
    Step 3 from docs."
   [action evidence-record-id]
 
-  (let [id (:id action)
-        k (str "action/" id)
-        duplicate-info (store/get-string @action-dedupe-store k)
-        duplicate-info-parsed (when duplicate-info (json/read-str duplicate-info))]
+  (if-let [id (:id action)]
+    (let [k (str "action/" id)
+         duplicate-info (store/get-string @action-dedupe-store k)
+         duplicate-info-parsed (when duplicate-info (json/read-str duplicate-info))]
 
-    (if duplicate-info-parsed
-      (assoc action :duplicate duplicate-info-parsed)
-      action)))
+      (if duplicate-info-parsed
+        (assoc action :duplicate duplicate-info-parsed)
+        action))
+    action))
+
 
 (defn process-observations-candidates
   "Step Process all the observations of an Action to generate Candidates. Collect Candidates.
@@ -134,7 +136,7 @@
 (defn create-event-from-extra-event
   "Given an extra Event in an Action, expand it to include the full compliment of fields."
   [input-bundle event]
-  (let [base-event (merge {:evidence-record (:url input-bundle)
+  (let [base-event (merge {:evidence_record (:url input-bundle)
                            :id (str (UUID/randomUUID))
                            :source_token (:source-token input-bundle)
                            :source_id (:source-id input-bundle)

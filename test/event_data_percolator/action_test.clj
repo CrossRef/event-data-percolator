@@ -178,12 +178,12 @@
              :obj
              {:pid "https://dx.doi.org/10.5555/12345678",
               :url "http://psychoceramics.labs.crossref.org/12345"},
-             :evidence-record "http://example.com/evidence/123456",
+             :evidence_record "http://example.com/evidence/123456",
              :relation_type_id "cites"}
 
-            ; Emitted ones have :id, :evidence-record, :action, :source-id added 
+            ; Emitted ones have :id, :evidence_record, :action, :source_id added 
             {:license "http://example.com/license"
-             :evidence-record "http://example.com/evidence/123456",
+             :evidence_record "http://example.com/evidence/123456",
              :source_token "SOURCE_TOKEN",
              :source_id "SOURCE_ID",
              :action "add",
@@ -192,7 +192,7 @@
              :subj_id "https://example.com/1/version/2",
              :relation_type_id "is_version_of"}
             {:license "http://example.com/license"
-             :evidence-record "http://example.com/evidence/123456",
+             :evidence_record "http://example.com/evidence/123456",
              :source_token "SOURCE_TOKEN",
              :source_id "SOURCE_ID",
              :action "add",
@@ -232,7 +232,7 @@
         :obj
         {:pid "https://dx.doi.org/10.5555/12345678",
          :url "http://psychoceramics.labs.crossref.org/12345"},
-        :evidence-record "http://example.com/evidence/123456",
+        :evidence_record "http://example.com/evidence/123456",
         :relation_type_id "cites"}]))))
 
 (deftest dedupe-by-val-substring

@@ -31,7 +31,9 @@
        :url s/Str
        :relation-type-id s/Str
        :occurred-at s/Str
-       :id s/Str
+       ; Action ID is optional but recommended except for specific cases. 
+       ; See input-bundle-test/action-id-can-be-ommitted
+       (s/optional-key :id) s/Str
        :subj s/Any
        ; Extra Events that are only carried through if observations match.
        (s/optional-key :extra-events) s/Any
