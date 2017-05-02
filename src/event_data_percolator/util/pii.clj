@@ -23,26 +23,36 @@
 (defn validate-pii
   "Validate a PII and return the DOI if it's been used as an alternative ID."
   [pii]
-  (let [result (try-try-again {:sleep 5000 :tries 4}
-                #(-> 
-                  (http/get "https://api.crossref.org/v1/works" {:query-params {:filter (str "alternative-id:" pii)}})
-                  deref
-                  :body
-                  json/read-str))
-        items (get-in result ["message" "items"])]
+  (when-not (clojure.string/blank? pii)
+    (let [result (try
+                   (try-try-again {:sleep 5000 :tries 2}
+                    #(-> 
+                      (http/get "https://api.crossref.org/v1/works" {:query-params {:filter (str "alternative-id:" pii)}})
+                       deref
+                       :body
+                       json/read-str))
+                   (catch Exception ex (fn []
+                                         (log/error "Failed to retrieve PII from REST API:" pii)
+                                         (.printStackTrace ex)
+                                         nil)))
 
-    (status/add! "percolator" "metadata-api" "request" 1)
-    
-    (when-not result
-      (log/error "Failed to retrieve PII from API for" pii)
-      (status/add! "percolator" "metadata-api" "fail" 1))
+          items (get-in result ["message" "items"])]
 
-    (when result
-      (status/add! "percolator" "metadata-api" "ok" 1))
+      (status/add! "percolator" "metadata-api" "request" 1)
+      
+      (when-not result
+        (log/error "Failed to retrieve PII from API for" pii)
+        (status/add! "percolator" "metadata-api" "fail" 1))
 
-    ; Only return when there's exactly one match.
-    ; If so, check that the DOI exists and in the process normalize (don't trust the API's indexed data).
-    (when (= 1 (count items))
-      (let [possible-doi (get (first items) "DOI")
-            extant-doi (doi/validate-cached possible-doi)]
-        (when extant-doi (crdoi/normalise-doi extant-doi))))))
+      (when result
+        (status/add! "percolator" "metadata-api" "ok" 1))
+
+      ; Only return when there's exactly one match.
+      ; If so, check that the DOI exists and in the process normalize (don't trust the API's indexed data).
+      (when (= 1 (count items))
+        (let [possible-doi (get (first items) "DOI")
+              extant-doi (doi/validate-cached possible-doi)]
+          (when extant-doi (crdoi/normalise-doi extant-doi)))))))
+
+
+

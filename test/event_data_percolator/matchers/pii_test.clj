@@ -38,4 +38,39 @@
                           ; And attempts to chop the end off
                           #"https://doi.org/api/handles/1.*" (util/doi-not-found)]
       (let [result (pii/match-pii-candidate {:value "S232251141300001-2"} nil)]
-        (is (= result {:value "S232251141300001-2", :match nil}))))))
+        (is (= result {:value "S232251141300001-2", :match nil})))))
+
+  (testing "empty PII should never result in a match or query"
+    ; Ensure that no network activity is made.
+    (fake/with-fake-http []
+      (let [result (pii/match-pii-candidate {:value ""} nil)]
+        (is (= result {:value "", :match nil})))))
+
+  (testing "nill PII should never result in a match or query"
+    ; Ensure that no network activity is made.
+    (fake/with-fake-http []
+      (let [result (pii/match-pii-candidate {:value nil} nil)]
+        (is (= result {:value nil, :match nil})))))
+
+  (testing "match-pii-candidate can deal with non-JSON response."
+    (fake/with-fake-http ["https://api.crossref.org/v1/works"
+                          {:status 200
+                           :headers {:content-type "application/json"}
+                           :body "<xml>BANG</xml>"}]
+      (let [result (pii/match-pii-candidate {:value "CRASHING-XML"} nil)]
+        (is (= result {:value "CRASHING-XML", :match nil})))))
+
+  (testing "match-pii-candidate can deal with empty response."
+    (fake/with-fake-http ["https://api.crossref.org/v1/works"
+                          {:status 200
+                           :headers {:content-type "application/json"}
+                           :body ""}]
+      (let [result (pii/match-pii-candidate {:value "CRASHING-EMPTY"} nil)]
+        (is (= result {:value "CRASHING-EMPTY", :match nil})))))
+
+    (testing "match-pii-candidate can deal with exception."
+    (fake/with-fake-http ["https://api.crossref.org/v1/works"
+                          #(throw (new Exception "Something went wrong."))]
+      (let [result (pii/match-pii-candidate {:value "CRASHING-EXCEPTION"} nil)]
+        (is (= result {:value "CRASHING-EXCEPTION", :match nil}))))))
+
