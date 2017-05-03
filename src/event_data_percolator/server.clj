@@ -105,7 +105,7 @@
            ; Carry the auth header through so we can pass it onto the event bus downstream.
            (let [auth-header (get-in ctx [:request :headers "authorization"])]
              (queue/enqueue {:auth-header auth-header
-                             :payload (::payload ctx)} process/input-bundle-queue-name))
+                             :payload (::payload ctx)} @queue/input-bundle-connection))
            true)
 
   :handle-created (fn [ctx]

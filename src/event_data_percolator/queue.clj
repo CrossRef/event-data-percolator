@@ -19,6 +19,23 @@
 (def amq-connection-factory
   (delay (new org.apache.activemq.ActiveMQConnectionFactory (:activemq-username env) (:activemq-password env) (:activemq-url env))))
 
+(defn build-connection-objects [queue-name]
+  (let [connection (.createConnection @amq-connection-factory)
+        session (.createSession connection false, Session/AUTO_ACKNOWLEDGE)
+        destination (.createQueue session queue-name)
+        producer (.createProducer session destination)]
+  {:connection connection :session session :destination destination :producer producer}))
+
+(def input-bundle-queue-name "input-bundle")
+(def output-bundle-queue-name "output-bundle")
+
+; Persistent connection objects.
+(def input-bundle-connection
+  (delay (build-connection-objects input-bundle-queue-name)))
+
+(def output-bundle-connection
+  (delay (build-connection-objects output-bundle-queue-name)))
+
 (defn process-queue
   [queue-name process-f]
   (log/info "Starting to process queue" queue-name)
@@ -32,10 +49,7 @@
         (recur (.receive consumer))))))
 
 (defn enqueue
-  [data queue-name]
-  (with-open [connection (.createConnection @amq-connection-factory)]
-    (let [session (.createSession connection false, Session/AUTO_ACKNOWLEDGE)
-          destination (.createQueue session queue-name)
-          producer (.createProducer session destination)
-          message (.createTextMessage session (json/write-str data))]
-      (.send producer message))))
+  "Send data to a connection object."
+  [data queue-connection]
+  (let [message (.createTextMessage (:session queue-connection) (json/write-str data))]
+    (.send (:producer queue-connection) message)))

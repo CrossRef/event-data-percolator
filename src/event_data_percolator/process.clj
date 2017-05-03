@@ -17,8 +17,6 @@
             [event-data-common.status :as status]
             [robert.bruce :refer [try-try-again]]))
 
-(def input-bundle-queue-name "input-bundle")
-(def output-bundle-queue-name "output-bundle")
 
 (def domain-list-artifact-name "crossref-domain-list")
 
@@ -60,7 +58,7 @@
 (defn process-input-bundle-and-enqueue
   [input]
   (let [result (process-input-bundle input)]
-    (queue/enqueue result output-bundle-queue-name)))
+    (queue/enqueue result @queue/output-bundle-connection)))
 
 (def process-concurrency
   (delay (Integer/parseInt (:process-concurrency env "10"))))
@@ -71,7 +69,7 @@
   (log/info "Start process queue")
   (let [threads (map (fn [thread-number]
                        (log/info "Starting processing thread number" thread-number)
-                       (thread (queue/process-queue input-bundle-queue-name process-input-bundle-and-enqueue)))
+                       (thread (queue/process-queue queue/input-bundle-queue-name process-input-bundle-and-enqueue)))
                      (range @process-concurrency))]
 
     ; Wait for any threads to exit. They shoudln't.
@@ -139,4 +137,4 @@
   ; Of course, it could just be SIGKILLED, which would mean we had left-over processing in the working queue.
 
   (log/info "Start push queue")
-  (queue/process-queue output-bundle-queue-name push-output-bundle))
+  (queue/process-queue queue/output-bundle-queue-name push-output-bundle))
