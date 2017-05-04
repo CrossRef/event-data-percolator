@@ -1,7 +1,8 @@
 (ns event-data-percolator.observation-types.html
   "Extract unlinked DOIs, unlinked URLs and linked URLs (including DOIs) from HTML snippet or document."
   (:require [event-data-percolator.observation-types.plaintext :as plaintext]
-            [event-data-percolator.observation-types.url :as url])
+            [event-data-percolator.observation-types.url :as url]
+            [clojure.tools.logging :as log])
   (:import [org.jsoup Jsoup]
            [org.apache.commons.codec.digest DigestUtils]
            [java.net URI]))
@@ -9,20 +10,33 @@
 (defn plaintext-from-html
   "Extract a single plaintext string from text of whole document."
   [html]
-  (-> html
-      Jsoup/parse
-      (.body)
-      (.text)))
+  (try
+    (-> html
+        Jsoup/parse
+        (.body)
+        (.text))
+    ; We're getting text from anywhere. Anything could happen.
+    (catch Exception ex (do
+      (log/warn "Error parsing HTML for text")
+      (.printStackTrace ex)
+      ""))))
 
 (defn links-from-html
   "Extract a seq of all links (a hrefs) from an HTML document."
   [html]
-  (->> html
-      Jsoup/parse
-      (#(.select % "a"))
-      (map #(.attr % "href"))
-      (remove empty?)
-      (set)))
+  (try
+    (->> html
+        Jsoup/parse
+        (#(.select % "a"))
+        (map #(.attr % "href"))
+        (remove empty?)
+        (set))
+      ; We're getting text from anywhere. Anything could happen.
+      (catch Exception ex (do
+        (log/warn "Error parsing HTML for links")
+        (.printStackTrace ex)
+        #{}))))
+
 
 (defn newsfeed-links-from-html
   "Extract a seq of all newsfeed links (RSS and Atom) from an HTML document.

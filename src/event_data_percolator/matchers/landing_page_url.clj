@@ -97,29 +97,35 @@
 (defn try-fetched-page-metadata-content
   "Extract DOI from Metadata tags."
   [text]
-  (when text
-    (let [document (Jsoup/parse text)
+  (try
+    (when text
+      (let [document (Jsoup/parse text)
 
-          ; Get specific attribute values from named elements.
-          interested-attr-values (mapcat (fn [[selector attr-name]]
-                                                  (->>
-                                                    (.select document selector)
-                                                    (map #(.attr % attr-name))))
-                                                interested-tag-attrs)
+            ; Get specific attribute values from named elements.
+            interested-attr-values (mapcat (fn [[selector attr-name]]
+                                                    (->>
+                                                      (.select document selector)
+                                                      (map #(.attr % attr-name))))
+                                                  interested-tag-attrs)
 
-          ; Get text values from named elements.
-          interested-text-values (mapcat (fn [selector]
-                                                  (->>
-                                                    (.select document selector)
-                                                    (map #(.text %))))
-                                                interested-tag-text)
+            ; Get text values from named elements.
+            interested-text-values (mapcat (fn [selector]
+                                                    (->>
+                                                      (.select document selector)
+                                                      (map #(.text %))))
+                                                  interested-tag-text)
 
-          interested-values (distinct (concat interested-attr-values interested-text-values))
+            interested-values (distinct (concat interested-attr-values interested-text-values))
 
-          ; Try to normalize by removing recognised prefixes, then resolve
-          extant (keep (comp doi/validate-cached crdoi/non-url-doi) interested-values)]
-  
-      (-> extant first normalize-doi-if-exists))))
+            ; Try to normalize by removing recognised prefixes, then resolve
+            extant (keep (comp doi/validate-cached crdoi/non-url-doi) interested-values)]
+    
+        (-> extant first normalize-doi-if-exists)))
+    ; We're getting text from anywhere. Anything could happen.
+    (catch Exception ex (do
+      (log/warn "Error parsing HTML for DOI.")
+      (.printStackTrace ex)
+      nil))))
 
 (defn try-fetched-page-metadata
   [url web-trace-atom]
