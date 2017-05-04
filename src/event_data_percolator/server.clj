@@ -3,7 +3,7 @@
             [clojure.tools.logging :as log]
             [event-data-percolator.input-bundle :as input-bundle]
             [event-data-percolator.process :as process]
-            [event-data-percolator.queue :as queue]
+            [event-data-common.queue :as queue]
             [org.httpkit.server :as server]
             [config.core :refer [env]]
             [compojure.core :refer [defroutes GET POST]]
@@ -105,7 +105,7 @@
            ; Carry the auth header through so we can pass it onto the event bus downstream.
            (let [auth-header (get-in ctx [:request :headers "authorization"])]
              (queue/enqueue {:auth-header auth-header
-                             :payload (::payload ctx)} @queue/input-bundle-connection))
+                             :payload (::payload ctx)} process/input-bundle-queue))
            true)
 
   :handle-created (fn [ctx]

@@ -1,6 +1,6 @@
 (ns event-data-percolator.process
   "Top level process inputs."
-  (:require [event-data-percolator.queue :as queue]
+  (:require [event-data-common.queue :as queue]
             [event-data-percolator.input-bundle :as input-bundle]
             [event-data-percolator.action :as action]
             [clojure.tools.logging :as log]
@@ -19,6 +19,10 @@
 
 
 (def domain-list-artifact-name "crossref-domain-list")
+
+(def input-bundle-queue {:queue-name "input-bundle" :url (:activemq-url env) :username (:activemq-username env) :password (:activemq-password env)})
+
+(def output-bundle-queue {:queue-name "output-bundle" :url (:activemq-url env) :username (:activemq-username env) :password (:activemq-password env)})
 
 (def evidence-store
   (delay
@@ -58,7 +62,7 @@
 (defn process-input-bundle-and-enqueue
   [input]
   (let [result (process-input-bundle input)]
-    (queue/enqueue result @queue/output-bundle-connection)))
+    (queue/enqueue result output-bundle-queue)))
 
 (def process-concurrency
   (delay (Integer/parseInt (:process-concurrency env "10"))))
@@ -69,7 +73,7 @@
   (log/info "Start process queue")
   (let [threads (map (fn [thread-number]
                        (log/info "Starting processing thread number" thread-number)
-                       (thread (queue/process-queue queue/input-bundle-queue-name process-input-bundle-and-enqueue)))
+                       (thread (queue/process-queue input-bundle-queue process-input-bundle-and-enqueue)))
                      (range @process-concurrency))]
 
     ; Wait for any threads to exit. They shoudln't.
@@ -137,4 +141,4 @@
   ; Of course, it could just be SIGKILLED, which would mean we had left-over processing in the working queue.
 
   (log/info "Start push queue")
-  (queue/process-queue queue/output-bundle-queue-name push-output-bundle))
+  (queue/process-queue output-bundle-queue push-output-bundle))

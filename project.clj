@@ -1,4 +1,4 @@
-(defproject event-data-percolator "0.2.3"
+(defproject event-data-percolator "0.2.4"
   :description "Event Data Percolator"
   :url "http://eventdata.crossref.org/"
   :license {:name "MIT License"
@@ -6,7 +6,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/core.cache "0.6.5"]
                  [org.clojure/core.async "0.2.395"]
-                 [event-data-common "0.1.20"]
+                 [event-data-common "0.1.24"]
                  [enlive "1.1.6"]
                  [org.clojure/core.memoize "0.5.8"]
                  [commons-codec/commons-codec "1.10"]
@@ -41,10 +41,7 @@
                  [org.apache.commons/commons-io "1.3.2"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.apache.logging.log4j/log4j-core "2.6.2"]
-                 [org.slf4j/slf4j-simple "1.7.21"]
-
-                 ;; https://mvnrepository.com/artifact/org.apache.activemq/activemq-client
-                 [org.apache.activemq/activemq-client "5.14.5"]]
+                 [org.slf4j/slf4j-simple "1.7.21"]]
 
   :main ^:skip-aot event-data-percolator.core
   :target-path "target/%s"
