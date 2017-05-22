@@ -18,7 +18,6 @@
     ; We're getting text from anywhere. Anything could happen.
     (catch Exception ex (do
       (log/warn "Error parsing HTML for text")
-      (.printStackTrace ex)
       ""))))
 
 (defn links-from-html
