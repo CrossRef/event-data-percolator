@@ -16,13 +16,21 @@
         valid (when-not blacklist-match (try (new URL url) (catch Exception e nil)))]
     (boolean valid)))
 
+(defn url-is-landing-page
+  "Is the URL on a landing page domain?"
+  [landing-page-domain-set url]
+  (when-let [domain (try (.getHost (new URL url)) (catch Exception e nil))]
+    (landing-page-domain-set (landing-page-domain-set domain))))
+
 (defn process-content-url-observation
   [observation landing-page-domain-set web-trace-atom]
   (let [input (:input-url observation "")
         valid? (url-valid? input)
+        domain-allowed (not (url-is-landing-page landing-page-domain-set input))
+        proceed (and valid? domain-allowed)
         ; The :ignore-robots flag is passed in by Agents that have specific exemptions.
         ; E.g. Wikipedia sites' API is excluded for general-purpose robots but allowed for our uses.
-        content (when valid?
+        content (when proceed
                   (if (:ignore-robots observation)
                     (web/fetch-ignoring-robots input web-trace-atom)
                     (web/fetch-respecting-robots input web-trace-atom)))]
@@ -30,10 +38,12 @@
     (when-let [newsfeed-links (html/newsfeed-links-from-html (:body content) input)]
       (when web-trace-atom
         (swap! web-trace-atom concat (map (fn [link] {:url link :type :newsfeed-url}) newsfeed-links))))
-  
-    (if-not content
-      (assoc observation :error :failed-fetch-url)
-      (let [; Attach content then pass the thing to the HTML processor for heavy lifting.
-            new-observation (assoc observation :input-content (:body content))
-            html-observations (html/process-html-content-observation new-observation landing-page-domain-set web-trace-atom)]
-        html-observations))))
+    
+    (if-not domain-allowed
+      (assoc observation :error :skipped-domain)
+      (if-not content
+        (assoc observation :error :failed-fetch-url)
+        (let [; Attach content then pass the thing to the HTML processor for heavy lifting.
+              new-observation (assoc observation :input-content (:body content))
+              html-observations (html/process-html-content-observation new-observation landing-page-domain-set web-trace-atom)]
+          html-observations)))))

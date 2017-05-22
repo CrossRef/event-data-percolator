@@ -7,7 +7,11 @@
   "Return a canonical DOI if this is a valid, extant Short DOI."
   [short-doi-url]
   (let [valid-url (try (new URL short-doi-url) (catch Exception _ nil))
-        shortdoi-path (when valid-url (.substring (or (.getPath valid-url) "") 1))
+        shortdoi-path (when valid-url
+                    (let [the-path (.getPath valid-url)]
+                      ; Drop leading slash, unless there isn't a path.
+                      (when-not (clojure.string/blank? the-path)
+                        (.substring the-path 1))))
         validated (doi/validate-cached shortdoi-path)]
     (when validated
       (crdoi/normalise-doi validated))))

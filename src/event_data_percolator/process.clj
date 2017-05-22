@@ -117,7 +117,7 @@
           @retry-delay
           retries
           ; Only log info on retry because it'll be tried again.
-          #(log/info "Error sending Evidence Record" (:id event) "with exception" (.getMessage %))
+          #(log/info "Error sending Event" (:id event) "with exception" (.getMessage %))
           ; But if terminate is called, that's a serious problem.
           #(log/error "Failed to send event" (:id event) "to downstream")
           #(log/debug "Finished broadcasting" (:id event) "to downstream")))

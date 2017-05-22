@@ -22,6 +22,11 @@
       (let [result (shortdoi-url/match-shortdoi-url-candidate {:value ""} nil)]
         (is (nil? (:match result)) "Should return nil without throwing exception."))))
 
+  (testing "match-shortdoi-url-candidate handles URL with no path"
+    (fake/with-fake-http []
+      (let [result (shortdoi-url/match-shortdoi-url-candidate {:value "http://example.com"} nil)]
+        (is (nil? (:match result)) "Should return nil without throwing exception."))))
+
   (testing "match-shortdoi-url-candidate handles null value"
     (fake/with-fake-http []
       (let [result (shortdoi-url/match-shortdoi-url-candidate {:value nil} nil)]

@@ -23,12 +23,25 @@
 
   (testing "process-content-url-observation should set error when URL can't be retrieved"
     (fake/with-fake-http ["http://cannot-be-retrieved.com/abc" {:status 404}]
-      (let [result (content-url/process-content-url-observation {:input-url "http://cannot-be-retrieved.com/abc"} #{"cannot-be-retrieved.com"} (atom []))]
+      (let [result (content-url/process-content-url-observation
+                      {:input-url "http://cannot-be-retrieved.com/abc"}
+                      #{} (atom []))]
         (is (:error result)))))
+
+  (testing "process-content-url-observation not visit landing page domains"
+    ; Assert that no web call is made.
+    (fake/with-fake-http []
+      (let [result (content-url/process-content-url-observation
+                      {:input-url "http://publisher-site.com/this/page"}
+                      #{"publisher-site.com"} (atom []))]
+      
+        (is (= (:error result) :skipped-domain) "Results in :skipped-domain error")
+        (is (nil? (:input-content result)) "No content is returned."))))
+
 
   (testing "process-content-url-observation should set candidates on match where there are matches"
     (fake/with-fake-http ["http://can-be-retrieved.com/abc" "Webpage content 10.5555/12345678"]
-      (let [result (content-url/process-content-url-observation {:input-url "http://can-be-retrieved.com/abc"} #{"can-be-retrieved.com"} (atom []))]
+      (let [result (content-url/process-content-url-observation {:input-url "http://can-be-retrieved.com/abc"} #{} (atom []))]
         (is (nil? (:error result)))
 
         ; Simplest possible thing that returns candidates (actually passed all the way through to plain-text).
