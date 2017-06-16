@@ -9,7 +9,6 @@ services:
      - JWT_SECRETS=TEST,TEST2
      - DUPLICATE_STORAGE=memory
      - EVIDENCE_STORAGE=memory
-     - STATUS_SERVICE=http://status.eventdata.crossref.org
      - EVENT_BUS_URL_BASE=https://bus.eventdata.crossref.org
      - REDIS_HOST=redis
      - REDIS_PORT=6379
