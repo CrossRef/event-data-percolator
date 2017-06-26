@@ -134,7 +134,7 @@
 (def redis-db-number (delay (Integer/parseInt (get env :landing-page-cache-redis-db "0"))))
 
 (def redis-cache-store
-  (delay (redis/build "landing-page-cache:" (:landing-page-cache-redis-host env) (Integer/parseInt (:landing-page-cache-redis-port env)) @redis-db-number)))
+  (delay (redis/build "landing-page-cache:" (:percolator-landing-page-cache-redis-host env) (Integer/parseInt (:percolator-landing-page-cache-redis-port env)) @redis-db-number)))
 
 ; These can be reset by component tests.
 (def success-expiry-seconds
@@ -146,7 +146,7 @@
   (atom (* 60 60 24 10)))
 
 ; Set for component tests.
-(def skip-cache (:skip-landing-page-cache env))
+(def skip-cache (:percolator-skip-landing-page-cache env))
  
 ; This one function is responsible for all outgoing web traffic. Cache its results.
 ; Other results are derived algorithmically, so there's no use caching those.

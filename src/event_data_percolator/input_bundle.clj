@@ -5,14 +5,19 @@
             [clj-time.format :as clj-time-format]
             [config.core :refer [env]]
             [schema.core :as s]
-            [clojure.tools.logging :as log])
-  (:import [java.util UUID]))
-
-(def date-format
-  (clj-time-format/formatters :basic-date))
+            [clojure.tools.logging :as log]))
 
 (def bundles-schema
-  {:source-token s/Str
+  {; id like 20170101-twitter-23781b07-a198-4607-a1b7-0752224411c6
+   :id s/Str
+
+   ; ISO8601 timestamp
+   :timestamp s/Str
+   
+   ; JWT for claims. This will be removed during processing.
+   :jwt s/Str 
+   
+   :source-token s/Str
    :source-id s/Str
    (s/optional-key :license) s/Str
 
@@ -52,7 +57,7 @@
 (defn generate-url
   "Generate a URL for the Evidence Record (where it will be accessible)"
   [id]
-  (str (:evidence-url-base env) "/" evidence-url-prefix id))
+  (str (:global-evidence-url-base env) "/" evidence-url-prefix id))
 
 (defn validation-errors
   "Return validation errors, or nil on success."
@@ -70,20 +75,11 @@
       (assoc page
         :actions (map f (:actions page)))) (:pages bundle))))
 
-(defn id-and-timestamp
-  "Associate an evidence and date stamp at the same time.
-   ID has YYYYMMDD prefix to make downstream analysis workflows a bit easier."
+(defn url
+  "Associate a URL based on the ID."
   [bundle]
-  (let [now (clj-time/now)
-        id (str
-             (clj-time-format/unparse date-format now)
-             "-" (:source-id bundle) "-"
-             (UUID/randomUUID))
-        now-str (str now)]
-    (assoc bundle
-      :id id
-      :timestamp now-str
-      :url (generate-url id))))
+  (assoc bundle
+    :url (generate-url (:id bundle))))
 
 (defn dedupe-actions
   "Dedupe actions in an input bundle.
@@ -129,7 +125,7 @@
   (let [web-trace-atom (atom [])
         result (->
             bundle
-            id-and-timestamp
+            url
             dedupe-actions
             (candidates domain-set web-trace-atom)
             (match web-trace-atom)

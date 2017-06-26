@@ -42,8 +42,8 @@
   (assoc observation :error :unrecognised-observation-type))
 
 (defn process-observation
-  [observation duplicate? domain-set web-trace-atom]
   "Process an observation, extracting candidates unless it's part of a duplicate action."
+  [observation duplicate? domain-set web-trace-atom]
   ; Choose a dispatch function or pass-through if unrecognised-observation-type.
   (let [sensitive? (:sensitive observation)
         typ (:type observation)

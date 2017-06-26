@@ -2,19 +2,17 @@
 
 <img src="doc/percolator-render.png" align="right" style="float: right">
 
-The Event Data Percolator identifies and extracts Events from inputs fed to it by Agents. It takes Input Bundles from Agents and creates Evidence Records and Events, and sends them to the Evidence Registry and Event Bus respectively. 
+The Event Data Percolator accepts inputs from Agents in the form of 'skeleton' input Evidence Records. It does all the work that's common to Crossref Agents, including identifying, extracting and validating Events. It emits Evidence Records and Events. This allows the design of an Agent to focus only on the specific job of connecting to an external data source and building input Evidence Records.
 
-The Event Data Percolator accepts Input Bundles from Agents. An Input Bundle contains URLs, text, HTML and links found by an Agent, along with all the other information necessary to create Events and Evidence Records. The Agent therefore focuses on doing a specific job: connecting to its data source, gathering inputs and sending them to the Percolator in a recognised format.
+An input Evidence Record contains URLs, text, HTML and links found by an Agent, along with all the other information necessary to create Events and finished Evidence Records. 
 
 ![](doc/workflow.png)
 
 The Percolator therefore does most of the work involved in finding Events. By having a decoupled service, the service and algorithms that extract data can be improved, upgraded and scaled independently of the Agents.
 
-(Of course, implementors of Event Data Agents are free to use whatever methods are best. The Event Data Percolator implements common patterns observed when building Crossref's Event Data Agents.)
+(Of course, implementors of non-Crossref Event Data Agents are free to use whatever methods are best. The Event Data Percolator implements common patterns observed when building Crossref's Event Data Agents.)
 
-> NB: This is under development, details subject to change.
-
-## Input Bundle format
+## Input Evidence Record format
 
 An Agent identifies Actions. An Action represents a single actionable stimulus that led to an Event. Examples:
 
@@ -26,27 +24,29 @@ There are a number of ways that observations can be made: a source may send chun
 
 Actions are packaged up in a structure that describes the structure by they were recieved. Some Triggers provide a single Action (e.g. a tweet), some present a list of Actions (e.g. a Newsfeed retrieval) and some present a list of pages of actions (e.g. a Reddit API response). A list of pages, each containing a list of Actions is the common denomenator. For simplicity, all Input Bundles must have this format.
 
-An Input Bundle is a JSON object that packages up Actions and Observations, along with any extra required information.
+An Input Evidence Record is a JSON object that packages up Actions and Observations, along with any extra required information.
 
-Each Observation type is processed (every type has a different method), and DOIs identified, inferred or extracted. The Percolator takes an Input Bundle and, preserving its structure, processes each Observation into an Observation Output. The finished Output Bundle is identical to the Input Bundle, but with all Observations transformed.
+Each Observation type is processed (every type has a different method), and DOIs identified, inferred or extracted. The Percolator takes an Input Evidence Record and, preserving its structure, processes each Observation into an Observation Output. The finished Evidence Record is identical to the Input Evidence Record, but with all Observations transformed.
 
-An Input Bundle may also have a trigger, which describes the reason for the trigger. If the reason was an artifact-scan, the version of the artifact in use is also included. The Trigger information is purely for informational purposes; the content is not inspected by the Percolator.
+An Input Evidence Record may also have a `trigger`, which describes the reason that the Evidence Record was created. If the reason was an artifact-scan, the version of the artifact in use is also included. The Trigger information is purely for informational purposes; the content is not inspected by the Percolator.
 
-## Example Input Bundles
+## Example Input Evidence Records
 
-### Twitter Input Bundle
+### Twitter Input Evidence Record
 
 A Twitter trigger is a single tweet. Therefore there's only one page with one Action, but that Action can contain both a `plain-text` observation (for the Tweet text) and potentially a number of `url`observations (as extracted and sent by the Gnip API).
 
 ![](doc/input-bundle-formats-twitter.png)
 
-### Newsfeed Input Bundle
+For practicality, the Twitter Agent batches up a number of Actions in each Evidence Record Input.
+
+### Newsfeed Input Evidence Record
 
 A Newsfeed trigger is the retrieval of a given RSS feed. A newsfeed usually contains one page of data, but each page has a number of published blog posts, each of which is an Action. The entry in an RSS feed can have two observations: the URL of the post and a summary HTML snippet.
 
 ![](doc/input-bundle-formats-newsfeed.png)
 
-### Reddit Input Bundle
+### Reddit Input Evidence Record
 
 A Reddit trigger is a search query for a domain. The API will return a list of pages of posts. Each post has plain-text content.
 
@@ -54,80 +54,84 @@ A Reddit trigger is a search query for a domain. The API will return a list of p
 
 ## Deduplication
 
-An Action must have an ID. This is different to the finished Event ID. The Percolator will only process a trigger once, and if it is subsequently asked to process it, it will politely decline, including a "duplicate" field which includes the date and Evidence Record ID that the Event previously occurred on. Duplicates *within* an Evidence bundle are not detected. Don't send them.
+An Action should have an ID. This is different to the finished Event ID. The Percolator will only process a trigger once, and if it is subsequently asked to process it, it will politely decline, including a "duplicate" field which includes the date and Evidence Record ID that the Event previously occurred on. Duplicates *within* an Evidence bundle are not detected. Don't send them.
+
+Although recommended, Action IDs aren't compulsory. If you don't send an Action ID then it won't be de-duplicated. There are cases where you might like to do this, e.g. the Wikipedia Agent which sends a very high volume of data with a low signal-to-noise ratio and a very low likelihood of duplicate Events being sent. 
 
 The interpretation and formulation of the ID is up to the Agent:
 
  - the Twitter agent uses a hash of the tweet ID, ensuring each tweet can only be processed once. This is useful because it allows the Tweet stream to be re-processed with catch-up, with no duplicates introduced.
- - the Wikipedia agent uses a hash of the the external Event Stream ID, ensuring that the Wikipedia agent can be run in parallel during deployment transitions.
  - the Newsfeed agent uses a hash of the concatenation of the blog post URL, meaning the blog post can only be processed once, regardless of which feed it was seen on. This is useful because blog feeds repeatedly return previously seen data.
  - the Reddit agent uses a hash of the post ID. This is useful because the Reddit API can return posts previously seen.
 
 ## Workflow
 
-The end-to-end workflow is as follows. Each is a discrete, self-contained step.
+The Percolator accepts Input Evidence Records from an Apache Kafka topic. Because of the design of Kafka, clients should be able to deal with duplicate inputs. The Percolator process function doesn't re-process Input Evidence Records when it knows it is already processing it elsewhere, or where it has already been done. It does this by taking out a mutex in Redis (which times out) and by checking the existence of the Evidence Record in the Evidence Registry. The Percolator runs a configurable number of threads, each of which consumes a number of partitions of the Input Evidence Record Topic.
 
-### 1. Accept Input Bundle
+During a process cycle, the Percolator:
 
- - Check JWT authentication meets one of the secrets.
+ - accepts a batch of Evidence Records from the Topic
+ - does a de-duplication check based on the timeout lock
+ - does a de-duplication check based on the Evidence Registry
+ - takes out a timeout lock based on the ID (which has been assigned by the Agent as a part of the Evidence Record)
+ - dedupe Actions based on previously stored Action IDs
+ - process Observations to Candidates
+ - match Candidates to DOIs
+ - create Events
+ - save the Evidence Record to the Evidence Registry
+ - set Action IDs for subsequent de-duplication
+ - send Events to a downstream Kafka topic
+ - finish processing the batch
 
-### 2. Queue
+More detail on each step:
 
- - Input Bundles are placed on a queue, and dequeued.
+### Dedupe Actions
 
-### 3. Dedupe Actions
-
- - Transform Input Bundle, keeping structure identical.
+ - Transform Evidence Record, keeping structure identical.
  - Look up each Action ID.
  - If it has already been seen, set the "duplicate" field to the Event ID and date. 
  - If the Action ID has not already been seen, set the "duplicate" value to "false".
 
-### 4. Process each Observation to extract Candidates
+### Process each Observation to extract Candidates
 
- - Transform Input Bundle, keeping structure identical.
+ - Transform Evidence Record, keeping structure identical.
  - According to the input type, apply the relevant transformation to generate candidates.
  - Each transformation is supplied the value of the "duplicate" value.
  - If it is "false", the transformation is applied normally.
  - If it is not false, the transformation won't attempt to extract any DOIs, but will pass through the input (or a hash of it).
 
-### 5. Match Candidates into DOIs
+### Match Candidates into DOIs
 
  - Transform Input Bundle, keeping structure identical
  - For every Action:
      - Collect all of the candidate DOIs and Landing Page URLs
      - Attempt to convert each one into a DOI 
- - Also 5.5: Deduplicate matches that identify the same DOI from the same input but via different candidates. E.g. a hyperlinked DOI with the DOI also in the link text.
+ - Deduplicate matches that identify the same DOI from the same input but via different candidates. E.g. a hyperlinked DOI with the DOI also in the link text.
 
-### 6. Create Events and Evidence Record
+### Create Events and Evidence Record
 
  - Generate an Evidence Record ID (a UUID).
  - Create an Evidence Record that includes the resulting Input Package under the "input" key
  - For every Action, take the union of DOIs found (as some may be found by more than one Observation).
  - Create a mapping of Action ID to list of Events, include in the Evidence Record under the "events" key.
 
-### 7. Send
 
- - Send Evidence Record to Evidence Registry with its ID.
- - Send each Event to the Event Bus.
- - Register each Action ID to prevent future duplicates.
- 
- ## Details of Input Package format
- 
- ### Input Package
- 
-Required fields:
+## Details of Evidence Record format
+  
+Required fields should be supplied by Agents:
 
  - `source-name` - the name of the source, e.g. `wikipedia`.
  - `source-token` - the unique ID of the agent collecting data.
  - `pages` - list of page objects
+ - `jwt` - this is included with each Event sent to the Events topic (which will be picked by the Event Bus). It is secret, and removed from the public Evidence Record
+ - `id` - a unique ID, generated by the Agent. Should be of the form `«YYYYMMDD»-«agent-name«-«uuid»`.
+ - `timestamp` - ISO8601 timestamp of when the Evidence Record was produced
 
 Optional fields:
  - `license` - a license URL, attached to each Event
  
 Other fields may be supplied by the Agent if required, and will be carried through.
  
-## Bundle Format
-
 Schema documented in `event-data-percolator.input-bundle` namespace.
 
 ### Input Bundle
@@ -282,11 +286,9 @@ These get Redis involved.
 
 ## Running
 
-There are three processes that should be run. They can be scaled independently. 
+There is one process to run. It spins up a configurable number of threads. Other copies can be run for failover or parallelism.
 
- - `lein run accept`  - Accept inputs from Agents and enqueue. Lightweight. Recommended 3x for failover.
  - `lein run process` - Process inputs from queue. Recommended > 3x for failover and load balancing.
- - `lein run push` - Push downstream to Event Bus. Lightweight. Recommended 3x for failover.
 
 ## Docker
 
@@ -294,75 +296,58 @@ There are three processes that should be run. They can be scaled independently.
 
 This should be run with Docker Swarm for load-balancing, service discovery and fail-over. Details can be found in the Event Data System repository.
 
- - command: `lein run`
+ - command: `lein run process`
  - directory: `/usr/src/app`
 
 ## Config
 
-Config via environment variables
+The Percolator uses Event Data's global namespace of configuration values. The following environment variables are used:
 
- - `S3_KEY`
- - `S3_SECRET`
- - `S3_REGION_NAME`
- - `S3_ACTION_BUCKET_NAME`
- - `PORT`
- - `JWT_SECRETS`
- - `ARTIFACT_BASE` - URL base of bucket where artifact registry is hosted without slash, e.g. `http://event-data-artifact-prod.s3.amazonaws.com`
- - `DUPLICATE_STORAGE` - one of `memory` for testing or `s3` for production
- - `DUPLICATE_BUCKET_NAME` - when s3, name of bucket where duplicate information is stored
- - `DUPLICATE_BUCKET_REGION`
- - `EVIDENCE_STORAGE` - one of `memory` for testing or `s3` for production
- - `EVIDENCE_BUCKET_NAME` - when s3, name of bucket where evidence records should be stored
- - `EVIDENCE_BUCKET_REGION`
- - `EVIDENCE_URL_BASE` - URL base where evidence registry is hosted, e.g. `https://evidence.eventdata.crossref.org`
- - `EVENT_BUS_URL_BASE` - URL base where the event bus is hosted. e.g. `https://bus.eventdata.crossref.org`
- - `DOI_CACHE_REDIS_PORT` - Redis connection to store DOI cache. You may want to segregate this
- - `DOI_CACHE_REDIS_HOST`
- - `DOI_CACHE_REDIS_DB`
- - `LANDING_PAGE_CACHE_REDIS_PORT` - Redis connection to store Landing page -> DOI cache. You may want to segregate this
- - `LANDING_PAGE_CACHE_REDIS_HOST`
- - `LANDING_PAGE_CACHE_REDIS_DB`
- - `ROBOTS_CACHE_REDIS_PORT` - Redis connection to store robots.txt cache. You may want to segregate this
- - `ROBOTS_CACHE_REDIS_HOST`
- - `ROBOTS_CACHE_REDIS_DB`
- - `PROCESS_CONCURRENCY` - number of threads when processing. Default is 10.
- - `SKIP_LANDING_PAGE_CACHE`
- - `ACTIVEMQ_USERNAME`
- - `ACTIVEMQ_PASSWORD`
- - `ACTIVEMQ_URL` - e.g. tcp://localhost:61616
+ - `GLOBAL_ARTIFACT_URL_BASE`
+ - `GLOBAL_EVENT_INPUT_TOPIC`
+ - `GLOBAL_EVIDENCE_URL_BASE`
+ - `GLOBAL_KAFKA_BOOTSTRAP_SERVERS`
+ - `GLOBAL_STATUS_TOPIC`
+ - `PERCOLATOR_DOI_CACHE_REDIS_DB`
+ - `PERCOLATOR_DOI_CACHE_REDIS_HOST`
+ - `PERCOLATOR_DOI_CACHE_REDIS_PORT`
+ - `PERCOLATOR_DUPLICATE_BUCKET_NAME`
+ - `PERCOLATOR_DUPLICATE_REGION_NAME`
+ - `PERCOLATOR_DUPLICATE_STORAGE` - one of `memory` for testing or `s3` for production
+ - `PERCOLATOR_EVIDENCE_BUCKET_NAME`
+ - `PERCOLATOR_EVIDENCE_REGION_NAME`
+ - `PERCOLATOR_EVIDENCE_STORAGE` one of `memory` for testing or `s3` for production
+ - `PERCOLATOR_INPUT_EVIDENCE_RECORD_TOPIC`
+ - `PERCOLATOR_LANDING_PAGE_CACHE_REDIS_HOST`
+ - `PERCOLATOR_LANDING_PAGE_CACHE_REDIS_PORT`
+ - `PERCOLATOR_MUTEX_REDIS_DB`
+ - `PERCOLATOR_MUTEX_REDIS_HOST`
+ - `PERCOLATOR_MUTEX_REDIS_PORT`
+ - `PERCOLATOR_MUTEX_REDIS_PORT` 
+ - `PERCOLATOR_PROCESS_CONCURRENCY`
+ - `PERCOLATOR_ROBOTS_CACHE_REDIS_DB`
+ - `PERCOLATOR_ROBOTS_CACHE_REDIS_HOST`
+ - `PERCOLATOR_ROBOTS_CACHE_REDIS_PORT`
+ - `PERCOLATOR_S3_KEY`
+ - `PERCOLATOR_S3_SECRET`
+ - `PERCOLATOR_SKIP_DOI_CACHE`
+ - `PERCOLATOR_SKIP_LANDING_PAGE_CACHE`
+ - `PERCOLATOR_SKIP_ROBOTS_CACHE`
+
+## Configure Kafka
+
+You should create a Kafka topic for the Input Evidence records with suffucient partitions for future expansion. Also note that a status topic should exist.
+
+    bin/kafka-topics.sh --create --partitions 20 --topic percolator-input-evidence-record --zookeeper localhost --replication-factor 2
+
+
 ## Demo
-
-### Diagnostic in-and-out
-
-Background:
-
-     time docker-compose  -f docker-compose-demo.yml run -w /usr/src/app  -p 8005:8005 accept lein run accept
-
-Then:
-
-     curl http://localhost:8006/input/diagnostic --verbose --data @demo/demo.json --header "Content-type: application/json" -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyIxIjoiMSIsInN1YiI6Indpa2lwZWRpYSJ9.w7zV2vtKNzrNDfgr9dfRpv6XYnspILRli_V5vd1J29Q" | jq .
-
-### Full pipeline
-
-Set up all three services (accept, process, push) in addition to a status service, an event bus and a live demo.
-
-     docker-compose -f docker-compose-demo.yml up accept
-
-Tail logs:
-
-     docker-compose -f docker-compose-demo.yml logs -f
-
-
-Then:
-
-     curl http://localhost:8005/input --verbose --data @demo/demo.json --header "Content-type: application/json" -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyIxIjoiMSIsInN1YiI6Indpa2lwZWRpYSJ9.w7zV2vtKNzrNDfgr9dfRpv6XYnspILRli_V5vd1J29Q" | jq .
-
 
 ### Quality
 
 Run code quality check:
 
-    time docker-compose run -w /usr/src/app test lein eastwood
+    time docker-compose -f docker-compose-unit-tests.yml run -w /usr/src/app test lein eastwood
 
 ### Coverage
 

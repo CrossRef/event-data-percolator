@@ -10,26 +10,19 @@
             [event-data-percolator.test-util :as util]))
 
 
-
-(deftest ^:unit id-and-timestamp
-  (testing "id-and-timestamp should add timestamp and ID based on the time."
-    (clj-time/do-at (clj-time/date-time 2017 5 2)
-      (let [bundle {:some :thing :source-id "my-source"}
-            result (input-bundle/id-and-timestamp bundle)]
-        (is (:some result) "Original bundle data preserved.")
-        (is (:id result) "ID applied")
-        (is (:timestamp result) "Timestamp applied")
-        (is (.startsWith (:id result) "20170502") "Should start with date prefix.")
-        (is (= (.length (:id result)) 55) "Should have trailing UUID")
-        (is (.contains (:id result) "my-source") "Should have contain source ID")
-        (is (:url result) "URL should be set")
-        (is (= (:timestamp result) "2017-05-02T00:00:00.000Z") "Should have full ISO8601 timestamp.")))))
-
+(deftest ^:unit url
+  (testing "url should add url based on the id."
+      (let [bundle {:id "20170101-twitter-123456789"}
+            result (input-bundle/url bundle)]
+        (is (:id result) "Original bundle data preserved.")
+        (is (= (:url result) "https://evidence.eventdata.crossref.org/evidence/20170101-twitter-123456789") "URL should be set"))))
+        
 (deftest ^:unit candidates
   (testing "candidates should generate candidates based on input"
     ; Just to guarantee there are no external calls at this stage.
     (fake/with-fake-http []
-      (let [input-bundle {:pages [
+      (let [input-bundle {:id "1234"
+                          :pages [
                            {:actions [
                              {:unrelated :junk
                               :url "http://example.com"
@@ -43,7 +36,8 @@
             
             ; Supply empty domain list as we're not testing landing page extraction.
             result (input-bundle/candidates input-bundle #{} (atom []))]
-        (is (= result {:pages [{:actions
+        (is (= result {:id "1234"
+                       :pages [{:actions
                                 [{:unrelated :junk
                                   :url "http://example.com"
                                   :occurred-at "2017-05-02T00:00:00.000Z"
@@ -70,7 +64,8 @@
                           "https://doi.org/api/handles/10.5555/22222" (util/doi-ok "10.5555/22222")]
       
       (let [; Input bundle that came out of candidates.
-            input-bundle {:pages [{:actions
+            input-bundle {:id "1234"
+                          :pages [{:actions
                                 [{:unrelated :junk
                                   :url "http://example.com"
                                   :occurred-at "2017-05-02T00:00:00.000Z"
@@ -85,7 +80,8 @@
                                     :candidates [{:type :doi-url, :value "http://doi.org/10.5555/22222"}]}]}]}]}
             result (input-bundle/match input-bundle nil)]
 
-        (is (= result {:pages [{:actions
+        (is (= result {:id "1234"
+                       :pages [{:actions
                                 [{:unrelated :junk,
                                   :url "http://example.com"
                                   :occurred-at "2017-05-02T00:00:00.000Z"
@@ -118,6 +114,7 @@
             input-bundle {:source-token "ABCDEFGH"
                           :source-id "THE_SOURCE_NAME"
                           :timestamp "2017-05-02T00:00:00.000Z"
+                          :id "1234"
                           :pages [{:actions
                                     [{:unrelated :junk,
                                       :url "http://example.com"
@@ -162,7 +159,8 @@
     ; Processed, finished bundle, now it's an output bundle!
     ; Except without the irrelevant bits.
     (let [output-bundle
-          {:pages
+          {:id "1234"
+           :pages
             ; Page 1
             [{:actions
              [{; Action 1.1
@@ -193,7 +191,8 @@
 (deftest ^:unit map-actions
   (testing "map-actions should apply a function to all actions within an input bundle, preserving the rest of the structure"
     ; Doesn't matter what the actions are. This test just applying str function to a load of keywords as it's the simplet input/output.
-    (let [input {:pages [
+    (let [input {:id "1234"
+                 :pages [
                   {:other-stuff :in-page
                    :actions [:some-dummy-action-object-1]}
                   
@@ -202,7 +201,8 @@
 
           result (input-bundle/map-actions str input)]
       (is (= result
-             {:pages [
+             {:id "1234"
+              :pages [
                {:other-stuff :in-page
                 :actions [":some-dummy-action-object-1"]}
 
@@ -221,7 +221,8 @@
                           ; This one throws a timeout error, which should be reported
                           "http://article.com/article/XXXXX" (fn [a b c] (throw (new org.httpkit.client.TimeoutException "I got bored")))]
       (let [domain-list #{"article.com"}
-            input-bundle {:artifacts {:other :value} ; pass-through any artifact info from input package.
+            input-bundle {:id "1234"
+                          :artifacts {:other :value} ; pass-through any artifact info from input package.
                           :pages [
                            {:actions [
                              {:url "http://example.com/page/11111"
@@ -258,7 +259,8 @@
     (fake/with-fake-http ["https://doi.org/api/handles/10.5555/12345678" (doi-ok "10.5555/12345678")]
       (let [domain-list #{}
             ; We submit the same input bundle twice. 
-            input-bundle {:pages [
+            input-bundle {:id "1234"
+                          :pages [
                            {:actions [
                              {:url "http://example.com/page/11111"
                               :id "88888"
@@ -281,10 +283,6 @@
             ; This has string keys because it's fetched back from serialized storage.
             expected-duplicate {"evidence-record-id" input-bundle-id-1 "action-id" "88888"}]
 
-      (is input-bundle-id-1 "Input bundle ID should always be set.")
-      (is input-bundle-id-2 "Input bundle ID should always be set.")
-      (is (not= input-bundle-id-1 input-bundle-id-2) "Input bundles should be given different IDs")
-
       (is (-> result-1 :pages first :actions first :duplicate nil?) "Action in first bundle not marked as duplicate")
       (is (= (-> result-2 :pages first :actions first :duplicate) expected-duplicate) "Action in second bundle not marked as duplicate, with ID of first bundle.")
 
@@ -304,7 +302,8 @@
   (testing "Action IDs can be ommitted if it's sensible to do so, e.g. low chance of collision, very high rate of input per Wikipedia"
     (fake/with-fake-http ["https://doi.org/api/handles/10.5555/9898989898" (doi-ok "10.5555/9898989898")]
       (let [domain-list #{}
-            input-bundle {:pages [
+            input-bundle {:id "1234"
+                          :pages [
                            {:actions [
                              ; Same actions in the input bundle. In reality this shouldn't happen, but do it to verify that they aren't deduplicated.
                              {:url "https://en.wikipedia.org/w/index.php?title=Bus&oldid=776981387"

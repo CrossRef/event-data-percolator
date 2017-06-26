@@ -15,14 +15,14 @@
 
 (def redirect-depth 4)
 
-(def skip-cache (:skip-robots-cache env))
+(def skip-cache (:percolator-skip-robots-cache env))
 
 (defn fetch
   "Fetch the content at a URL as a string, following redirects and accepting cookies.
    Take an optional atom to which sequences of urls and status codes will be appended."
   ([url] (fetch url nil))
   ([url trace-atom]
-    (status/add! "percolator" "web-fetch" "request" 1)
+    (status/send! "percolator" "web-fetch" "request" nil 1 url)
     (try
       (loop [headers {"Referer" "https://eventdata.crossref.org"
                       "User-Agent" event-data-percolator.consts/user-agent-for-robots}
@@ -45,8 +45,8 @@
                                                (instance? org.httpkit.client.TimeoutException error) :timeout-error
                                                :default :unknown-error)}])))
               (if (#{200 401} (:status result))
-                (status/add! "percolator" "web-fetch" "ok" 1)
-                (status/add! "percolator" "web-fetch" "fail" 1))
+                (status/send! "percolator" "web-fetch" "ok" nil 1 url)
+                (status/send! "percolator" "web-fetch" "fail" nil 1 url))
 
               (condp = (:status result)
                 200 result
@@ -79,7 +79,9 @@
                          nil))))))
 
 (def redis-cache-store
-  (delay (redis/build "robot-cache:" (:robots-cache-redis-host env) (Integer/parseInt (:robots-cache-redis-port env)) (Integer/parseInt (:robots-cache-redis-db env "0")))))
+  (delay (redis/build "robot-cache:" (:percolator-robots-cache-redis-host env)
+                                     (Integer/parseInt (:percolator-robots-cache-redis-port env))
+                                     (Integer/parseInt (:percolator-robots-cache-redis-db env "0")))))
 
 ; These can be reset by component tests.
 (def expiry-seconds
@@ -123,8 +125,8 @@
         allowed (if-not rules true (.isAllowed rules url-str))]
 
     (if allowed 
-      (status/add! "percolator" "robot" "allowed" 1)
-      (status/add! "percolator" "robot" "not-allowed" 1))
+      (status/send! "percolator" "robot" "allowed" nil 1 url-str)
+      (status/send! "percolator" "robot" "not-allowed" nil 1 url-str))
 
     allowed))
 

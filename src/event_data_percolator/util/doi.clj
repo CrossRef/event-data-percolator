@@ -24,7 +24,7 @@
   "Resolve and validate a DOI or ShortDOI, expressed as not-URL form. May or may not be URLEscaped. Return the DOI."
   [doi]
 
-  (status/add! "percolator" "doi-api" "request" 1)
+  (status/send! "percolator" "doi-api" "request" nil 1 doi)
   (let [is-short-doi (not (re-matches #"^10\.\d+/.*" doi))
         ; if it looks like a full DOI, look that up. It it looks like a handle, different syntax.
         input-handle (if is-short-doi
@@ -39,13 +39,13 @@
                (-> response :body (json/read-str :key-fn keyword)))
         ; Either get the validated handle, or for a short DOI, the DOI it's aliased to.
         handle (when body
-                 (status/add! "percolator" "doi-api" "match" 1)
+                 (status/send! "percolator" "doi-api" "match" nil 1 doi)
                  (if is-short-doi
                    (->> body :values (filter #(= (:type %) "HS_ALIAS")) first :data :value)
                    (:handle body)))]
 
       (when-not body 
-        (status/add! "percolator" "doi-api" "no-match" 1))
+        (status/send! "percolator" "doi-api" "no-match" nil 1 doi))
 
     handle))
 
@@ -105,10 +105,10 @@
         
         (recur (inc i) (drop-right-char doi))))))
 
-(def redis-db-number (delay (Integer/parseInt (get env :doi-cache-redis-db "0"))))
-
 (def redis-cache-store
-  (delay (redis/build "doi-cache:" (:doi-cache-redis-host env) (Integer/parseInt (:doi-cache-redis-port env)) @redis-db-number)))
+  (delay (redis/build "doi-cache:" (:percolator-doi-cache-redis-host env)
+                                   (Integer/parseInt (:percolator-doi-cache-redis-port env))
+                                   (Integer/parseInt (:percolator-doi-cache-redis-db env "0")))))
 
 ; These can be reset by component tests.
 (def success-expiry-seconds
@@ -120,7 +120,7 @@
   (atom (* 60 60 24 30)))
 
 ; Set for component tests.
-(def skip-cache (:skip-doi-cache env))
+(def skip-cache (:percolator-skip-doi-cache env))
 
 (defn validate-cached
   "Take a suspected DOI or ShortDOI and return the correct full well-formed, extant DOI.

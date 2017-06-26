@@ -73,7 +73,7 @@
     (is (= (doi/validate-doi-dropping "https://doi.org/") nil))))
 
 ; Regression for https://github.com/CrossRef/event-data-percolator/issues/30
-(deftest ^:unit empty-doi-resolve-doi
+(deftest ^:unit nonexistent-doi-resolve-doi
   (testing "Nonexisting DOIs that return 303 from proxy shouldn't be accepted as extant."
     (is (= (doi/resolve-doi "www.uclouvain.be/784506.html") nil))
     (is (= (doi/validate-doi-dropping "https://doi.org/www.uclouvain.be/784506.html") nil))))

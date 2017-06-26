@@ -12,3 +12,4 @@ pom.xml.asc
 .env
 src/scrap.clj
 notes.txt
+demo.sh

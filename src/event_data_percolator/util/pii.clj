@@ -38,14 +38,14 @@
 
           items (get-in result ["message" "items"])]
 
-      (status/add! "percolator" "metadata-api" "request" 1)
+      (status/send! "percolator" "metadata-api" "request")
       
       (when-not result
         (log/error "Failed to retrieve PII from API for" pii)
-        (status/add! "percolator" "metadata-api" "fail" 1))
+        (status/send! "percolator" "metadata-api" "fail"))
 
       (when result
-        (status/add! "percolator" "metadata-api" "ok" 1))
+        (status/send! "percolator" "metadata-api" "ok"))
 
       ; Only return when there's exactly one match.
       ; If so, check that the DOI exists and in the process normalize (don't trust the API's indexed data).

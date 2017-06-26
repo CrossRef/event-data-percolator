@@ -12,14 +12,12 @@
             [clojure.data.json :as json])
   (:import [java.util UUID]))
 
-
 (def action-dedupe-store
   (delay
-    (condp = (:duplicate-storage env "s3")
+    (condp = (:percolator-duplicate-storage env "s3")
       ; Memory for unit testing ONLY.
       "memory" (memory/build)
-      ; Redis can be used for component testing ONLY. Reuse the redis connection.
-      "s3" (s3/build (:s3-key env) (:s3-secret env) (:duplicate-region-name env) (:duplicate-bucket-name env)))))
+      "s3" (s3/build (:percolator-s3-key env) (:percolator-s3-secret env) (:percolator-duplicate-region-name env) (:percolator-duplicate-bucket-name env)))))
 
 (defn into-map [f coll]
   (into {} (map (juxt identity f)) coll))

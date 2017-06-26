@@ -220,7 +220,7 @@
 
          result-action (action/create-events-for-action input-bundle input-action)]
     (is (= (count (:events result-action)) 1) "One Events should have been emitted, from the match.")
-    (is (= (map #(dissoc % :id) (:events result-action)))
+    (is (= (map #(dissoc % :id) (:events result-action))
       [{:license "http://example.com/license"
         :obj_id "https://dx.doi.org/10.5555/12345678",
         :source_token "SOURCE_TOKEN",
@@ -233,7 +233,7 @@
         {:pid "https://dx.doi.org/10.5555/12345678",
          :url "http://psychoceramics.labs.crossref.org/12345"},
         :evidence_record "http://example.com/evidence/123456",
-        :relation_type_id "cites"}]))))
+        :relation_type_id "cites"}])))))
 
 (deftest dedupe-by-val-substring
   (testing "dedupe-by-val-substring removes all matches that are a substring of any other in the group."
