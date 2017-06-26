@@ -1,5 +1,5 @@
 (ns event-data-percolator.observation-test
-  "Most of the observation functions are tested via input-bundle-test"
+  "Most of the observation functions are tested via evidence-record-test"
   (:require [event-data-percolator.observation :as observation]
             [clojure.test :refer :all]
             [event-data-percolator.test-util :as util]))

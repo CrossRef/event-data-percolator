@@ -1,6 +1,6 @@
 (ns event-data-percolator.action
   "An Action is something that happened about a single external object, made by a list of Observations.
-   This is mostly tested by input-bundle-tests"
+   This is mostly tested by evidence-record-tests"
   (:require [event-data-percolator.observation :as observation]
             [event-data-percolator.match :as match]
             [config.core :refer [env]]
@@ -25,8 +25,7 @@
 (defn dedupe-action
   "Take an Action, decorate with 'duplicate' field IFF there's an action ID.
    If there's duplicate information (a chunk of JSON representing a previous Evidence Record), associate it with the Action, otherwise pass it through.
-   The store is updated with the values in the 'push' process.
-   Step 3 from docs."
+   The store is updated with the values in the 'push' process."
   [action evidence-record-id]
 
   (if-let [id (:id action)]
@@ -42,8 +41,7 @@
 
 (defn process-observations-candidates
   "Step Process all the observations of an Action to generate Candidates. Collect Candidates.
-   If it's a duplicate action, the candidate extractor won't run.
-   Step 4 from docs."
+   If it's a duplicate action, the candidate extractor won't run."
   [action domain-set  web-trace-atom]
   (let [observations (:observations action)
         duplicate? (:duplicate action)
@@ -53,8 +51,7 @@
         (dissoc :observations))))
 
 (defn match-candidates
-  "Attempt to match all candidates into DOIs.
-   Step 5 from docs."
+  "Attempt to match all candidates into DOIs."
   [action web-trace-atom]
    (let [matches (mapcat (fn [observation]
                        (map #(match/match-candidate % web-trace-atom) (:candidates observation)))
@@ -82,8 +79,7 @@
           matches))
 
 (defn dedupe-matches
-  "Deduplicate matches.
-   Step 5.5 from docs."
+  "Deduplicate matches."
   [action]
    (let [matches (:matches action)
 
@@ -104,7 +100,7 @@
     (assoc action :matches all-matches)))
 
 (defn create-event-from-match
-  [input-bundle action match]
+  [evidence-record action match]
   ; Provide default subject metadata if not supplied.
   (let [subj (merge {:pid (:url action)} (:subj action {}))
         ; For the obj, include the DOI URL as :pid,
@@ -117,50 +113,50 @@
                     :url (or obj-url
                              (:match match))} (:obj action {}))
         base-event {:id (str (UUID/randomUUID))
-                    :source_token (:source-token input-bundle)
+                    :source_token (:source-token evidence-record)
                     :subj_id (:url action)
                     :obj_id (:match match)
                     :relation_type_id (:relation-type-id action)
-                    :source_id (:source-id input-bundle)
+                    :source_id (:source-id evidence-record)
                     :action (:action-type action "add")
                     :occurred_at (str (:occurred-at action))
                     :subj subj
                     :obj obj
-                    :evidence_record (:url input-bundle)}
+                    :evidence_record (:url evidence-record)}
 
-        with-license (if-let [license (:license input-bundle)] (assoc base-event :license license) base-event)]
+        with-license (if-let [license (:license evidence-record)] (assoc base-event :license license) base-event)]
       with-license))
 
 (defn create-event-from-extra-event
   "Given an extra Event in an Action, expand it to include the full compliment of fields."
-  [input-bundle event]
-  (let [base-event (merge {:evidence_record (:url input-bundle)
+  [evidence-record event]
+  (let [base-event (merge {:evidence_record (:url evidence-record)
                            :id (str (UUID/randomUUID))
-                           :source_token (:source-token input-bundle)
-                           :source_id (:source-id input-bundle)
+                           :source_token (:source-token evidence-record)
+                           :source_id (:source-id evidence-record)
                            :action "add"}
                           event)
-        with-license (if-let [license (:license input-bundle)]
+        with-license (if-let [license (:license evidence-record)]
                        (assoc base-event :license license) base-event)]
     with-license))
 
 (defn create-events-for-action
   "Update action to include a seq of Events generated from observations in the Action. Plus extra-events if included, and if there were any matches."
-  [input-bundle action]
+  [evidence-record action]
   
-  (let [events-from-matches (map (partial create-event-from-match input-bundle action) (:matches action))
-        events-from-extras (when (not-empty (:matches action)) (map (partial create-event-from-extra-event input-bundle) (:extra-events action)))
+  (let [events-from-matches (map (partial create-event-from-match evidence-record action) (:matches action))
+        events-from-extras (when (not-empty (:matches action)) (map (partial create-event-from-extra-event evidence-record) (:extra-events action)))
         events (concat events-from-matches events-from-extras)]
   (assoc action
     :events events)))
 
 (defn store-action-duplicates
-  "Save all action IDs from a bundle into duplicate records. Called on 'push'."
-  [bundle]
-  (let [actions (mapcat :actions (:pages bundle))]
+  "Save all action IDs from an evidence record into duplicate records. Called on 'push'."
+  [evidence-record]
+  (let [actions (mapcat :actions (:pages evidence-record))]
     (doseq [action actions]
       ; Action ID might not be set.
       (when-let [action-id (:id action)]
-        (store/set-string @action-dedupe-store (str "action/" action-id) (json/write-str {:evidence-record-id (:id bundle) :action-id action-id}))))))
+        (store/set-string @action-dedupe-store (str "action/" action-id) (json/write-str {:evidence-record-id (:id evidence-record) :action-id action-id}))))))
 
 

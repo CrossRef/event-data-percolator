@@ -1,5 +1,5 @@
-(ns event-data-percolator.input-bundle
-  "Process and Input Bundle."
+(ns event-data-percolator.evidence-record
+  "Process an Evidence Record."
   (:require [event-data-percolator.action :as action]
             [clj-time.core :as clj-time]
             [clj-time.format :as clj-time-format]
@@ -7,7 +7,7 @@
             [schema.core :as s]
             [clojure.tools.logging :as log]))
 
-(def bundles-schema
+(def evidence-record-schema
   {; id like 20170101-twitter-23781b07-a198-4607-a1b7-0752224411c6
    :id s/Str
 
@@ -23,7 +23,7 @@
 
    (s/optional-key :agent) s/Any
    
-   ; Extra per-bundle info.
+   ; Extra per-evidence-record info.
    (s/optional-key :extra) s/Any
   
    :pages
@@ -37,7 +37,7 @@
        :relation-type-id s/Str
        :occurred-at s/Str
        ; Action ID is optional but recommended except for specific cases. 
-       ; See input-bundle-test/action-id-can-be-ommitted
+       ; See evidence-record-test/action-id-can-be-ommitted
        (s/optional-key :id) s/Str
        :subj s/Any
        ; Extra Events that are only carried through if observations match.
@@ -61,70 +61,66 @@
 
 (defn validation-errors
   "Return validation errors, or nil on success."
-  [bundle]
+  [evidence-record]
   (try
-    (s/validate bundles-schema bundle)
+    (s/validate evidence-record-schema evidence-record)
     nil
     (catch RuntimeException e e)))
 
 (defn map-actions
-  "Map over actions within an Input Bundle, leaving the rest intact."
-  [f bundle]
-  (assoc bundle
+  "Map over actions within an Input Evidence Record, leaving the rest intact."
+  [f evidence-record]
+  (assoc evidence-record
     :pages (map (fn [page]
       (assoc page
-        :actions (map f (:actions page)))) (:pages bundle))))
+        :actions (map f (:actions page)))) (:pages evidence-record))))
 
 (defn url
   "Associate a URL based on the ID."
-  [bundle]
-  (assoc bundle
-    :url (generate-url (:id bundle))))
+  [evidence-record]
+  (assoc evidence-record
+    :url (generate-url (:id evidence-record))))
 
 (defn dedupe-actions
-  "Dedupe actions in an input bundle.
-  Step 3 in docs."
-  [bundle]
-  (log/debug "Deduping in " (:id bundle))
-  (map-actions #(action/dedupe-action % (:id bundle)) bundle))
+  "Dedupe actions in an input Evidence Record."
+  [evidence-record]
+  (log/debug "Deduping in " (:id evidence-record))
+  (map-actions #(action/dedupe-action % (:id evidence-record)) evidence-record))
 
 (defn candidates
-  "Produce candidates in input bundle.
-  Step 4 in docs."
-  [bundle domain-set web-trace-atom]
-  (log/debug "Candidates in " (:id bundle))
-  (map-actions #(action/process-observations-candidates % domain-set web-trace-atom) bundle))
+  "Produce candidates in input evidence-record."
+  [evidence-record domain-set web-trace-atom]
+  (log/debug "Candidates in " (:id evidence-record))
+  (map-actions #(action/process-observations-candidates % domain-set web-trace-atom) evidence-record))
 
 (defn match
-  "Match candidates in input bundle.
-  Step 5 in docs."
-  [bundle web-trace-atom]
-  (log/debug "Match in " (:id bundle))
-  (map-actions #(action/match-candidates % web-trace-atom) bundle))
+  "Match candidates in input evidence-record."
+  [evidence-record web-trace-atom]
+  (log/debug "Match in " (:id evidence-record))
+  (map-actions #(action/match-candidates % web-trace-atom) evidence-record))
 
 (defn dedupe-matches
-  "Dedupe matches WITHIN an action.
-  Step 5.5 in docs."
-  [bundle]
-  (log/debug "Dedupe in " (:id bundle))
-  (map-actions action/dedupe-matches bundle))
+  "Dedupe matches WITHIN an action."
+  [evidence-record]
+  (log/debug "Dedupe in " (:id evidence-record))
+  (map-actions action/dedupe-matches evidence-record))
 
 (defn events
   "Generate an Event for each candidate match, update extra Events."
-  [bundle]
-  (log/debug "Events in " (:id bundle))
-  (->> bundle
-      (map-actions (partial action/create-events-for-action bundle))))
+  [evidence-record]
+  (log/debug "Events in " (:id evidence-record))
+  (->> evidence-record
+      (map-actions (partial action/create-events-for-action evidence-record))))
 
 (def percolator-version (System/getProperty "event-data-percolator.version"))
 
 (defn process
-  [bundle domain-artifact-version domain-set]
+  [evidence-record domain-artifact-version domain-set]
   ; an atom that's passed around to functions that might want to log which URLs they access
   ; and their respose codes.
   (let [web-trace-atom (atom [])
         result (->
-            bundle
+            evidence-record
             url
             dedupe-actions
             (candidates domain-set web-trace-atom)
@@ -143,8 +139,8 @@
 
 (defn extract-all-events
   "Extract all events for pushing downstream."
-  [bundle]
+  [evidence-record]
   (mapcat
     (fn [page]
       (mapcat :events (:actions page)))
-    (:pages bundle)))
+    (:pages evidence-record)))

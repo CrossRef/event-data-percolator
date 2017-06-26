@@ -1,6 +1,6 @@
 (ns event-data-percolator.process
   "Top level process inputs."
-  (:require [event-data-percolator.input-bundle :as input-bundle]
+  (:require [event-data-percolator.evidence-record :as evidence-record]
             [event-data-percolator.action :as action]
             [clojure.tools.logging :as log]
             [clojure.core.async :refer [thread alts!!]]
@@ -69,7 +69,7 @@
 
 (defn storage-key-for-evidence-record-id
   [id]
-  (str input-bundle/evidence-url-prefix id))
+  (str evidence-record/evidence-url-prefix id))
 
 ; The mutex is used as a pessimistic lock.
 ; The timeout is used so that the process can crash if it needs to.
@@ -106,13 +106,13 @@
         [domain-list-artifact-version domain-list] (cached-domain-list)
         
         ; Actually do the work of processing an Evidence Record.
-        evidence-record-processed (input-bundle/process evidence-record-input domain-list-artifact-version domain-list)
+        evidence-record-processed (evidence-record/process evidence-record-input domain-list-artifact-version domain-list)
         
         ; Remove the JWT before saving as a public record.
         public-evidence-record (dissoc evidence-record-processed :jwt)
 
         storage-key (storage-key-for-evidence-record-id id)
-        events (input-bundle/extract-all-events evidence-record-processed)
+        events (evidence-record/extract-all-events evidence-record-processed)
         jwt (:jwt evidence-record-input)
         topic (:global-event-input-topic env)]
 
@@ -191,12 +191,11 @@
             (status/send! "percolator" "input-queue" "time-lag" (- (System/currentTimeMillis) (.timestamp record)))
 
             (let [value (.value record)
-                  ; payload (try (json/read value :key-fn keyword) (catch Exception _ nil))
-                  payload (json/read-str value :key-fn keyword)
-                  schema-errors (input-bundle/validation-errors payload)]
-              (log/info "Look at" (:id payload))
+                  evidence-record (json/read-str value :key-fn keyword)
+                  schema-errors (evidence-record/validation-errors evidence-record)]
+              (log/info "Look at" (:id evidence-record))
               (if schema-errors
-                (log/error "Schema errors with input bundle id" (:id payload) schema-errors)
+                (log/error "Schema errors with input Evidence Record id" (:id evidence-record) schema-errors)
                 (duplicate-guard
                   (json/read-str (.value record) :key-fn keyword)
                   process-and-save)))

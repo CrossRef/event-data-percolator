@@ -20,14 +20,14 @@
                         :relation-type-id "cites"
                         :processed-observations [{:match match}]}
           
-          input-bundle {:source-token source-token
-                        :source-id source-id
-                        :pages [{:actions [input-action]}]}
+          evidence-record {:source-token source-token
+                           :source-id source-id
+                           :pages [{:actions [input-action]}]}
 
-          result (action/create-event-from-match input-bundle input-action match)]
+          result (action/create-event-from-match evidence-record input-action match)]
 
       (is (= (:obj_id result) object-doi) "Match URL should be output as obj_id")
-      (is (= (:source_token result) source-token) "Source token should be taken from bundle")
+      (is (= (:source_token result) source-token) "Source token should be taken from Evidence Record")
       (is (= (:occurred_at result) "2016-02-05") "Occurred at should be taken from the Action")
       (is (= (:subj_id result) subject-url) "Subject URL should be taken from the Action")
       (is (:id result) "ID is assigned")
@@ -50,12 +50,12 @@
                         :relation-type-id "cites"
                         :processed-observations [{:match match}]}
           
-          input-bundle {:source-token source-token
-                        :source-id source-id
-                        :pages [{:actions [input-action]}]
-                        :license "https://creativecommons.org/publicdomain/zero/1.0/"}
+          evidence-record {:source-token source-token
+                           :source-id source-id
+                           :pages [{:actions [input-action]}]
+                           :license "https://creativecommons.org/publicdomain/zero/1.0/"}
 
-          result (action/create-event-from-match input-bundle input-action match)]
+          result (action/create-event-from-match evidence-record input-action match)]
       (is (= (:license result) "https://creativecommons.org/publicdomain/zero/1.0/") "License field present")))
 
   (testing "create-event-from-match does not add license field if not present"
@@ -71,11 +71,11 @@
                         :relation-type-id "cites"
                         :processed-observations [{:match match}]}
           
-          input-bundle {:source-token source-token
-                        :source-id source-id
-                        :pages [{:actions [input-action]}]}
+          evidence-record {:source-token source-token
+                           :source-id source-id
+                           :pages [{:actions [input-action]}]}
 
-          result (action/create-event-from-match input-bundle input-action match)]
+          result (action/create-event-from-match evidence-record input-action match)]
       (is (not (contains? result :license)) "License field not present (not just nil)"))))
 
 ; This behaviour allows consumers to tell the difference between DOIs that were matched from an input URL (e.g. landing page)
@@ -93,12 +93,12 @@
                       :occurred-at "2016-02-05"
                       :relation-type-id "cites"}
         
-        input-bundle {:source-token "SOURCE_TOKEN"
-                      :source-id "SOURCE_ID"
-                      :pages [{:actions [input-action]}]}
+        evidence-record {:source-token "SOURCE_TOKEN"
+                         :source-id "SOURCE_ID"
+                         :pages [{:actions [input-action]}]}
 
-        result1 (action/create-event-from-match input-bundle input-action match1)
-        result2 (action/create-event-from-match input-bundle input-action match2)]
+        result1 (action/create-event-from-match evidence-record input-action match1)
+        result2 (action/create-event-from-match evidence-record input-action match2)]
 
     (testing "create-event-from-match will take the input URL as the event URL from the match where there is one"
       (is (= (-> result1 :obj :pid) "https://dx.doi.org/10.5555/12345678"))
@@ -127,13 +127,13 @@
                         :matches []
                         :extra-events extra-events}
          
-          input-bundle {:source-token "SOURCE_TOKEN"
-                        :source-id "SOURCE_ID"
-                        :license "http://example.com/license"
-                        :url "http://example.com/evidence/123456"
-                        :pages [{:actions [input-action]}]}
+          evidence-record {:source-token "SOURCE_TOKEN"
+                           :source-id "SOURCE_ID"
+                           :license "http://example.com/license"
+                           :url "http://example.com/evidence/123456"
+                           :pages [{:actions [input-action]}]}
 
-         result-action (action/create-events-for-action input-bundle input-action)]
+         result-action (action/create-events-for-action evidence-record input-action)]
     (is (empty? (:events result-action)) "No Events should have been emitted.")))
 
   (testing "When there are are extra Events and there was at least one match, those Extra Events should be emitted, with the requisite fields."
@@ -156,13 +156,13 @@
                                   :match "https://dx.doi.org/10.5555/12345678"}]
                         :extra-events extra-events}
          
-          input-bundle {:source-token "SOURCE_TOKEN"
-                        :source-id "SOURCE_ID"
-                        :license "http://example.com/license"
-                        :url "http://example.com/evidence/123456"
-                        :pages [{:actions [input-action]}]}
+          evidence-record {:source-token "SOURCE_TOKEN"
+                           :source-id "SOURCE_ID"
+                           :license "http://example.com/license"
+                           :url "http://example.com/evidence/123456"
+                           :pages [{:actions [input-action]}]}
 
-         result-action (action/create-events-for-action input-bundle input-action)]
+         result-action (action/create-events-for-action evidence-record input-action)]
     (is (= (count (:events result-action)) 3) "Three Events should have been emitted, one from the match and two from the extras.")
     
     ; compare with out :id field, that's random.
@@ -212,13 +212,13 @@
                         ; no extra events
                         :extra-events []}
          
-          input-bundle {:source-token "SOURCE_TOKEN"
-                       :source-id "SOURCE_ID"
-                       :license "http://example.com/license"
-                       :url "http://example.com/evidence/123456"
-                       :pages [{:actions [input-action]}]}
+          evidence-record {:source-token "SOURCE_TOKEN"
+                           :source-id "SOURCE_ID"
+                           :license "http://example.com/license"
+                           :url "http://example.com/evidence/123456"
+                           :pages [{:actions [input-action]}]}
 
-         result-action (action/create-events-for-action input-bundle input-action)]
+         result-action (action/create-events-for-action evidence-record input-action)]
     (is (= (count (:events result-action)) 1) "One Events should have been emitted, from the match.")
     (is (= (map #(dissoc % :id) (:events result-action))
       [{:license "http://example.com/license"

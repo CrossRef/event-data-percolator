@@ -1,11 +1,11 @@
-(ns event-data-percolator.input-bundle-test
-  "Tests for input bundle processing.
+(ns event-data-percolator.evidence-record-test
+  "Tests for Evidence Record processing.
    These call a chain of extraction and matching functions. They are fully exercised in their own tests."
   (:require [clojure.test :refer :all]
             [clj-time.core :as clj-time]
             [org.httpkit.fake :as fake]
             [clojure.data.json :as json]
-            [event-data-percolator.input-bundle :as input-bundle]
+            [event-data-percolator.evidence-record :as evidence-record]
             [event-data-percolator.action :as action]
             [event-data-percolator.test-util :as util]))
 
@@ -13,7 +13,7 @@
 (deftest ^:unit url
   (testing "url should add url based on the id."
       (let [bundle {:id "20170101-twitter-123456789"}
-            result (input-bundle/url bundle)]
+            result (evidence-record/url bundle)]
         (is (:id result) "Original bundle data preserved.")
         (is (= (:url result) "https://evidence.eventdata.crossref.org/evidence/20170101-twitter-123456789") "URL should be set"))))
         
@@ -21,21 +21,21 @@
   (testing "candidates should generate candidates based on input"
     ; Just to guarantee there are no external calls at this stage.
     (fake/with-fake-http []
-      (let [input-bundle {:id "1234"
-                          :pages [
-                           {:actions [
-                             {:unrelated :junk
-                              :url "http://example.com"
-                              :occurred-at "2017-05-02T00:00:00.000Z"
-                              :observations [
-                                {:more :unrelated-stuff
-                                  :type "plaintext"
-                                  :input-content "10.5555/11111"}
-                                {:type "url"
-                                 :input-url "http://doi.org/10.5555/22222"}]}]}]}
+      (let [evidence-record {:id "1234"
+                             :pages [
+                              {:actions [
+                                {:unrelated :junk
+                                 :url "http://example.com"
+                                 :occurred-at "2017-05-02T00:00:00.000Z"
+                                 :observations [
+                                   {:more :unrelated-stuff
+                                     :type "plaintext"
+                                     :input-content "10.5555/11111"}
+                                   {:type "url"
+                                    :input-url "http://doi.org/10.5555/22222"}]}]}]}
             
             ; Supply empty domain list as we're not testing landing page extraction.
-            result (input-bundle/candidates input-bundle #{} (atom []))]
+            result (evidence-record/candidates evidence-record #{} (atom []))]
         (is (= result {:id "1234"
                        :pages [{:actions
                                 [{:unrelated :junk
@@ -64,21 +64,21 @@
                           "https://doi.org/api/handles/10.5555/22222" (util/doi-ok "10.5555/22222")]
       
       (let [; Input bundle that came out of candidates.
-            input-bundle {:id "1234"
-                          :pages [{:actions
-                                [{:unrelated :junk
-                                  :url "http://example.com"
-                                  :occurred-at "2017-05-02T00:00:00.000Z"
-                                  :processed-observations
-                                  [{:more :unrelated-stuff
-                                    :type "plaintext"
-                                    :input-content "10.5555/11111"
-                                    :candidates [{:value "10.5555/11111" :type :plain-doi}]
-                                    :input-content-hash "e45fed4d47822fdc4791d6d9d38ec40650eb06dc"}
-                                   {:type "url"
-                                    :input-url "http://doi.org/10.5555/22222"
-                                    :candidates [{:type :doi-url, :value "http://doi.org/10.5555/22222"}]}]}]}]}
-            result (input-bundle/match input-bundle nil)]
+            evidence-record {:id "1234"
+                             :pages [{:actions
+                                   [{:unrelated :junk
+                                     :url "http://example.com"
+                                     :occurred-at "2017-05-02T00:00:00.000Z"
+                                     :processed-observations
+                                     [{:more :unrelated-stuff
+                                       :type "plaintext"
+                                       :input-content "10.5555/11111"
+                                       :candidates [{:value "10.5555/11111" :type :plain-doi}]
+                                       :input-content-hash "e45fed4d47822fdc4791d6d9d38ec40650eb06dc"}
+                                      {:type "url"
+                                       :input-url "http://doi.org/10.5555/22222"
+                                       :candidates [{:type :doi-url, :value "http://doi.org/10.5555/22222"}]}]}]}]}
+            result (evidence-record/match evidence-record nil)]
 
         (is (= result {:id "1234"
                        :pages [{:actions
@@ -111,35 +111,35 @@
     ; Ensure that no HTTP requests are made.
     (fake/with-fake-http []
       (let [; Input bundle that came out of candidates.
-            input-bundle {:source-token "ABCDEFGH"
-                          :source-id "THE_SOURCE_NAME"
-                          :timestamp "2017-05-02T00:00:00.000Z"
-                          :id "1234"
-                          :pages [{:actions
-                                    [{:unrelated :junk,
-                                      :url "http://example.com"
-                                      :subj {:title "My example Subject" :custom "value"}
-                                      :relation-type-id "contemplates"
-                                      :occurred-at "2017-05-02T00:00:00.000Z"
-                                      :processed-observations
-                                        [{:more :unrelated-stuff
-                                          :type "plaintext"
-                                          :input-content "10.5555/11111"
-                                          :candidates [{:value "10.5555/11111"
-                                                        :type :plain-doi}]
-                                          :input-content-hash "e45fed4d47822fdc4791d6d9d38ec40650eb06dc"}
-                                         {:type "url"
-                                          :input-url "http://doi.org/10.5555/22222"
-                                          :candidates
-                                          [{:type :doi-url
-                                            :value "http://doi.org/10.5555/22222"}]}]
-                                      :matches [{:value "10.5555/11111"
-                                                 :type :plain-doi
-                                                 :match "https://doi.org/10.5555/11111"}
-                                                {:type :doi-url
-                                                 :value "http://doi.org/10.5555/22222"
-                                                 :match "https://doi.org/10.5555/22222"}]}]}]}
-            result (input-bundle/events input-bundle)
+            evidence-record {:source-token "ABCDEFGH"
+                             :source-id "THE_SOURCE_NAME"
+                             :timestamp "2017-05-02T00:00:00.000Z"
+                             :id "1234"
+                             :pages [{:actions
+                                       [{:unrelated :junk,
+                                         :url "http://example.com"
+                                         :subj {:title "My example Subject" :custom "value"}
+                                         :relation-type-id "contemplates"
+                                         :occurred-at "2017-05-02T00:00:00.000Z"
+                                         :processed-observations
+                                           [{:more :unrelated-stuff
+                                             :type "plaintext"
+                                             :input-content "10.5555/11111"
+                                             :candidates [{:value "10.5555/11111"
+                                                           :type :plain-doi}]
+                                             :input-content-hash "e45fed4d47822fdc4791d6d9d38ec40650eb06dc"}
+                                            {:type "url"
+                                             :input-url "http://doi.org/10.5555/22222"
+                                             :candidates
+                                             [{:type :doi-url
+                                               :value "http://doi.org/10.5555/22222"}]}]
+                                         :matches [{:value "10.5555/11111"
+                                                    :type :plain-doi
+                                                    :match "https://doi.org/10.5555/11111"}
+                                                   {:type :doi-url
+                                                    :value "http://doi.org/10.5555/22222"
+                                                    :match "https://doi.org/10.5555/22222"}]}]}]}
+            result (evidence-record/events evidence-record)
             events (-> result :pages first :actions first :events)]
 
         (is (= (count events) 2) "Two events produced from two matches.")
@@ -178,7 +178,7 @@
                [{:id "55555" :and :other-fields}
                 {:id "66666" :and :other-fields}]}]}]}
 
-        result (input-bundle/extract-all-events output-bundle)]
+        result (evidence-record/extract-all-events output-bundle)]
 
       (is (= (set result) #{{:id "11111" :and :other-fields}
                             {:id "22222" :and :other-fields}
@@ -199,7 +199,7 @@
                   {:ignore-this :stuff
                    :actions [:some-dummy-action-object-2 :some-dummy-action-object-3]}]}
 
-          result (input-bundle/map-actions str input)]
+          result (evidence-record/map-actions str input)]
       (is (= result
              {:id "1234"
               :pages [
@@ -221,19 +221,19 @@
                           ; This one throws a timeout error, which should be reported
                           "http://article.com/article/XXXXX" (fn [a b c] (throw (new org.httpkit.client.TimeoutException "I got bored")))]
       (let [domain-list #{"article.com"}
-            input-bundle {:id "1234"
-                          :artifacts {:other :value} ; pass-through any artifact info from input package.
-                          :pages [
-                           {:actions [
-                             {:url "http://example.com/page/11111"
-                              :occurred-at "2017-05-02T00:00:00.000Z"
-                              :observations [
-                                {:type "url"
-                                 :input-url "http://article.com/article/22222"}
-                                {:type "url"
-                                 :input-url "http://article.com/article/XXXXX"}]}]}]}
+            evidence-record {:id "1234"
+                             :artifacts {:other :value} ; pass-through any artifact info from input package.
+                             :pages [
+                              {:actions [
+                                {:url "http://example.com/page/11111"
+                                 :occurred-at "2017-05-02T00:00:00.000Z"
+                                 :observations [
+                                   {:type "url"
+                                    :input-url "http://article.com/article/22222"}
+                                   {:type "url"
+                                    :input-url "http://article.com/article/XXXXX"}]}]}]}
             
-            result (input-bundle/process input-bundle "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)]
+            result (evidence-record/process evidence-record "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)]
         
         (is (= (-> result :percolator :artifacts :domain-set-artifact-version)
                 "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417")
@@ -255,33 +255,33 @@
         
 (deftest ^:component deduplication-across-bundles
   ; This is the most likely case.
-  (testing "Duplicates can be detected between a input-bundles"
+  (testing "Duplicates can be detected between a evidence-records"
     (fake/with-fake-http ["https://doi.org/api/handles/10.5555/12345678" (doi-ok "10.5555/12345678")]
       (let [domain-list #{}
             ; We submit the same input bundle twice. 
-            input-bundle {:id "1234"
-                          :pages [
-                           {:actions [
-                             {:url "http://example.com/page/11111"
-                              :id "88888"
-                              :occurred-at "2017-05-02T00:00:00.000Z"
-                              :observations [
-                                {:type "plaintext"
-                                 :input-content "10.5555/12345678"}]}]}]}
+            evidence-record {:id "1234"
+                             :pages [
+                              {:actions [
+                                {:url "http://example.com/page/11111"
+                                 :id "88888"
+                                 :occurred-at "2017-05-02T00:00:00.000Z"
+                                 :observations [
+                                   {:type "plaintext"
+                                    :input-content "10.5555/12345678"}]}]}]}
             
-            result-1 (input-bundle/process input-bundle "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)
+            result-1 (evidence-record/process evidence-record "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)
             
             ; Now save the action IDs. This is normally triggered in 'push'.
             push-output-bundle-result (action/store-action-duplicates result-1)
 
-            result-2 (input-bundle/process input-bundle "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)
+            result-2 (evidence-record/process evidence-record "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)
 
-            input-bundle-id-1 (:id result-1)
-            input-bundle-id-2 (:id result-2)
+            evidence-record-id-1 (:id result-1)
+            evidence-record-id-2 (:id result-2)
 
             ; A duplicate record, built from the action ID and the input bundle ID. We'll expect to see this.
             ; This has string keys because it's fetched back from serialized storage.
-            expected-duplicate {"evidence-record-id" input-bundle-id-1 "action-id" "88888"}]
+            expected-duplicate {"evidence-record-id" evidence-record-id-1 "action-id" "88888"}]
 
       (is (-> result-1 :pages first :actions first :duplicate nil?) "Action in first bundle not marked as duplicate")
       (is (= (-> result-2 :pages first :actions first :duplicate) expected-duplicate) "Action in second bundle not marked as duplicate, with ID of first bundle.")
@@ -302,28 +302,28 @@
   (testing "Action IDs can be ommitted if it's sensible to do so, e.g. low chance of collision, very high rate of input per Wikipedia"
     (fake/with-fake-http ["https://doi.org/api/handles/10.5555/9898989898" (doi-ok "10.5555/9898989898")]
       (let [domain-list #{}
-            input-bundle {:id "1234"
-                          :pages [
-                           {:actions [
-                             ; Same actions in the input bundle. In reality this shouldn't happen, but do it to verify that they aren't deduplicated.
-                             {:url "https://en.wikipedia.org/w/index.php?title=Bus&oldid=776981387"
-                              :occurred-at "2017-05-02T00:00:00.000Z"
-                              :observations [
-                                {:type "plaintext"
-                                 :input-content "10.5555/9898989898"}]}
-                             {:url "https://en.wikipedia.org/w/index.php?title=Bus&oldid=776981387"
-                              :occurred-at "2017-05-02T00:00:00.000Z"
-                              :observations [
-                                {:type "plaintext"
-                                 :input-content "10.5555/9898989898"}]}]}]}
+            evidence-record {:id "1234"
+                             :pages [
+                              {:actions [
+                                ; Same actions in the input bundle. In reality this shouldn't happen, but do it to verify that they aren't deduplicated.
+                                {:url "https://en.wikipedia.org/w/index.php?title=Bus&oldid=776981387"
+                                 :occurred-at "2017-05-02T00:00:00.000Z"
+                                 :observations [
+                                   {:type "plaintext"
+                                    :input-content "10.5555/9898989898"}]}
+                                {:url "https://en.wikipedia.org/w/index.php?title=Bus&oldid=776981387"
+                                 :occurred-at "2017-05-02T00:00:00.000Z"
+                                 :observations [
+                                   {:type "plaintext"
+                                    :input-content "10.5555/9898989898"}]}]}]}
 
             ; Also send twice.
-            result-1 (input-bundle/process input-bundle "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)
+            result-1 (evidence-record/process evidence-record "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)
             
             ; Now save the action IDs. This is normally triggered in 'push'.
             push-output-bundle-result (action/store-action-duplicates result-1)
 
-            result-2 (input-bundle/process input-bundle "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)]
+            result-2 (evidence-record/process evidence-record "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)]
 
       (is (= (dissoc result-1
                :id

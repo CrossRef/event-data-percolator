@@ -8,9 +8,7 @@
             [org.httpkit.fake :as fake]
             [event-data-percolator.test-util :as util]))
 
-(def auth-header "Bearer AUTH_TOKEN")
-
 (deftest ^:unit env-pre
   (testing "Environment variables set as expected")
   (is (= "memory" (:percolator-evidence-storage env)) "Config check EVIDENCE_STORAGE is in-memory")
-  (is (= event-data-percolator.input-bundle/evidence-url-prefix "evidence/") "Evidence URL prefix constant should be as expected in later tests."))
+  (is (= event-data-percolator.evidence-record/evidence-url-prefix "evidence/") "Evidence URL prefix constant should be as expected in later tests."))
