@@ -330,16 +330,19 @@ The Percolator uses Event Data's global namespace of configuration values. The f
  - `PERCOLATOR_ROBOTS_CACHE_REDIS_PORT`
  - `PERCOLATOR_S3_KEY`
  - `PERCOLATOR_S3_SECRET`
- - `PERCOLATOR_SKIP_DOI_CACHE`
- - `PERCOLATOR_SKIP_LANDING_PAGE_CACHE`
- - `PERCOLATOR_SKIP_ROBOTS_CACHE`
+ - `PERCOLATOR_SKIP_DOI_CACHE` - true or don't set
+ - `PERCOLATOR_SKIP_LANDING_PAGE_CACHE` - true or don't set
+ - `PERCOLATOR_SKIP_ROBOTS_CACHE` - true or don't set
 
 ## Configure Kafka
 
-You should create a Kafka topic for the Input Evidence records with suffucient partitions for future expansion. Also note that a status topic should exist.
+You should create a Kafka topic for the Input Evidence records with suffucient partitions for future expansion. Also note that a status topic should exist. Topic name should agree with value of PERCOLATOR_INPUT_EVIDENCE_RECORD_TOPIC and GLOBAL_EVENT_INPUT_TOPIC
 
-    bin/kafka-topics.sh --create --partitions 20 --topic percolator-input-evidence-record --zookeeper localhost --replication-factor 2
+    bin/kafka-topics.sh --create --partitions 200 --topic percolator-input-evidence-record --zookeeper localhost --replication-factor 2
 
+    bin/kafka-topics.sh --create --partitions 2 --topic event-input --zookeeper localhost --replication-factor 2
+
+If the input queue is rebalanced quickly (due to extra instances spinning up or down) then some Events may be caught in the 1 minute mutex timeout, meaning that it never gets processed. For this reason the `cleanup` mode should be run on a periodic basis (e.g. every week).
 
 ## Demo
 
