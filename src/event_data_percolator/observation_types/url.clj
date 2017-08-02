@@ -39,10 +39,11 @@
 
 (defn process-url-observation
   "Process a url observation into a candidate url. Check if valid and if on the domain list."
-  [observation landing-page-domain-set web-trace-atom]
+  [context observation]
   (let [input (:input-url observation "")
         
         ; single input input, but candidate responses are always lists.
         candidates (remove nil? [(url-to-doi-url-candidate input)
-                                 (url-to-landing-page-url-candidate input landing-page-domain-set)])]
+                                 (url-to-landing-page-url-candidate input (:domain-set context))])]
+
     (assoc observation :candidates candidates)))

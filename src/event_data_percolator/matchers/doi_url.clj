@@ -4,7 +4,7 @@
             [event-data-percolator.matchers.plain-doi :as plain-doi]))
 
 (defn match-doi-url-candidate
-  [candidate web-trace-atom]
+  [context candidate]
   (assoc candidate
-         :match (-> candidate :value crdoi/non-url-doi plain-doi/match-plain-doi)))
+         :match (->> candidate :value crdoi/non-url-doi (plain-doi/match-plain-doi context))))
 

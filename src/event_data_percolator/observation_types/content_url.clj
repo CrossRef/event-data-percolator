@@ -1,7 +1,8 @@
 (ns event-data-percolator.observation-types.content-url
   "Extract unlinked DOIs, unlinked URLs and linked URLs (including DOIs) from HTML document at given URL."
   (:require [event-data-percolator.observation-types.html :as html]
-            [event-data-percolator.util.web :as web])
+            [event-data-percolator.util.web :as web]
+            [event-data-common.evidence-log :as evidence-log])
   (:import [org.jsoup Jsoup]
            [org.apache.commons.codec.digest DigestUtils]
            [java.net URL]))
@@ -23,21 +24,28 @@
     (landing-page-domain-set (landing-page-domain-set domain))))
 
 (defn process-content-url-observation
-  [observation landing-page-domain-set web-trace-atom]
+  [context observation]
   (let [input (:input-url observation "")
         valid? (url-valid? input)
-        domain-allowed (not (url-is-landing-page landing-page-domain-set input))
+        domain-allowed (not (url-is-landing-page (:domain-set context) input))
         proceed (and valid? domain-allowed)
         ; The :ignore-robots flag is passed in by Agents that have specific exemptions.
         ; E.g. Wikipedia sites' API is excluded for general-purpose robots but allowed for our uses.
         content (when proceed
                   (if (:ignore-robots observation)
-                    (web/fetch-ignoring-robots input web-trace-atom)
-                    (web/fetch-respecting-robots input web-trace-atom)))]
+                    (web/fetch-ignoring-robots context input)
+                    (web/fetch-respecting-robots context input)))]
     
-    (when-let [newsfeed-links (html/newsfeed-links-from-html (:body content) input)]
-      (when web-trace-atom
-        (swap! web-trace-atom concat (map (fn [link] {:url link :type :newsfeed-url}) newsfeed-links))))
+    (doseq [newsfeed-link (html/newsfeed-links-from-html (:body content) input)]
+      (evidence-log/log! {
+        ; Service
+        :s "percolator"
+        ; Component
+        :c "newsfeed-link"
+        ; Evidence Record ID
+        :r (:id context)
+        ; URL
+        :u newsfeed-link}))
     
     (if-not domain-allowed
       (assoc observation :error :skipped-domain)
@@ -45,5 +53,5 @@
         (assoc observation :error :failed-fetch-url)
         (let [; Attach content then pass the thing to the HTML processor for heavy lifting.
               new-observation (assoc observation :input-content (:body content))
-              html-observations (html/process-html-content-observation new-observation landing-page-domain-set web-trace-atom)]
+              html-observations (html/process-html-content-observation context new-observation)]
           html-observations)))))

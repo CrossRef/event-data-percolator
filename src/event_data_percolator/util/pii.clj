@@ -6,7 +6,7 @@
             [crossref.util.doi :as crdoi]
             [robert.bruce :refer [try-try-again]]
             [clojure.tools.logging :as log]
-            [event-data-common.status :as status]
+            [event-data-common.evidence-log :as evidence-log]
             [clojure.data.json :as json]))
 
 (def pii-re #"([SB][0-9XB\-]{16,20})")
@@ -22,7 +22,7 @@
 
 (defn validate-pii
   "Validate a PII and return the DOI if it's been used as an alternative ID."
-  [pii]
+  [context pii]
   (when-not (clojure.string/blank? pii)
     (let [result (try
                    (try-try-again {:sleep 5000 :tries 2}
@@ -37,21 +37,25 @@
                                          nil)))
 
           items (get-in result ["message" "items"])]
-
-      (status/send! "percolator" "metadata-api" "request")
       
       (when-not result
         (log/error "Failed to retrieve PII from API for" pii)
-        (status/send! "percolator" "metadata-api" "fail"))
+        (evidence-log/log! {
+        :s "percolator" :c "lookup-pii" :f "failed"
+        :r (:id context)
+        :v pii}))
 
       (when result
-        (status/send! "percolator" "metadata-api" "ok"))
+        (evidence-log/log! {
+        :s "percolator" :c "lookup-pii" :f "success"
+        :r (:id context)
+        :v pii}))
 
       ; Only return when there's exactly one match.
       ; If so, check that the DOI exists and in the process normalize (don't trust the API's indexed data).
       (when (= 1 (count items))
         (let [possible-doi (get (first items) "DOI")
-              extant-doi (doi/validate-cached possible-doi)]
+              extant-doi (doi/validate-cached context possible-doi)]
           (when extant-doi (crdoi/normalise-doi extant-doi)))))))
 
 

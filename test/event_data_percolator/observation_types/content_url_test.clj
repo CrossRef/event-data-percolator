@@ -17,31 +17,36 @@
     (is (false? (content-url/url-valid? "http://example.com/somefile.pdf")))))
 
 (deftest ^:unit process-content-url-observation
-  (testing "process-content-url-observation should set error when URL isn't allowed"
-    (let [result (content-url/process-content-url-observation {:input-url nil} #{"example.com"} (atom []))]
+  (testing "process-content-url-observation should set error when URL isn't allowed becuase it's empty and therefore doesn't match the domain."
+    (let [result (content-url/process-content-url-observation
+          util/mock-context
+          {:input-url nil})]
+    
       (is (:error result))))
 
   (testing "process-content-url-observation should set error when URL can't be retrieved"
     (fake/with-fake-http ["http://cannot-be-retrieved.com/abc" {:status 404}]
       (let [result (content-url/process-content-url-observation
-                      {:input-url "http://cannot-be-retrieved.com/abc"}
-                      #{} (atom []))]
+                      util/mock-context
+                      {:input-url "http://cannot-be-retrieved.com/abc"})]
         (is (:error result)))))
 
   (testing "process-content-url-observation not visit landing page domains"
     ; Assert that no web call is made.
     (fake/with-fake-http []
       (let [result (content-url/process-content-url-observation
-                      {:input-url "http://publisher-site.com/this/page"}
-                      #{"publisher-site.com"} (atom []))]
-      
+                     (assoc util/mock-context :domain-set #{"example.com"})
+                     {:input-url "http://example.com/this/page"})]
+        
         (is (= (:error result) :skipped-domain) "Results in :skipped-domain error")
         (is (nil? (:input-content result)) "No content is returned."))))
 
 
   (testing "process-content-url-observation should set candidates on match where there are matches"
     (fake/with-fake-http ["http://can-be-retrieved.com/abc" "Webpage content 10.5555/12345678"]
-      (let [result (content-url/process-content-url-observation {:input-url "http://can-be-retrieved.com/abc"} #{} (atom []))]
+      (let [result (content-url/process-content-url-observation
+                    util/mock-context
+       {:input-url "http://can-be-retrieved.com/abc"})]
         (is (nil? (:error result)))
 
         ; Simplest possible thing that returns candidates (actually passed all the way through to plain-text).
@@ -54,7 +59,8 @@
     (fake/with-fake-http ["http://disallow-robots.com/abc" "Disalowed content 10.5555/12345678"
                           "http://disallow-robots.com/robots.txt" "User-agent: *\nDisallow: /"]
       (let [result (content-url/process-content-url-observation
-                     {:input-url "http://disallow-robots.com/abc"} #{} (atom []))]
+                     util/mock-context
+                     {:input-url "http://disallow-robots.com/abc"})]
 
         ; No candidates should be matched because of robots exclusion.
         (is (= result {:input-url "http://disallow-robots.com/abc"
@@ -64,8 +70,10 @@
   (testing "Fetch usually respects robots.txt Allow"
     (fake/with-fake-http ["http://allow-robots.com/abc" "Allowed content 10.5555/12345678"
                           "http://allow-robots.com/robots.txt" "User-agent: *\nAllow: /"]
+
       (let [result (content-url/process-content-url-observation
-                     {:input-url "http://allow-robots.com/abc"} #{} (atom []))]
+                     util/mock-context
+                     {:input-url "http://allow-robots.com/abc"})]
 
         (is (= result {:input-url "http://allow-robots.com/abc"
                        :input-content "Allowed content 10.5555/12345678"
@@ -76,8 +84,9 @@
     (fake/with-fake-http ["http://disallow-robots.com/abc" "Disallow robots content 10.5555/12345678"
                           "http://disallow-robots.com/robots.txt" "User-agent: *\nDisallow: /"]
       (let [result (content-url/process-content-url-observation
+                     util/mock-context
                      {:input-url "http://disallow-robots.com/abc"
-                      :ignore-robots true} #{} (atom []))]
+                      :ignore-robots true})]
 
         ; No candidates should be matched because of robots exclusion.
         (is (= result {:input-url "http://disallow-robots.com/abc"
@@ -90,8 +99,9 @@
     (fake/with-fake-http ["http://allow-robots.com/abc" "Allow robots content 10.5555/12345678"
                           "http://allow-robots.com/robots.txt" "User-agent: *\nAllow: /"]
       (let [result (content-url/process-content-url-observation
+                     util/mock-context
                      {:input-url "http://allow-robots.com/abc"
-                      :ignore-robots true} #{} (atom []))]
+                      :ignore-robots true})]
 
         (is (= result {:input-url "http://allow-robots.com/abc"
                        :ignore-robots true

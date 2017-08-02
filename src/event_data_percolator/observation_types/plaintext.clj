@@ -40,12 +40,13 @@
 
 (defn process-plaintext-content-observation
   "Process an observation of type plaintext-content."
-  [observation landing-page-domain-set web-trace-atom]
+  [context observation]
   (let [input (:input-content observation "")
         possible-urls (possible-urls-from-text input)
 
         candidates (concat (candidate-dois-from-text input)
                            (candidate-piis-from-text input)
                            (keep url/url-to-doi-url-candidate possible-urls)
-                           (keep #(url/url-to-landing-page-url-candidate % landing-page-domain-set) possible-urls))]
+                           (keep #(url/url-to-landing-page-url-candidate % (:domain-set context)) possible-urls))]
+        
     (assoc observation :candidates candidates)))

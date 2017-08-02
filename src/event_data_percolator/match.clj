@@ -19,13 +19,14 @@
   :landing-page-url landing-page-url/match-landing-page-url-candidate})
 
 (defn match-unrecognised-type
-  [candidate]
+  [context candidate]
   (assoc candidate 
          :match nil
          :error :unrecognised-candidate-type))
 
 (defn match-candidate
-  [candidate web-trace-atom]
+  [context candidate]
   (let [f (candidate-processors (:type candidate) match-unrecognised-type)]
-    (f candidate web-trace-atom)))
+    (f context candidate)))
+
 

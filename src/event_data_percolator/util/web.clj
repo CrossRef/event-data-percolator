@@ -7,7 +7,7 @@
             [event-data-common.storage.store :as store]
             [org.httpkit.client :as client]
             [clojure.core.memoize :as memo]
-            [event-data-common.status :as status]
+            [event-data-common.evidence-log :as evidence-log]
             [event-data-percolator.consts])
   (:import [java.net URL]
            [crawlercommons.robots SimpleRobotRulesParser BaseRobotRules]
@@ -20,63 +20,97 @@
 (defn fetch
   "Fetch the content at a URL as a string, following redirects and accepting cookies.
    Take an optional atom to which sequences of urls and status codes will be appended."
-  ([url] (fetch url nil))
-  ([url trace-atom]
-    (status/send! "percolator" "web-fetch" "request" nil 1 url)
-    (try
-      (loop [headers {"Referer" "https://eventdata.crossref.org"
-                      "User-Agent" event-data-percolator.consts/user-agent-for-robots}
-               depth 0
-               url url]
-          (if (> depth redirect-depth)
-            nil
-            (let [result @(http/get url {:follow-redirects false :headers headers :as :text :throw-exceptions true})
-                  error (:error result)
-                  cookie (-> result :headers :set-cookie)
-                  new-headers (merge headers (when cookie {"Cookie" cookie}))]
-              
-              
-              ; Trace. Two kinds of exception handling, the returned error and the try-catch below.
-              (when trace-atom
-                (if-not error
-                  (swap! trace-atom concat [{:url url :type :request :status (:status result)}])
-                  (swap! trace-atom concat [{:url url :type :request
-                                             :error (cond
-                                               (instance? org.httpkit.client.TimeoutException error) :timeout-error
-                                               :default :unknown-error)}])))
-              (if (#{200 401} (:status result))
-                (status/send! "percolator" "web-fetch" "ok" nil 1 url)
-                (status/send! "percolator" "web-fetch" "fail" nil 1 url))
-
-              (condp = (:status result)
-                200 result
-                ; Weirdly some Nature pages return 401 with the content. http://www.nature.com/nrendo/journal/v10/n9/full/nrendo.2014.114.html
-                401 result
-                301 (recur new-headers (inc depth) (-> result :headers :location))
-                303 (recur new-headers (inc depth) (-> result :headers :location))
-                302 (recur new-headers (inc depth) (-> result :headers :location))
-                nil))))
+  [context url]
   
-      ; On error just return nil, but add exception to trace.
-      (catch java.net.URISyntaxException exception (when trace-atom
-                                               (do (swap! trace-atom concat [{:error :url-syntax-error :type :request :url url}])
-                                                nil)))
+  (evidence-log/log! {
+    ; Service
+    :s "percolator"
+    ; Component
+    :c "fetch"
+    ; Facet
+    :f "request"
+    ; Evidence Record ID
+    :r (:id context)
+    ; DOI
+    :d ""
+    ; URL
+    :u "url"})
 
-      (catch java.net.UnknownHostException exception (when trace-atom
-                                                 (do (swap! trace-atom concat [{:error :unknown-host-error :type :request :url url}])
-                                                  nil)))
+  (try
+    (loop [headers {"Referer" "https://eventdata.crossref.org"
+                    "User-Agent" event-data-percolator.consts/user-agent-for-robots}
+             depth 0
+             url url]
+        (if (> depth redirect-depth)
+          nil
+          (let [result @(http/get url {:follow-redirects false :headers headers :as :text :throw-exceptions true})
+                error (:error result)
+                cookie (-> result :headers :set-cookie)
+                new-headers (merge headers (when cookie {"Cookie" cookie}))]
+            
+            (evidence-log/log! {
+              ; Service
+              :s "percolator"
+              ; Component
+              :c "fetch"
+              ; Facet
+              :f "response"
+              ; Evidence Record ID
+              :r (:id context)
+              ; DOI
+              :d ""
+              ; URL
+              :u "url"})
 
-      (catch org.httpkit.client.TimeoutException exception (when trace-atom
-                                                       (do (swap! trace-atom concat [{:error :timeout-error :type :request :url url}])
-                                                        nil)))
+            (condp = (:status result)
+              200 result
+              ; Weirdly some Nature pages return 401 with the content. http://www.nature.com/nrendo/journal/v10/n9/full/nrendo.2014.114.html
+              401 result
+              301 (recur new-headers (inc depth) (-> result :headers :location))
+              303 (recur new-headers (inc depth) (-> result :headers :location))
+              302 (recur new-headers (inc depth) (-> result :headers :location))
+              nil))))
 
-      (catch org.httpkit.ProtocolException exception (when trace-atom
-                                                       (do (swap! trace-atom concat [{:error :timeout-error :type :request :url url}])
-                                                        nil)))
+    ; On error just return nil, but add exception to trace.
+    (catch java.net.URISyntaxException exception
+      (do
+        (evidence-log/log! {
+          :s "percolator" :c "fetch"
+          :f "error" :v "uri-syntax-exception"
+          :r (:id context) :u url})
+        nil))
 
-      (catch Exception exception (when trace-atom
-                        (do (swap! trace-atom concat [{:error :unknown :exception-message (.getMessage exception) :type :request :url url}])
-                         nil))))))
+    (catch java.net.UnknownHostException exception
+      (do
+        (evidence-log/log! {
+          :s "percolator" :c "fetch"
+          :f "error" :v "unknown-host-exception"
+          :r (:id context) :u url})
+        nil))
+
+    (catch org.httpkit.client.TimeoutException exception
+      (do
+        (evidence-log/log! {
+          :s "percolator" :c "fetch"
+          :f "error" :v "timeout-exception"
+          :r (:id context) :u url})
+        nil))
+
+    (catch org.httpkit.ProtocolException exception
+      (do
+        (evidence-log/log! {
+          :s "percolator" :c "fetch"
+          :f "error" :v "protocol-exception"
+          :r (:id context) :u url})
+        nil))
+
+    (catch Exception exception
+      (do
+        (evidence-log/log! {
+          :s "percolator" :c "fetch"
+          :f "error" :v "unknown-exception"
+          :r (:id context) :u url})
+        nil))))
 
 (def redis-cache-store
   (delay (redis/build "robot-cache:" (:percolator-robots-cache-redis-host env)
@@ -90,14 +124,14 @@
 
 (defn fetch-robots-cached
   "Return robots file. Return nil if it doesn't exist."
-  [robots-file-url]  
+  [context robots-file-url]  
   (if skip-cache
-    (:body (fetch robots-file-url))
+    (:body (fetch nil robots-file-url))
     (if-let [cached-result (store/get-string @redis-cache-store robots-file-url)]
       (if (= cached-result "NULL")
           nil
           cached-result)
-      (let [result (:body (fetch robots-file-url))]
+      (let [result (:body (fetch context robots-file-url))]
         (redis/set-string-and-expiry-seconds @redis-cache-store robots-file-url @expiry-seconds (or result "NULL"))
         result))))
 
@@ -109,41 +143,62 @@
 
 (defn get-rules
   "Get a Robot Rules object for the given robots.txt file url. Or nil if there aren't any."
-  [robots-file-url]
-  (when-let [file-content (fetch-robots-cached robots-file-url)]
+  [context robots-file-url]
+  (when-let [file-content (fetch-robots-cached context robots-file-url)]
     (parse-rules robots-file-url file-content)))
 
 ; The robots files are cached in Redis, but must be re-parsed. Keep track of the thousand-odd most visited sites.
+; Note that this calls fetch, which records Evidence Logs about its activity. Because this is cached, a prior
+; request under a previous Evidence Record may have satisfy the robots.txt request.
 (def get-rules-cached
   (memo/lu get-rules :lu/threshold 1024))
 
 (defn allowed?
-  [url-str]
+  [context url-str]
   (let [robots-file-url (new URL (new URL url-str) "/robots.txt")
-        rules (get-rules-cached (str robots-file-url))
+        rules (get-rules-cached context (str robots-file-url))
+        
         ; If there's no robots file, proceed.
         allowed (if-not rules true (.isAllowed rules url-str))]
-
-    (if allowed 
-      (status/send! "percolator" "robot" "allowed" nil 1 url-str)
-      (status/send! "percolator" "robot" "not-allowed" nil 1 url-str))
 
     allowed))
 
 (defn fetch-respecting-robots
   "Fetch URL, respecting robots.txt directives for domain."
-  [url trace-atom]
-  (let [allowed (allowed? url)]
-    (if-not allowed
-      (do
-        (when trace-atom
-          (swap! trace-atom concat [{:error :robots-forbidden :type :request :url url}]))
-        nil)
-      (fetch url trace-atom))))
+  [context url]
+
+  (let [allowed (allowed? context url)]
+    (evidence-log/log! {
+      ; Service
+      :s "percolator"
+      ; Component
+      :c "robot-check"
+      ; Facet
+      :f "result"
+      ; Value
+      :v (boolean allowed)
+      ; Evidence Record ID
+      :r (:id context)
+      ; URL
+      :u url})
+
+  (when allowed
+    (fetch context url))))
 
 (defn fetch-ignoring-robots
   "Fetch URL, ignoring any robots.txt directives"
-  [url trace-atom]
-  ; Just an alias, but intentional.
-  (fetch url trace-atom))
+  [context url]
 
+  (evidence-log/log! {
+      ; Service
+      :s "percolator"
+      ; Component
+      :c "robot-check"
+      ; Facet
+      :f "skip"
+      ; Evidence Record ID
+      :r (:id context)
+      ; URL
+      :u url})
+
+  (fetch context url))

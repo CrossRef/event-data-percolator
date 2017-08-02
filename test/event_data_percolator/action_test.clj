@@ -133,7 +133,7 @@
                            :url "http://example.com/evidence/123456"
                            :pages [{:actions [input-action]}]}
 
-         result-action (action/create-events-for-action evidence-record input-action)]
+         result-action (action/create-events-for-action util/mock-context evidence-record input-action)]
     (is (empty? (:events result-action)) "No Events should have been emitted.")))
 
   (testing "When there are are extra Events and there was at least one match, those Extra Events should be emitted, with the requisite fields."
@@ -162,7 +162,7 @@
                            :url "http://example.com/evidence/123456"
                            :pages [{:actions [input-action]}]}
 
-         result-action (action/create-events-for-action evidence-record input-action)]
+         result-action (action/create-events-for-action util/mock-context evidence-record input-action)]
     (is (= (count (:events result-action)) 3) "Three Events should have been emitted, one from the match and two from the extras.")
     
     ; compare with out :id field, that's random.
@@ -218,7 +218,7 @@
                            :url "http://example.com/evidence/123456"
                            :pages [{:actions [input-action]}]}
 
-         result-action (action/create-events-for-action evidence-record input-action)]
+         result-action (action/create-events-for-action util/mock-context evidence-record input-action)]
     (is (= (count (:events result-action)) 1) "One Events should have been emitted, from the match.")
     (is (= (map #(dissoc % :id) (:events result-action))
       [{:license "http://example.com/license"
@@ -259,6 +259,6 @@
                                      {:type :landing-page-url :value "https://www.example.com/article/123456789" :match "https://doi.org/10.5555/12345678"}
                                      {:type :doi-url, :value "https://doi.org/10.6666/24242424" :match "https://doi.org/10.6666/24242424"}]}
 
-         result (action/dedupe-matches input-action)]
+         result (action/dedupe-matches util/mock-context util/mock-evidence-record input-action)]
       (is (= result expected-result)))))
 

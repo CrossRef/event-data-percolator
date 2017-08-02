@@ -8,7 +8,7 @@
             [event-data-common.storage.store :as store]
             [event-data-common.storage.redis :as redis]
             [clojure.tools.logging :as log]
-            [event-data-common.status :as status]
+            [event-data-common.evidence-log :as evidence-log]
             [clojure.data.json :as json]))
 
 (def doi-re #"(10\.\d{4,9}/[^\s]+)")
@@ -22,44 +22,52 @@
 
 (defn resolve-doi
   "Resolve and validate a DOI or ShortDOI, expressed as not-URL form. May or may not be URLEscaped. Return the DOI."
-  [doi]
+  [context doi]
 
-  (status/send! "percolator" "doi-api" "request" nil 1 doi)
   (let [is-short-doi (not (re-matches #"^10\.\d+/.*" doi))
+
         ; if it looks like a full DOI, look that up. It it looks like a handle, different syntax.
         input-handle (if is-short-doi
                           (str "10/" doi)
                           doi)
+
         response @(try-try-again {:sleep 5000 :tries 2}
                     #(http/get
                       (str "https://doi.org/api/handles/" input-handle)
                       {:as :text}))
+
         status (:status response)
         body (when (= 200 status)
                (-> response :body (json/read-str :key-fn keyword)))
+        
         ; Either get the validated handle, or for a short DOI, the DOI it's aliased to.
         handle (when body
-                 (status/send! "percolator" "doi-api" "match" nil 1 doi)
+                 (evidence-log/log! {
+                  :s "percolator" :c "resolve-doi" :f "success"
+                  :r (:id context) :d doi})
+
                  (if is-short-doi
                    (->> body :values (filter #(= (:type %) "HS_ALIAS")) first :data :value)
                    (:handle body)))]
 
       (when-not body 
-        (status/send! "percolator" "doi-api" "no-match" nil 1 doi))
+        (evidence-log/log! {
+          :s "percolator" :c "resolve-doi" :f "failure"
+          :r (:id context) :d doi}))
 
     handle))
 
 (defn resolve-doi-maybe-escaped
   "Try to resolve a possibly URL-encoded DOI. If it can be decoded and still resolve, return it decoded."
-  [original]
+  [context original]
   (if
     ; %2F is the URL-encoded slash which is present in every DOI.
     (and original (re-find #"%2[Ff]" original))
     (let [decoded (try (URLDecoder/decode original "UTF-8") (catch java.lang.IllegalArgumentException _ nil))]
-      (if-let [resolved (when decoded (resolve-doi decoded))]
+      (if-let [resolved (when decoded (resolve-doi context decoded))]
         resolved
-        (resolve-doi original)))
-    (resolve-doi original)))
+        (resolve-doi context original)))
+    (resolve-doi context original)))
 
 (defn drop-right-char
   "Drop a character from the right of a string.
@@ -77,7 +85,7 @@
 (def max-drops 5)
 (defn validate-doi-dropping
   "For a given suspected DOI or shortDOI, validate that it exists, possibly chopping some of the end off to get there."
-  [doi]
+  [context doi]
   (loop [i 0
          doi doi]
     ; Terminate if we're at the end of clipping things off or the DOI no longer looks like an DOI. 
@@ -90,7 +98,7 @@
       ; Stop recursion.
       nil
       ; Or try this substring.
-      (if-let [clean-doi (resolve-doi-maybe-escaped doi)] 
+      (if-let [clean-doi (resolve-doi-maybe-escaped context doi)] 
         ; resolve-doi may alter the DOI it returns, e.g. resolving a shortDOI to a real DOI or lower-casing.
         
         ; We have a working DOI!
@@ -98,7 +106,7 @@
         ; If there is a question mark, try removing it to see if it still works.
         (if (.contains clean-doi "?")
           (let [before-q (first (.split clean-doi "\\?"))]
-            (if (resolve-doi before-q)
+            (if (resolve-doi context before-q)
               before-q
               clean-doi))
           clean-doi)
@@ -125,14 +133,14 @@
 (defn validate-cached
   "Take a suspected DOI or ShortDOI and return the correct full well-formed, extant DOI.
    This is the function you want."
-  [suspected-doi]
+  [context suspected-doi]
   (if skip-cache
-    (validate-doi-dropping suspected-doi)
+    (validate-doi-dropping context suspected-doi)
     (if-let [cached-result (store/get-string @redis-cache-store suspected-doi)]
       (if (= cached-result "NULL")
           nil
           cached-result)
-      (if-let [result (validate-doi-dropping suspected-doi)]
+      (if-let [result (validate-doi-dropping context suspected-doi)]
         ; success
         (do
           (redis/set-string-and-expiry-seconds @redis-cache-store suspected-doi @success-expiry-seconds result)

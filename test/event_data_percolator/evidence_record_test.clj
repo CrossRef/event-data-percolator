@@ -13,7 +13,7 @@
 (deftest ^:unit url
   (testing "url should add url based on the id."
       (let [bundle {:id "20170101-twitter-123456789"}
-            result (evidence-record/url bundle)]
+            result (evidence-record/url util/mock-context bundle)]
         (is (:id result) "Original bundle data preserved.")
         (is (= (:url result) "https://evidence.eventdata.crossref.org/evidence/20170101-twitter-123456789") "URL should be set"))))
         
@@ -34,8 +34,8 @@
                                    {:type "url"
                                     :input-url "http://doi.org/10.5555/22222"}]}]}]}
             
-            ; Supply empty domain list as we're not testing landing page extraction.
-            result (evidence-record/candidates evidence-record #{} (atom []))]
+            result (evidence-record/candidates util/mock-context evidence-record)]
+
         (is (= result {:id "1234"
                        :pages [{:actions
                                 [{:unrelated :junk
@@ -50,12 +50,8 @@
                                    {:type "url"
                                     :input-url "http://doi.org/10.5555/22222"
                                     :candidates [{:type :doi-url, :value "http://doi.org/10.5555/22222"}]}]}]}]})
-            "Overall structure preserved. Candidates are attached to actions and input-content-hash where appropriate. Unrelated information at all levels carried through.")))))
 
-(defn doi-ok
-  "Fake OK return from DOI proxy."
-  [handle]
-  {:status 200 :body (json/write-str {"handle" handle})})
+            "Overall structure preserved. Candidates are attached to actions and input-content-hash where appropriate. Unrelated information at all levels carried through.")))))
 
 (deftest ^:component match
   (testing "match should transform candidates, but leave structure intact"
@@ -78,7 +74,8 @@
                                       {:type "url"
                                        :input-url "http://doi.org/10.5555/22222"
                                        :candidates [{:type :doi-url, :value "http://doi.org/10.5555/22222"}]}]}]}]}
-            result (evidence-record/match evidence-record nil)]
+            
+            result (evidence-record/match util/mock-context evidence-record)]
 
         (is (= result {:id "1234"
                        :pages [{:actions
@@ -103,6 +100,7 @@
                                             {:type :doi-url
                                              :value "http://doi.org/10.5555/22222"
                                              :match "https://doi.org/10.5555/22222"}]}]}]})
+        
               "Overall structure preserved. Matches gathered for each action over candidates. Occurred-at carried through to match.")))))
 
 
@@ -139,7 +137,8 @@
                                                    {:type :doi-url
                                                     :value "http://doi.org/10.5555/22222"
                                                     :match "https://doi.org/10.5555/22222"}]}]}]}
-            result (evidence-record/events evidence-record)
+            
+            result (evidence-record/events util/mock-context evidence-record)
             events (-> result :pages first :actions first :events)]
 
         (is (= (count events) 2) "Two events produced from two matches.")
@@ -199,7 +198,7 @@
                   {:ignore-this :stuff
                    :actions [:some-dummy-action-object-2 :some-dummy-action-object-3]}]}
 
-          result (evidence-record/map-actions str input)]
+          result (evidence-record/map-actions util/mock-context (fn [context evidence-record action] (str action)) input)]
       (is (= result
              {:id "1234"
               :pages [
@@ -211,7 +210,7 @@
                           ":some-dummy-action-object-3"]}]})))))
 
 (deftest ^:component end-to-end-process
-  (testing "End-to-end processing of Input Bundle should result in an Evidence Record with Events and HTTP tracing."
+  (testing "End-to-end processing of Input Bundle should result in an Evidence Record with Events."
     ; A single redirect so that we can demonstrate that the trace is captured.
     (fake/with-fake-http ["http://article.com/article/22222" {:status 303 :headers {:location "http://article.com/article/22222-X"}}
                           "http://article.com/article/22222-X" {:status 200 :body "<html><head><meta name='dc.identifier' content='https://doi.org/10.5555/12345678'></head></html>"}
@@ -220,8 +219,8 @@
 
                           ; This one throws a timeout error, which should be reported
                           "http://article.com/article/XXXXX" (fn [a b c] (throw (new org.httpkit.client.TimeoutException "I got bored")))]
-      (let [domain-list #{"article.com"}
-            evidence-record {:id "1234"
+      
+      (let [evidence-record {:id "1234"
                              :artifacts {:other :value} ; pass-through any artifact info from input package.
                              :pages [
                               {:actions [
@@ -233,19 +232,13 @@
                                    {:type "url"
                                     :input-url "http://article.com/article/XXXXX"}]}]}]}
             
-            result (evidence-record/process evidence-record "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)]
-        
+            result (evidence-record/process (assoc util/mock-context :domain-set #{"article.com"}) evidence-record)]
+
         (is (= (-> result :percolator :artifacts :domain-set-artifact-version)
-                "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417")
-            "Domain list artifact version should be correctly set.")
+               (:domain-list-artifact-version util/mock-context))
+            "Domain list artifact version should be correctly set from context object.")
 
         (is (= (-> result :artifacts :other) :value) "Pre-existing values in artifacts are passed through.")
-
-        (is (= (set (:web-trace result))
-                #{{:type :request :url "http://article.com/article/22222" :status 303 }
-                  {:type :request :url "http://article.com/article/22222-X" :status 200 }
-                  {:type :request :url "http://article.com/article/XXXXX" :error :timeout-error}})
-            "All HTTP access should be recorded")
 
         ; The rest of the pieces are tested above.
         (is (= 1 (-> result :pages first :actions first :events count)) "One event should be found")
@@ -256,9 +249,8 @@
 (deftest ^:component deduplication-across-bundles
   ; This is the most likely case.
   (testing "Duplicates can be detected between a evidence-records"
-    (fake/with-fake-http ["https://doi.org/api/handles/10.5555/12345678" (doi-ok "10.5555/12345678")]
-      (let [domain-list #{}
-            ; We submit the same input bundle twice. 
+    (fake/with-fake-http ["https://doi.org/api/handles/10.5555/12345678" (util/doi-ok "10.5555/12345678")]
+      (let [; We submit the same input bundle twice. 
             evidence-record {:id "1234"
                              :pages [
                               {:actions [
@@ -269,12 +261,12 @@
                                    {:type "plaintext"
                                     :input-content "10.5555/12345678"}]}]}]}
             
-            result-1 (evidence-record/process evidence-record "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)
+            result-1 (evidence-record/process util/mock-context evidence-record)
             
             ; Now save the action IDs. This is normally triggered in 'push'.
             push-output-bundle-result (action/store-action-duplicates result-1)
 
-            result-2 (evidence-record/process evidence-record "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)
+            result-2 (evidence-record/process util/mock-context evidence-record)
 
             evidence-record-id-1 (:id result-1)
             evidence-record-id-2 (:id result-2)
@@ -300,9 +292,8 @@
 
 (deftest ^:component action-id-can-be-ommitted
   (testing "Action IDs can be ommitted if it's sensible to do so, e.g. low chance of collision, very high rate of input per Wikipedia"
-    (fake/with-fake-http ["https://doi.org/api/handles/10.5555/9898989898" (doi-ok "10.5555/9898989898")]
-      (let [domain-list #{}
-            evidence-record {:id "1234"
+    (fake/with-fake-http ["https://doi.org/api/handles/10.5555/9898989898" (util/doi-ok "10.5555/9898989898")]
+      (let [evidence-record {:id "1234"
                              :pages [
                               {:actions [
                                 ; Same actions in the input bundle. In reality this shouldn't happen, but do it to verify that they aren't deduplicated.
@@ -318,12 +309,12 @@
                                     :input-content "10.5555/9898989898"}]}]}]}
 
             ; Also send twice.
-            result-1 (evidence-record/process evidence-record "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)
+            result-1 (evidence-record/process util/mock-context evidence-record)
             
             ; Now save the action IDs. This is normally triggered in 'push'.
             push-output-bundle-result (action/store-action-duplicates result-1)
 
-            result-2 (evidence-record/process evidence-record "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417" domain-list)]
+            result-2 (evidence-record/process util/mock-context evidence-record)]
 
       (is (= (dissoc result-1
                :id

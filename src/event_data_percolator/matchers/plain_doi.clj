@@ -5,11 +5,11 @@
 
 (defn match-plain-doi
   "Return a canonical DOI if this is a valid, extant DOI."
-  [plain-doi]
-  (when-let [validated (doi/validate-cached plain-doi)]
+  [context plain-doi]
+  (when-let [validated (doi/validate-cached context plain-doi)]
     (crdoi/normalise-doi validated)))
 
 (defn match-plain-doi-candidate
-  [candidate web-trace-atom]
+  [context candidate]
   (assoc candidate
-         :match (match-plain-doi (:value candidate))))
+         :match (match-plain-doi context (:value candidate))))

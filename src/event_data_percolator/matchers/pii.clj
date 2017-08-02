@@ -3,6 +3,6 @@
   (:require [event-data-percolator.util.pii :as pii]))
 
 (defn match-pii-candidate
-  [candidate web-trace-atom]
+  [context candidate]
   (assoc candidate
-         :match (pii/validate-pii (:value candidate))))
+         :match (pii/validate-pii context (:value candidate))))

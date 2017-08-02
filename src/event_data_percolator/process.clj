@@ -13,7 +13,7 @@
             [clojure.core.memoize :as memo]
             [clojure.data.json :as json]
             [org.httpkit.client :as client]
-            [event-data-common.status :as status]
+            [event-data-common.evidence-log :as evidence-log]
             [robert.bruce :refer [try-try-again]])
   (:import [org.apache.kafka.clients.producer KafkaProducer Producer ProducerRecord]
            [org.apache.kafka.clients.consumer KafkaConsumer Consumer ConsumerRecords]
@@ -21,24 +21,24 @@
 
 (def domain-list-artifact-name "crossref-domain-list")
 
-(defn retrieve-domain-list
+(defn retrieve-domain-set
   "Return tuple of [version-url, domain-list-set]"
   []
   (log/info "Retrieving domain list artifact")
-  (status/send! "percolator" "artifact" "fetch" -1 1 "domain-list")
+
   ; Fetch the cached copy of the domain list.
   (let [domain-list-artifact-version (artifact/fetch-latest-version-link domain-list-artifact-name)
         ; ~ 5KB string, set of ~ 8000
-        domain-list (-> domain-list-artifact-name artifact/fetch-latest-artifact-stream clojure.java.io/reader line-seq set)]
-    [domain-list-artifact-version domain-list]))
+        domain-set (-> domain-list-artifact-name artifact/fetch-latest-artifact-stream clojure.java.io/reader line-seq set)]
+    [domain-list-artifact-version domain-set]))
 
 (def cache-milliseconds
   "One hour"
   3600000)
 
-(def cached-domain-list
+(def cached-domain-set
   "Cache the domain list and version url. It's very rarely actually updated."
-  (memo/ttl retrieve-domain-list {} :ttl/threshold cache-milliseconds))
+  (memo/ttl retrieve-domain-set {} :ttl/threshold cache-milliseconds))
 
 (def evidence-store
   (delay
@@ -59,13 +59,12 @@
 
 (def kafka-producer
   (delay
-    (let [properties (java.util.Properties.)]
-      (.put properties "bootstrap.servers" (:global-kafka-bootstrap-servers env))
-      (.put properties "acks", "all")
-      (.put properties "retries", (int 5))
-      (.put properties "key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
-      (.put properties "value.serializer", "org.apache.kafka.common.serialization.StringSerializer")
-      (KafkaProducer. properties))))
+    (KafkaProducer. {
+      "bootstrap.servers" (:global-kafka-bootstrap-servers env)
+      "acks" "all"
+      "retries" (int 5)
+      "key.serializer" "org.apache.kafka.common.serialization.StringSerializer"
+      "value.serializer" "org.apache.kafka.common.serialization.StringSerializer"})))
 
 (defn storage-key-for-evidence-record-id
   [id]
@@ -103,10 +102,18 @@
   [evidence-record-input]
   (log/info "Processing" (:id evidence-record-input))
   (let [id (:id evidence-record-input)
-        [domain-list-artifact-version domain-list] (cached-domain-list)
+        [domain-list-artifact-version domain-set] (cached-domain-set)
+
+        ; Execution context for all processing involved in processing this Evidence Record.
+        ; This context is passed to all functions that need it.
+        ; Don't include the input evidence record, as it's modified in a few steps.
+        ; Keeping the original version around could be confusing.
+        context {:id id
+                 :domain-set domain-set
+                 :domain-list-artifact-version domain-list-artifact-version}
         
         ; Actually do the work of processing an Evidence Record.
-        evidence-record-processed (evidence-record/process evidence-record-input domain-list-artifact-version domain-list)
+        evidence-record-processed (evidence-record/process context evidence-record-input)
         
         ; Remove the JWT before saving as a public record.
         public-evidence-record (dissoc evidence-record-processed :jwt)
@@ -129,7 +136,11 @@
       (.send @kafka-producer
              (ProducerRecord. topic
                               (:id event)
-                              (json/write-str (assoc event :jwt jwt)))))
+                              (json/write-str (assoc event :jwt jwt))))
+
+      (evidence-log/log! {
+        :s "percolator" :c "event" :f "send"
+        :r (:id context) :n (:id event)}))
 
     (log/info "Finished saving" id)))
 
@@ -157,53 +168,80 @@
 (defn process-kafka-inputs
   "Process an input stream from Kafka in this thread."
   []
- (let [properties (java.util.Properties.)]
-     (.put properties "bootstrap.servers" (:global-kafka-bootstrap-servers env))
-     (.put properties "group.id"  "percolator-process")
-     (.put properties "key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
-     (.put properties "value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
-     
-     ; This is only used in the absence of an existing marker for the group.
-     (.put properties "auto.offset.reset" "earliest")
+  (let [consumer (KafkaConsumer.
+          {"bootstrap.servers" (:global-kafka-bootstrap-servers env)
+           "group.id"  "percolator-process"
+           "key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer"
+           "value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer"
+           "auto.offset.reset" "earliest"})
 
-     (let [consumer (KafkaConsumer. properties)
-           topic-name (:percolator-input-evidence-record-topic env)]
-       (log/info "Subscribing to" topic-name)
-       (.subscribe consumer (list topic-name))
-       (log/info "Subscribed to" topic-name "got" (count (or (.assignment consumer) [])) "assigned partitions")
-       (loop []
-         (log/info "Polling...")
-         (let [^ConsumerRecords records (.poll consumer (int 10000))
-               lag (lag-for-assigned-partitions consumer)
-               c (atom 0)]
-           (log/info "Lag for partitions:" lag)
+       topic-name (:percolator-input-evidence-record-topic env)]
 
-           (doseq [[topic-number topic-lag] lag]
-             (status/send! "percolator" "input-queue" "lag" topic-number topic-lag))
-           
-           (log/info "Got" (.count records) "records." (.hashCode records))
-           (doseq [^ConsumerRecords record records]
-            (swap! c inc)
-            
-            (log/info "Start processing:" (.key record) "size:" (.serializedValueSize record) @c "/" (.count records))
+   (log/info "Subscribing to" topic-name)
+   (.subscribe consumer (list topic-name))
 
-            (status/send! "percolator" "input-queue" "message-size" (.serializedValueSize record))
-            (status/send! "percolator" "input-queue" "time-lag" (- (System/currentTimeMillis) (.timestamp record)))
+   (log/info "Subscribed to" topic-name "got" (count (or (.assignment consumer) [])) "assigned partitions")
+   (loop []
+     (log/info "Polling...")
+     (let [^ConsumerRecords records (.poll consumer (int 10000))
+           lag (lag-for-assigned-partitions consumer)
+           c (atom 0)]
+       (log/info "Lag for partitions:" lag)
 
-            (let [value (.value record)
-                  evidence-record (json/read-str value :key-fn keyword)
-                  schema-errors (evidence-record/validation-errors evidence-record)]
-              (log/info "Look at" (:id evidence-record))
-              (if schema-errors
-                (log/error "Schema errors with input Evidence Record id" (:id evidence-record) schema-errors)
-                (duplicate-guard
-                  (json/read-str (.value record) :key-fn keyword)
-                  process-and-save)))
-            (log/info "Finished processing record" (.key record)))
-            
-            (log/info "Finished processing records" (.count records) "records." (.hashCode records))
-            ; The only way this ends is violently.
-            (recur))))))
+       (doseq [[partition-number partition-lag] lag]
+         (evidence-log/log! {
+            ; Service
+            :s "percolator"
+            ; Component
+            :c "process"
+            ; Facet
+            :f "input-message-lag"
+            ; Partition
+            :p partition-number
+            ; Value
+            :v partition-lag}))
+       
+       (log/info "Got" (.count records) "records." (.hashCode records))
+       (doseq [^ConsumerRecords record records]
+        (swap! c inc)
+        
+        (log/info "Start processing:" (.key record) "size:" (.serializedValueSize record) @c "/" (.count records))
+
+        (evidence-log/log! {
+          :s "percolator" :c "process" :f "input-message-size"
+          :v (.serializedValueSize record)})
+
+        (evidence-log/log! {
+          :s "percolator" :c "process" :f "input-message-time-lag"
+          :v (- (System/currentTimeMillis) (.timestamp record))}) 
+
+        (let [value (.value record)
+              evidence-record (json/read-str value :key-fn keyword)
+              schema-errors (evidence-record/validation-errors evidence-record)]
+          (log/info "Look at" (:id evidence-record))
+
+          (evidence-log/log! {
+            :s "percolator" :c "process" :f "start"
+            ; Evidence Record ID
+            :r (:id evidence-record)})
+
+          (if schema-errors
+            (log/error "Schema errors with input Evidence Record id" (:id evidence-record) schema-errors)
+            (duplicate-guard
+              (json/read-str (.value record) :key-fn keyword)
+              
+              ; This is where all the work happens!
+              process-and-save))
+        
+          (log/info "Finished processing record" (.key record))
+
+          (evidence-log/log! {
+            :s "percolator" :c "process" :f "finish"
+            :r (:id evidence-record)})))
+        
+        (log/info "Finished processing records" (.count records) "records." (.hashCode records)))
+        ; The only way this ends is violently.
+        (recur))))
 
 (defn process-kafka-inputs-concurrently
   "Run a number of threads to process inputs."

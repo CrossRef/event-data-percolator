@@ -68,74 +68,69 @@
     (catch RuntimeException e e)))
 
 (defn map-actions
-  "Map over actions within an Input Evidence Record, leaving the rest intact."
-  [f evidence-record]
+  "Map over actions within an Input Evidence Record, leaving the rest intact.
+   call (f context evidence-record action)"
+  [context f evidence-record]
   (assoc evidence-record
     :pages (map (fn [page]
       (assoc page
-        :actions (map f (:actions page)))) (:pages evidence-record))))
+        :actions (map #(f context evidence-record %) (:actions page)))) (:pages evidence-record))))
 
 (defn url
   "Associate a URL based on the ID."
-  [evidence-record]
+  [context evidence-record]
   (assoc evidence-record
     :url (generate-url (:id evidence-record))))
 
 (defn dedupe-actions
   "Dedupe actions in an input Evidence Record."
-  [evidence-record]
+  [context evidence-record]
   (log/debug "Deduping in " (:id evidence-record))
-  (map-actions #(action/dedupe-action % (:id evidence-record)) evidence-record))
+  (map-actions context action/dedupe-action evidence-record))
 
 (defn candidates
   "Produce candidates in input evidence-record."
-  [evidence-record domain-set web-trace-atom]
+  [context evidence-record]
   (log/debug "Candidates in " (:id evidence-record))
-  (map-actions #(action/process-observations-candidates % domain-set web-trace-atom) evidence-record))
+  (map-actions context action/process-observations-candidates evidence-record))
 
 (defn match
   "Match candidates in input evidence-record."
-  [evidence-record web-trace-atom]
+  [context evidence-record]
   (log/debug "Match in " (:id evidence-record))
-  (map-actions #(action/match-candidates % web-trace-atom) evidence-record))
+  (map-actions context action/match-candidates evidence-record))
 
 (defn dedupe-matches
   "Dedupe matches WITHIN an action."
-  [evidence-record]
+  [context evidence-record]
   (log/debug "Dedupe in " (:id evidence-record))
-  (map-actions action/dedupe-matches evidence-record))
+  (map-actions context action/dedupe-matches evidence-record))
 
 (defn events
   "Generate an Event for each candidate match, update extra Events."
-  [evidence-record]
+  [context evidence-record]
   (log/debug "Events in " (:id evidence-record))
-  (->> evidence-record
-      (map-actions (partial action/create-events-for-action evidence-record))))
+  (map-actions context action/create-events-for-action evidence-record))
 
 (def percolator-version (System/getProperty "event-data-percolator.version"))
 
 (defn process
-  [evidence-record domain-artifact-version domain-set]
-  ; an atom that's passed around to functions that might want to log which URLs they access
-  ; and their respose codes.
-  (let [web-trace-atom (atom [])
-        result (->
-            evidence-record
-            url
-            dedupe-actions
-            (candidates domain-set web-trace-atom)
-            (match web-trace-atom)
-            dedupe-matches
-            (assoc-in [:percolator :artifacts :domain-set-artifact-version] domain-artifact-version)
-            (assoc-in [:percolator :software-version] percolator-version)
-            events)
+  [context evidence-record]
+  (let [result (->>
+          evidence-record
+          (url context)
+          (dedupe-actions context)
+          (candidates context)
+          (match context)
+          (dedupe-matches context)
+          (#(assoc-in % [:percolator :artifacts :domain-set-artifact-version] (:domain-list-artifact-version context)))
+          (#(assoc-in % [:percolator :software-version] percolator-version))
+          (events context))
+
         ; There are lazy sequences in here. Force the entire structure to be realized.
-        ; This is necessary because the web-trace-atom's value is observed at this point,
-        ; so we need to be confident that everything that's going to happen, has happened.
-        realized (clojure.walk/postwalk identity result)
-        with-trace (assoc realized :web-trace @web-trace-atom)]
-    (log/debug "Finished processing" (:id with-trace))
-    with-trace))
+        realized (clojure.walk/postwalk identity result)]
+    (log/debug "Finished processing" (:id realized))
+    realized))
 
 (defn extract-all-events
   "Extract all events for pushing downstream."

@@ -1,4 +1,4 @@
-(defproject event-data-percolator "0.3.0"
+(defproject event-data-percolator "0.3.1"
   :description "Event Data Percolator"
   :url "http://eventdata.crossref.org/"
   :license {:name "MIT License"
@@ -6,7 +6,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/core.cache "0.6.5"]
                  [org.clojure/core.async "0.2.395"]
-                 [event-data-common "0.1.30"]
+                 [event-data-common "0.1.32"]
                  [enlive "1.1.6"]
                  [org.clojure/core.memoize "0.5.8"]
                  [commons-codec/commons-codec "1.10"]

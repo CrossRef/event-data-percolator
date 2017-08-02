@@ -26,7 +26,7 @@
   "Take an Action, decorate with 'duplicate' field IFF there's an action ID.
    If there's duplicate information (a chunk of JSON representing a previous Evidence Record), associate it with the Action, otherwise pass it through.
    The store is updated with the values in the 'push' process."
-  [action evidence-record-id]
+  [context evidence-record action]
 
   (if-let [id (:id action)]
     (let [k (str "action/" id)
@@ -42,20 +42,23 @@
 (defn process-observations-candidates
   "Step Process all the observations of an Action to generate Candidates. Collect Candidates.
    If it's a duplicate action, the candidate extractor won't run."
-  [action domain-set  web-trace-atom]
+  [context evidence-record action]
   (let [observations (:observations action)
         duplicate? (:duplicate action)
-        processed-observations (map #(observation/process-observation % duplicate? domain-set web-trace-atom) observations)]
+        processed-observations (map
+                                #(observation/process-observation context % duplicate?)
+                                observations)]
     (-> action
         (assoc :processed-observations processed-observations)
         (dissoc :observations))))
 
 (defn match-candidates
   "Attempt to match all candidates into DOIs."
-  [action web-trace-atom]
+  [context evidence-record action]
    (let [matches (mapcat (fn [observation]
-                       (map #(match/match-candidate % web-trace-atom) (:candidates observation)))
+                       (map #(match/match-candidate context %) (:candidates observation)))
                      (:processed-observations action))
+   
          ; if the :match field wasn't set then it didn't work. Remove these.
          successful (filter :match matches)]
     (assoc action :matches successful)))
@@ -80,7 +83,7 @@
 
 (defn dedupe-matches
   "Deduplicate matches."
-  [action]
+  [context evidence-record action]
    (let [matches (:matches action)
 
          ; Dedupe by the :match field (i.e. the matched DOI).
@@ -142,7 +145,7 @@
 
 (defn create-events-for-action
   "Update action to include a seq of Events generated from observations in the Action. Plus extra-events if included, and if there were any matches."
-  [evidence-record action]
+  [context evidence-record action]
   
   (let [events-from-matches (map (partial create-event-from-match evidence-record action) (:matches action))
         events-from-extras (when (not-empty (:matches action)) (map (partial create-event-from-extra-event evidence-record) (:extra-events action)))

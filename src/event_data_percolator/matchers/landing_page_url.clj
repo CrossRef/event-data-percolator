@@ -22,11 +22,11 @@
 
 (defn try-from-get-params
   "If there's a DOI in a get parameter of a URL, find it"
-  [url]
+  [context url]
   (try
     (let [params (-> url cemerick-url/query->map clojure.walk/keywordize-keys)
           doi-like-values (keep (fn [[k v]] (when (re-matches whole-doi-re v) v)) params)
-          extant (keep doi/validate-cached doi-like-values)]
+          extant (keep (partial doi/validate-cached context) doi-like-values)]
       (-> extant first normalize-doi-if-exists))
 
     ; Some things look like URLs but turn out not to be.
@@ -34,7 +34,7 @@
 
 (defn try-doi-from-url-text
   "Match an embedded DOI, try various treatments to make it fit."
-  [url]
+  [context url]
   (let [matches (map second (re-seq doi-re url))
 
         last-slash (map #(clojure.string/replace % #"^(10\.\d+/(.*))/.*$" "$1") matches)
@@ -56,15 +56,15 @@
 
         candidates (distinct (concat last-slash first-slash semicolon hashchar question-mark amp-mark))
 
-        extant (keep doi/validate-cached candidates)]
+        extant (keep (partial doi/validate-cached context) candidates)]
     (-> extant first normalize-doi-if-exists)))
 
 (defn try-pii-from-url-text
-  [url]
+  [context url]
   (->>
     url
     pii/find-candidate-piis
-    (map (comp pii/validate-pii :value))
+    (map (comp (partial pii/validate-pii context) :value))
     first))
 
 (def interested-tag-attrs
@@ -90,13 +90,12 @@
 
 (def interested-tag-text
   "List of selectors whose text content we're interested in."
-  [
-    ; e.g. http://jnci.oxfordjournals.org/content/108/6/djw160.full
+  [; e.g. http://jnci.oxfordjournals.org/content/108/6/djw160.full
     "span.slug-doi"])
 
 (defn try-fetched-page-metadata-content
   "Extract DOI from Metadata tags."
-  [text]
+  [context text]
   (try
     (when text
       (let [document (Jsoup/parse text)
@@ -118,7 +117,7 @@
             interested-values (distinct (concat interested-attr-values interested-text-values))
 
             ; Try to normalize by removing recognised prefixes, then resolve
-            extant (keep (comp doi/validate-cached crdoi/non-url-doi) interested-values)]
+            extant (keep (comp (partial doi/validate-cached context) crdoi/non-url-doi) interested-values)]
     
         (-> extant first normalize-doi-if-exists)))
     ; We're getting text from anywhere. Anything could happen.
@@ -128,8 +127,8 @@
       nil))))
 
 (defn try-fetched-page-metadata
-  [url web-trace-atom]
-  (-> url (web/fetch-respecting-robots web-trace-atom) :body try-fetched-page-metadata-content))
+  [context url]
+  (->> url (web/fetch-respecting-robots context) :body (try-fetched-page-metadata-content context)))
 
 (def redis-db-number (delay (Integer/parseInt (get env :landing-page-cache-redis-db "0"))))
 
@@ -151,14 +150,14 @@
 ; This one function is responsible for all outgoing web traffic. Cache its results.
 ; Other results are derived algorithmically, so there's no use caching those.
 (defn try-fetched-page-metadata-cached
-  [url web-trace-atom]
+  [context url]
   (if skip-cache
-    (try-fetched-page-metadata url web-trace-atom)
+    (try-fetched-page-metadata context url)
     (if-let [cached-result (store/get-string @redis-cache-store url)]
       (if (= cached-result "NULL")
           nil
           cached-result)
-      (if-let [result (try-fetched-page-metadata url web-trace-atom)]
+      (if-let [result (try-fetched-page-metadata context url)]
         ; success
         (do
           (redis/set-string-and-expiry-seconds @redis-cache-store url @success-expiry-seconds result)
@@ -177,15 +176,15 @@
 
 (defn match-landing-page-url
   "Try a multitude of ways to match, cheapest first."
-  [url web-trace-atom]
+  [context url]
   ; Step through lazy seq, an item at a time.
   (or
-    (try-from-get-params url)
-    (try-doi-from-url-text url)
-    (try-pii-from-url-text url)
-    (try-fetched-page-metadata-cached url web-trace-atom)))
+    (try-from-get-params context url)
+    (try-doi-from-url-text context url)
+    (try-pii-from-url-text context url)
+    (try-fetched-page-metadata-cached context url)))
 
 (defn match-landing-page-url-candidate
-  [candidate web-trace-atom]
+  [context candidate]
   (assoc candidate
-    :match (match-landing-page-url (:value candidate) web-trace-atom)))
+    :match (match-landing-page-url context (:value candidate))))
