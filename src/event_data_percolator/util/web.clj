@@ -22,19 +22,8 @@
    Take an optional atom to which sequences of urls and status codes will be appended."
   [context url]
   
-  (evidence-log/log! {
-    ; Service
-    :s "percolator"
-    ; Component
-    :c "fetch"
-    ; Facet
-    :f "request"
-    ; Evidence Record ID
-    :r (:id context)
-    ; DOI
-    :d ""
-    ; URL
-    :u "url"})
+  (evidence-log/log! (assoc (:log-default context)
+                            :c "fetch" :f "request" :u url))
 
   (try
     (loop [headers {"Referer" "https://eventdata.crossref.org"
@@ -47,20 +36,9 @@
                 error (:error result)
                 cookie (-> result :headers :set-cookie)
                 new-headers (merge headers (when cookie {"Cookie" cookie}))]
-            
-            (evidence-log/log! {
-              ; Service
-              :s "percolator"
-              ; Component
-              :c "fetch"
-              ; Facet
-              :f "response"
-              ; Evidence Record ID
-              :r (:id context)
-              ; DOI
-              :d ""
-              ; URL
-              :u "url"})
+             
+            (evidence-log/log! (assoc (:log-default context)
+                               :c "fetch" :f "response" :u url :v (:status result)))
 
             (condp = (:status result)
               200 result
@@ -74,42 +52,33 @@
     ; On error just return nil, but add exception to trace.
     (catch java.net.URISyntaxException exception
       (do
-        (evidence-log/log! {
-          :s "percolator" :c "fetch"
-          :f "error" :v "uri-syntax-exception"
-          :r (:id context) :u url})
+        (evidence-log/log! (assoc (:log-default context)
+                                  :c "fetch" :f "error" :v "uri-syntax-exception" :u url))
         nil))
 
     (catch java.net.UnknownHostException exception
       (do
-        (evidence-log/log! {
-          :s "percolator" :c "fetch"
-          :f "error" :v "unknown-host-exception"
-          :r (:id context) :u url})
+        (evidence-log/log! (assoc (:log-default context)
+                                  :c "fetch" :f "error" :v "unknown-host-exception" :u url))
         nil))
 
     (catch org.httpkit.client.TimeoutException exception
       (do
-        (evidence-log/log! {
-          :s "percolator" :c "fetch"
-          :f "error" :v "timeout-exception"
-          :r (:id context) :u url})
+        (evidence-log/log! (assoc (:log-default context)
+                                  :c "fetch" :f "error" :v "timeout-exception" :u url))
         nil))
 
     (catch org.httpkit.ProtocolException exception
       (do
-        (evidence-log/log! {
-          :s "percolator" :c "fetch"
-          :f "error" :v "protocol-exception"
-          :r (:id context) :u url})
+        (evidence-log/log! (assoc (:log-default context)
+                                  :c "fetch" :f "error" :v "protocol-exception" :u url))
         nil))
 
     (catch Exception exception
       (do
-        (evidence-log/log! {
-          :s "percolator" :c "fetch"
-          :f "error" :v "unknown-exception"
-          :r (:id context) :u url})
+        (evidence-log/log! (assoc (:log-default context)
+                                  :c "fetch" :f "error" :v "unknown-exception" :u url))
+
         nil))))
 
 (def redis-cache-store
@@ -168,19 +137,11 @@
   [context url]
 
   (let [allowed (allowed? context url)]
-    (evidence-log/log! {
-      ; Service
-      :s "percolator"
-      ; Component
-      :c "robot-check"
-      ; Facet
-      :f "result"
-      ; Value
-      :v (boolean allowed)
-      ; Evidence Record ID
-      :r (:id context)
-      ; URL
-      :u url})
+    (evidence-log/log! (assoc (:log-default context)
+                              :c "robot-check"
+                              :f "result"
+                              :v (boolean allowed)
+                              :u url))
 
   (when allowed
     (fetch context url))))
@@ -188,17 +149,9 @@
 (defn fetch-ignoring-robots
   "Fetch URL, ignoring any robots.txt directives"
   [context url]
-
-  (evidence-log/log! {
-      ; Service
-      :s "percolator"
-      ; Component
-      :c "robot-check"
-      ; Facet
-      :f "skip"
-      ; Evidence Record ID
-      :r (:id context)
-      ; URL
-      :u url})
+  (evidence-log/log! (assoc (:log-default context)
+                             :c "robot-check"
+                             :f "skip"
+                             :u url))
 
   (fetch context url))

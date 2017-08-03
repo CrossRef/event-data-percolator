@@ -37,15 +37,9 @@
                     (web/fetch-respecting-robots context input)))]
     
     (doseq [newsfeed-link (html/newsfeed-links-from-html (:body content) input)]
-      (evidence-log/log! {
-        ; Service
-        :s "percolator"
-        ; Component
-        :c "newsfeed-link"
-        ; Evidence Record ID
-        :r (:id context)
-        ; URL
-        :u newsfeed-link}))
+       (evidence-log/log! (assoc (:log-default context)
+                                 :c "newsfeed-link"
+                                 :u newsfeed-link)))
     
     (if-not domain-allowed
       (assoc observation :error :skipped-domain)

@@ -110,7 +110,9 @@
         ; Keeping the original version around could be confusing.
         context {:id id
                  :domain-set domain-set
-                 :domain-list-artifact-version domain-list-artifact-version}
+                 :domain-list-artifact-version domain-list-artifact-version
+                 ; A default evidence log message with common fields present
+                 :log-default {:s "percolator" :r id}}
         
         ; Actually do the work of processing an Evidence Record.
         evidence-record-processed (evidence-record/process context evidence-record-input)
@@ -138,9 +140,8 @@
                               (:id event)
                               (json/write-str (assoc event :jwt jwt))))
 
-      (evidence-log/log! {
-        :s "percolator" :c "event" :f "send"
-        :r (:id context) :n (:id event)}))
+      (evidence-log/log! (assoc (:log-default context)
+                                :c "event" :f "send" :n (:id event))))
 
     (log/info "Finished saving" id)))
 
@@ -189,17 +190,8 @@
        (log/info "Lag for partitions:" lag)
 
        (doseq [[partition-number partition-lag] lag]
-         (evidence-log/log! {
-            ; Service
-            :s "percolator"
-            ; Component
-            :c "process"
-            ; Facet
-            :f "input-message-lag"
-            ; Partition
-            :p partition-number
-            ; Value
-            :v partition-lag}))
+         (evidence-log/log! {:s "percolator" :c "process" :f "input-message-lag"
+                             :p partition-number :v partition-lag}))
        
        (log/info "Got" (.count records) "records." (.hashCode records))
        (doseq [^ConsumerRecords record records]
@@ -207,23 +199,18 @@
         
         (log/info "Start processing:" (.key record) "size:" (.serializedValueSize record) @c "/" (.count records))
 
-        (evidence-log/log! {
-          :s "percolator" :c "process" :f "input-message-size"
-          :v (.serializedValueSize record)})
+        (evidence-log/log! {:s "percolator" :c "process" :f "input-message-size"
+                            :v (.serializedValueSize record)})
 
-        (evidence-log/log! {
-          :s "percolator" :c "process" :f "input-message-time-lag"
-          :v (- (System/currentTimeMillis) (.timestamp record))}) 
+        (evidence-log/log! {:s "percolator"  :c "process" :f "input-message-time-lag"
+                            :v (- (System/currentTimeMillis) (.timestamp record))})
 
         (let [value (.value record)
               evidence-record (json/read-str value :key-fn keyword)
               schema-errors (evidence-record/validation-errors evidence-record)]
           (log/info "Look at" (:id evidence-record))
 
-          (evidence-log/log! {
-            :s "percolator" :c "process" :f "start"
-            ; Evidence Record ID
-            :r (:id evidence-record)})
+          (evidence-log/log! {:s "percolator" :c "process" :f "start" :r (:id evidence-record)})
 
           (if schema-errors
             (log/error "Schema errors with input Evidence Record id" (:id evidence-record) schema-errors)
@@ -235,9 +222,7 @@
         
           (log/info "Finished processing record" (.key record))
 
-          (evidence-log/log! {
-            :s "percolator" :c "process" :f "finish"
-            :r (:id evidence-record)})))
+          (evidence-log/log! {:s "percolator" :c "process" :f "finish" :r (:id evidence-record)})))
         
         (log/info "Finished processing records" (.count records) "records." (.hashCode records)))
         ; The only way this ends is violently.

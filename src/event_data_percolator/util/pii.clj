@@ -40,16 +40,12 @@
       
       (when-not result
         (log/error "Failed to retrieve PII from API for" pii)
-        (evidence-log/log! {
-        :s "percolator" :c "lookup-pii" :f "failed"
-        :r (:id context)
-        :v pii}))
+        (evidence-log/log! (assoc (:log-default context)
+                                  :c "lookup-pii" :f "failed" :v pii)))
 
       (when result
-        (evidence-log/log! {
-        :s "percolator" :c "lookup-pii" :f "success"
-        :r (:id context)
-        :v pii}))
+        (evidence-log/log! (assoc (:log-default context)
+                                  :c "lookup-pii" :f "success" :v pii)))
 
       ; Only return when there's exactly one match.
       ; If so, check that the DOI exists and in the process normalize (don't trust the API's indexed data).

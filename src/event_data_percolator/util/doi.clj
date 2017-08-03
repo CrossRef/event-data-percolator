@@ -42,18 +42,16 @@
         
         ; Either get the validated handle, or for a short DOI, the DOI it's aliased to.
         handle (when body
-                 (evidence-log/log! {
-                  :s "percolator" :c "resolve-doi" :f "success"
-                  :r (:id context) :d doi})
+                 (evidence-log/log! (assoc (:log-default context)
+                                           :c "resolve-doi" :f "success" :d doi))
 
                  (if is-short-doi
                    (->> body :values (filter #(= (:type %) "HS_ALIAS")) first :data :value)
                    (:handle body)))]
 
       (when-not body 
-        (evidence-log/log! {
-          :s "percolator" :c "resolve-doi" :f "failure"
-          :r (:id context) :d doi}))
+        (evidence-log/log! (assoc (:log-default context)
+                                  :c "resolve-doi" :f "failure" :d doi)))
 
     handle))
 
