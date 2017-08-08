@@ -274,15 +274,13 @@ Each Observation is transformed, retaining its input (in some form) and providin
 
 ### Unit tests
 
- - `time docker-compose -f docker-compose-unit-tests.yml run -w /usr/src/app test lein test :unit`
+    time docker-compose -f docker-compose-unit-tests.yml run -w /usr/src/app test lein test :unit
 
 ### Component tests
 
 These get Redis involved.
 
- - `time docker-compose -f docker-compose-component-tests.yml run -w /usr/src/app test lein test :component`
-
-
+    time docker-compose -f docker-compose-component-tests.yml run -w /usr/src/app test lein test :component
 
 ## Running
 

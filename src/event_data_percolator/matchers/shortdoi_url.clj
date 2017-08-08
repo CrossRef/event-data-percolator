@@ -1,6 +1,7 @@
 (ns event-data-percolator.matchers.shortdoi-url
   (:require [event-data-percolator.util.doi :as doi]
-            [crossref.util.doi :as crdoi])
+            [crossref.util.doi :as crdoi]
+            [event-data-common.evidence-log :as evidence-log])
   (:import [java.net URL]))
 
 (defn match-shortdoi-url
@@ -18,5 +19,14 @@
 
 (defn match-shortdoi-url-candidate
   [context candidate]
-  (assoc candidate
-        :match (match-shortdoi-url context (:value candidate))))
+  (let [result (match-shortdoi-url context (:value candidate))]
+    (evidence-log/log!
+      (assoc (:log-default context)
+             :c "match-shortdoi-url"
+             :f "validate"
+             :v (:value candidate)
+             :d result
+             :e (if result "t" "f")))
+
+    (assoc candidate
+          :match result)))

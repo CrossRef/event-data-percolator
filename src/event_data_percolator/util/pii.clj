@@ -24,7 +24,7 @@
   "Validate a PII and return the DOI if it's been used as an alternative ID."
   [context pii]
   (when-not (clojure.string/blank? pii)
-    (let [result (try
+    (let [http-result (try
                    (try-try-again {:sleep 5000 :tries 2}
                     #(-> 
                       (http/get "https://api.crossref.org/v1/works" {:query-params {:filter (str "alternative-id:" pii)}})
@@ -36,23 +36,18 @@
                                          (.printStackTrace ex)
                                          nil)))
 
-          items (get-in result ["message" "items"])]
+          items (get-in http-result ["message" "items"])
+
+          ; Only return when there's exactly one match.
+          ; If so, check that the DOI exists and in the process normalize (don't trust the API's indexed data).
+          result (when (= 1 (count items))
+                  (let [possible-doi (get (first items) "DOI")
+                        extant-doi (doi/validate-cached context possible-doi)]
+                    (when extant-doi (crdoi/normalise-doi extant-doi))))]
+
       
-      (when-not result
-        (log/error "Failed to retrieve PII from API for" pii)
-        (evidence-log/log! (assoc (:log-default context)
-                                  :c "lookup-pii" :f "failed" :v pii)))
+        
+      (evidence-log/log! (assoc (:log-default context)
+                                  :c "pii" :f "lookup" :v pii :d result :e (if result "f" "t")))
 
-      (when result
-        (evidence-log/log! (assoc (:log-default context)
-                                  :c "lookup-pii" :f "success" :v pii)))
-
-      ; Only return when there's exactly one match.
-      ; If so, check that the DOI exists and in the process normalize (don't trust the API's indexed data).
-      (when (= 1 (count items))
-        (let [possible-doi (get (first items) "DOI")
-              extant-doi (doi/validate-cached context possible-doi)]
-          (when extant-doi (crdoi/normalise-doi extant-doi)))))))
-
-
-
+      result)))

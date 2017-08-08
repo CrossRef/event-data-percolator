@@ -99,20 +99,17 @@
 
 (defn process-and-save
   "Accept an Evidence Record input, process, save and send Events downstream."
-  [evidence-record-input]
+  [context evidence-record-input]
   (log/info "Processing" (:id evidence-record-input))
   (let [id (:id evidence-record-input)
+
         [domain-list-artifact-version domain-set] (cached-domain-set)
 
-        ; Execution context for all processing involved in processing this Evidence Record.
-        ; This context is passed to all functions that need it.
-        ; Don't include the input evidence record, as it's modified in a few steps.
-        ; Keeping the original version around could be confusing.
-        context {:id id
-                 :domain-set domain-set
-                 :domain-list-artifact-version domain-list-artifact-version
-                 ; A default evidence log message with common fields present
-                 :log-default {:s "percolator" :r id}}
+        context (assoc context
+                      :id id
+                      :domain-set domain-set
+                      :domain-list-artifact-version domain-list-artifact-version)
+
         
         ; Actually do the work of processing an Evidence Record.
         evidence-record-processed (evidence-record/process context evidence-record-input)
@@ -141,7 +138,7 @@
                               (json/write-str (assoc event :jwt jwt))))
 
       (evidence-log/log! (assoc (:log-default context)
-                                :c "event" :f "send" :n (:id event))))
+                                :c "process" :f "send-event" :n (:id event))))
 
     (log/info "Finished saving" id)))
 
@@ -169,7 +166,13 @@
 (defn process-kafka-inputs
   "Process an input stream from Kafka in this thread."
   []
-  (let [consumer (KafkaConsumer.
+  (let [; Execution context for all processing involved in processing this Evidence Record.
+        ; This context is passed to all functions that need it.
+        context {; A default evidence log message with common fields present.
+                 ; As we get down the call stack, more detail is added.
+                 :log-default {:s "percolator"}}
+
+        consumer (KafkaConsumer.
           {"bootstrap.servers" (:global-kafka-bootstrap-servers env)
            "group.id"  "percolator-process"
            "key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer"
@@ -182,35 +185,58 @@
    (.subscribe consumer (list topic-name))
 
    (log/info "Subscribed to" topic-name "got" (count (or (.assignment consumer) [])) "assigned partitions")
-   (loop []
+   
+   ; Loop forever, recording how many batches ever processed.
+   (loop [batch-c 0]
      (log/info "Polling...")
      (let [^ConsumerRecords records (.poll consumer (int 10000))
            lag (lag-for-assigned-partitions consumer)
+
+           ; Count of number of records processed in this batch.
            c (atom 0)]
+
        (log/info "Lag for partitions:" lag)
 
-       (doseq [[partition-number partition-lag] lag]
-         (evidence-log/log! {:s "percolator" :c "process" :f "input-message-lag"
-                             :p partition-number :v partition-lag}))
+       ; Only need to log this infrequently, as it's very chatty.
+       (when (zero? (rem batch-c 100))
+         (doseq [[partition-number partition-lag] lag]
+           (evidence-log/log!
+              (assoc (:log-default context)
+                :c "process" :f "input-message-lag"
+                :p partition-number :v partition-lag))))
        
        (log/info "Got" (.count records) "records." (.hashCode records))
        (doseq [^ConsumerRecords record records]
-        (swap! c inc)
-        
-        (log/info "Start processing:" (.key record) "size:" (.serializedValueSize record) @c "/" (.count records))
+         (swap! c inc)
+         (let [value (.value record)
+               evidence-record (json/read-str value :key-fn keyword)
+               schema-errors (evidence-record/validation-errors evidence-record)
+               context (assoc-in context [:log-default :r] (:id evidence-record))
+               start-time (System/currentTimeMillis)]
 
-        (evidence-log/log! {:s "percolator" :c "process" :f "input-message-size"
-                            :v (.serializedValueSize record)})
+           (log/info "Look at" (:id evidence-record))
 
-        (evidence-log/log! {:s "percolator"  :c "process" :f "input-message-time-lag"
-                            :v (- (System/currentTimeMillis) (.timestamp record))})
+           (log/info "Start processing:" (.key record)
+                     "size:" (.serializedValueSize record)
+                     @c "/" (.count records))
 
-        (let [value (.value record)
-              evidence-record (json/read-str value :key-fn keyword)
-              schema-errors (evidence-record/validation-errors evidence-record)]
-          (log/info "Look at" (:id evidence-record))
+           (evidence-log/log!
+             (assoc (:log-default context))
+               :c "process"
+               :f "input-message-time-lag"
+               :v (- (System/currentTimeMillis) (.timestamp record)))
 
-          (evidence-log/log! {:s "percolator" :c "process" :f "start" :r (:id evidence-record)})
+           (evidence-log/log!
+             (assoc (:log-default context))
+               :c "process"
+               :f "start")
+
+
+           (evidence-log/log!
+             (assoc (:log-default context))
+               :c "process"
+               :f "input-message-size"
+               :v (.serializedValueSize record))
 
           (if schema-errors
             (log/error "Schema errors with input Evidence Record id" (:id evidence-record) schema-errors)
@@ -218,15 +244,19 @@
               (json/read-str (.value record) :key-fn keyword)
               
               ; This is where all the work happens!
-              process-and-save))
+              (partial process-and-save context)))
         
           (log/info "Finished processing record" (.key record))
 
-          (evidence-log/log! {:s "percolator" :c "process" :f "finish" :r (:id evidence-record)})))
+          (evidence-log/log!
+             (assoc (:log-default context))
+               :c "process"
+               :f "finish"
+               :v (- (System/currentTimeMillis) start-time))))
         
         (log/info "Finished processing records" (.count records) "records." (.hashCode records)))
         ; The only way this ends is violently.
-        (recur))))
+        (recur (inc batch-c)))))
 
 (defn process-kafka-inputs-concurrently
   "Run a number of threads to process inputs."

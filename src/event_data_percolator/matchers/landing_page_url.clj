@@ -7,6 +7,7 @@
             [event-data-percolator.util.pii :as pii]
             [event-data-common.storage.store :as store]
             [event-data-common.storage.redis :as redis]
+            [event-data-common.evidence-log :as evidence-log]
             [config.core :refer [env]]
             [robert.bruce :refer [try-try-again]]
             [cemerick.url :as cemerick-url])
@@ -20,14 +21,30 @@
 (defn normalize-doi-if-exists [doi]
   (when doi (crdoi/normalise-doi doi)))
 
+(defn e
+  "Produce a success code from the presence or absence of a result."
+  [result]
+  (if (nil? result)
+    "f" "t"))
+
 (defn try-from-get-params
   "If there's a DOI in a get parameter of a URL, find it"
   [context url]
   (try
     (let [params (-> url cemerick-url/query->map clojure.walk/keywordize-keys)
           doi-like-values (keep (fn [[k v]] (when (re-matches whole-doi-re v) v)) params)
-          extant (keep (partial doi/validate-cached context) doi-like-values)]
-      (-> extant first normalize-doi-if-exists))
+          extant (keep (partial doi/validate-cached context) doi-like-values)
+          result (-> extant first normalize-doi-if-exists)]
+      
+      (evidence-log/log!
+        (assoc (:log-default context)
+               :c "match-landingpage-url"
+               :f "from-get-params"
+               :u url
+               :d result
+               :e (e result)))
+
+        result)
 
     ; Some things look like URLs but turn out not to be.
     (catch IllegalArgumentException _ nil)))
@@ -56,16 +73,36 @@
 
         candidates (distinct (concat last-slash first-slash semicolon hashchar question-mark amp-mark))
 
-        extant (keep (partial doi/validate-cached context) candidates)]
-    (-> extant first normalize-doi-if-exists)))
+        extant (keep (partial doi/validate-cached context) candidates)
+
+        result (-> extant first normalize-doi-if-exists)]
+
+    (evidence-log/log!
+      (assoc (:log-default context)
+             :c "match-landingpage-url"
+             :f "from-url-text"
+             :u url
+             :d result
+             :e (e result)))
+
+        result))
 
 (defn try-pii-from-url-text
   [context url]
-  (->>
-    url
-    pii/find-candidate-piis
-    (map (comp (partial pii/validate-pii context) :value))
-    first))
+  (let [result (->> url
+                    pii/find-candidate-piis
+                    (map (comp (partial pii/validate-pii context) :value))
+                    first)]
+    
+    (evidence-log/log!
+      (assoc (:log-default context)
+             :c "match-landingpage-url"
+             :f "from-pii-from-url-text"
+             :u url
+             :d result
+             :e (e result)))
+
+    result))
 
 (def interested-tag-attrs
   "List of selectors whose attrs we're interested in."
@@ -93,6 +130,7 @@
   [; e.g. http://jnci.oxfordjournals.org/content/108/6/djw160.full
     "span.slug-doi"])
 
+; Logging for this happens in try-fetched-page-metadata-cached so we can include the :o parameter.
 (defn try-fetched-page-metadata-content
   "Extract DOI from Metadata tags."
   [context text]
@@ -118,7 +156,7 @@
 
             ; Try to normalize by removing recognised prefixes, then resolve
             extant (keep (comp (partial doi/validate-cached context) crdoi/non-url-doi) interested-values)]
-    
+
         (-> extant first normalize-doi-if-exists)))
     ; We're getting text from anywhere. Anything could happen.
     (catch Exception ex (do
@@ -152,21 +190,52 @@
 (defn try-fetched-page-metadata-cached
   [context url]
   (if skip-cache
-    (try-fetched-page-metadata context url)
-    (if-let [cached-result (store/get-string @redis-cache-store url)]
-      (if (= cached-result "NULL")
-          nil
-          cached-result)
-      (if-let [result (try-fetched-page-metadata context url)]
-        ; success
-        (do
-          (redis/set-string-and-expiry-seconds @redis-cache-store url @success-expiry-seconds result)
-          result)
+    
+    ; Skip cache.
+    (let [result (try-fetched-page-metadata context url)]
+      (evidence-log/log!
+        (assoc (:log-default context)
+               :c "match-landingpage-url"
+               :f "from-page-metadata"
+               :u url
+               :d result
+               :e (e result)
+               :o "e"))
+       result)
 
-        ; failure
+    ; Don't skip cache.
+    ; Cached result will be nil (not found) NULL (preivously failed) or successful result.
+    (let [cached-value (store/get-string @redis-cache-store url)
+          cached-result (if (= "NULL" cached-value) nil cached-value)]
+
+      (if cached-value
+      ; Success or failure from Cache.
         (do
-          (redis/set-string-and-expiry-seconds @redis-cache-store url @failure-expiry-seconds "NULL")
-          nil)))))
+          (evidence-log/log!
+            (assoc (:log-default context)
+                 :c "match-landingpage-url"
+                 :f "from-page-metadata"
+                 :u url
+                 :d cached-result
+                 :e (e cached-result)
+                 :o "c"))
+           cached-result)
+
+        ; No result in cache, 
+        (let [result (try-fetched-page-metadata context url)]
+          (if result
+            (redis/set-string-and-expiry-seconds @redis-cache-store url @success-expiry-seconds result)
+            (redis/set-string-and-expiry-seconds @redis-cache-store url @failure-expiry-seconds "NULL"))
+
+            (evidence-log/log!
+              (assoc (:log-default context)
+                 :c "match-landingpage-url"
+                 :f "from-page-metadata"
+                 :u url
+                 :d result
+                 :e (e result)
+                 :o "e"))
+            result)))))
 
 (defn unchunk [s]
   (when (seq s)

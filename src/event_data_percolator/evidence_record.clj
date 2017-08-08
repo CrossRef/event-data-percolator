@@ -69,12 +69,17 @@
 
 (defn map-actions
   "Map over actions within an Input Evidence Record, leaving the rest intact.
+   The action ID is inserted into the log-default object in the context.
    call (f context evidence-record action)"
   [context f evidence-record]
   (assoc evidence-record
     :pages (map (fn [page]
       (assoc page
-        :actions (map #(f context evidence-record %) (:actions page)))) (:pages evidence-record))))
+        :actions (map #(f
+                        (assoc-in context [:log-default :a] (:id %))
+                        evidence-record
+                        %)
+                        (:actions page)))) (:pages evidence-record))))
 
 (defn url
   "Associate a URL based on the ID."

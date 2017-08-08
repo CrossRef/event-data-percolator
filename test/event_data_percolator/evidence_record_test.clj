@@ -193,21 +193,41 @@
     (let [input {:id "1234"
                  :pages [
                   {:other-stuff :in-page
-                   :actions [:some-dummy-action-object-1]}
+                   :actions [{:id "my-action-111" :thing :some-dummy-action-object-1}
+                             {:id "my-action-222" :thing :some-dummy-action-object-2}]}
                   
                   {:ignore-this :stuff
-                   :actions [:some-dummy-action-object-2 :some-dummy-action-object-3]}]}
+                   :actions [{:id "my-action-333" :thing :some-dummy-action-object-3}
+                             {:id "my-action-444" :thing :some-dummy-action-object-4}]}]}
 
-          result (evidence-record/map-actions util/mock-context (fn [context evidence-record action] (str action)) input)]
+          ; The function will collect all the contexts it was sent as a side-effect.
+          contexts (atom [])
+
+          result (evidence-record/map-actions
+                   util/mock-context
+                   ; The function we're applying simply adds a field to each.
+                   (fn [context evidence-record action]
+                    (swap! contexts conj context)
+                    (assoc action :this-field-is :added)) input)]
+
       (is (= result
              {:id "1234"
               :pages [
                {:other-stuff :in-page
-                :actions [":some-dummy-action-object-1"]}
+                :actions [{:id "my-action-111" :thing :some-dummy-action-object-1 :this-field-is :added}
+                          {:id "my-action-222" :thing :some-dummy-action-object-2 :this-field-is :added}]}
 
                {:ignore-this :stuff
-                :actions [":some-dummy-action-object-2"
-                          ":some-dummy-action-object-3"]}]})))))
+                :actions [{:id "my-action-333" :thing :some-dummy-action-object-3 :this-field-is :added}
+                          {:id "my-action-444" :thing :some-dummy-action-object-4 :this-field-is :added}]}]})
+
+          "The function should have been applied to all actions and irrelevant fields should have been carried through.")
+
+      (is (= (set @contexts) #{(assoc-in util/mock-context [:log-default :a] "my-action-111")
+                               (assoc-in util/mock-context [:log-default :a] "my-action-222")
+                               (assoc-in util/mock-context [:log-default :a] "my-action-333")
+                               (assoc-in util/mock-context [:log-default :a] "my-action-444")})
+          "Contexts passed to the action process function should have had the respective action IDs associated with them."))))
 
 (deftest ^:component end-to-end-process
   (testing "End-to-end processing of Input Bundle should result in an Evidence Record with Events."

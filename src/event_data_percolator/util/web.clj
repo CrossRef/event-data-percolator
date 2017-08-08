@@ -140,7 +140,7 @@
     (evidence-log/log! (assoc (:log-default context)
                               :c "robot-check"
                               :f "result"
-                              :v (boolean allowed)
+                              :e (if allowed "t" "f")
                               :u url))
 
   (when allowed

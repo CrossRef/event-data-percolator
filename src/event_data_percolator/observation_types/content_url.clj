@@ -39,6 +39,8 @@
     (doseq [newsfeed-link (html/newsfeed-links-from-html (:body content) input)]
        (evidence-log/log! (assoc (:log-default context)
                                  :c "newsfeed-link"
+                                 :f "found"
+                                 :v input
                                  :u newsfeed-link)))
     
     (if-not domain-allowed

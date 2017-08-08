@@ -42,16 +42,17 @@
         
         ; Either get the validated handle, or for a short DOI, the DOI it's aliased to.
         handle (when body
-                 (evidence-log/log! (assoc (:log-default context)
-                                           :c "resolve-doi" :f "success" :d doi))
-
                  (if is-short-doi
                    (->> body :values (filter #(= (:type %) "HS_ALIAS")) first :data :value)
                    (:handle body)))]
 
-      (when-not body 
-        (evidence-log/log! (assoc (:log-default context)
-                                  :c "resolve-doi" :f "failure" :d doi)))
+
+    (evidence-log/log! (assoc (:log-default context)
+                              :c "doi"
+                              :f "resolve"
+                              :v doi
+                              :e (if handle "t" "f")
+                              :d handle))
 
     handle))
 
@@ -128,23 +129,72 @@
 ; Set for component tests.
 (def skip-cache (:percolator-skip-doi-cache env))
 
+(defn e
+  "Produce a success code from the presence or absence of a result."
+  [result]
+  (if (nil? result)
+    "f" "t"))
+
 (defn validate-cached
   "Take a suspected DOI or ShortDOI and return the correct full well-formed, extant DOI.
    This is the function you want."
   [context suspected-doi]
   (if skip-cache
-    (validate-doi-dropping context suspected-doi)
-    (if-let [cached-result (store/get-string @redis-cache-store suspected-doi)]
-      (if (= cached-result "NULL")
-          nil
-          cached-result)
-      (if-let [result (validate-doi-dropping context suspected-doi)]
-        ; success
-        (do
-          (redis/set-string-and-expiry-seconds @redis-cache-store suspected-doi @success-expiry-seconds result)
-          result)
 
-        ; failure
+    ; Valid or invalid, forced not from cache.
+    (let [result (validate-doi-dropping context suspected-doi)]
+      (evidence-log/log!
+        (assoc (:log-default context)
+                :c "doi"
+                :f "validate"
+                :v suspected-doi
+                :d result
+                :e (e result)
+                :o "e"))
+
+      result)
+
+    ; Don't skip cache.
+    (let [cached-value (store/get-string @redis-cache-store suspected-doi)
+          cached-result (when (= "NULL" cached-value) nil cached-value)]
+
+      (if cached-value
+
+        ; Valid or invalid, from cache.
         (do
-          (redis/set-string-and-expiry-seconds @redis-cache-store suspected-doi @failure-expiry-seconds "NULL")
-          nil)))))
+          (evidence-log/log!
+                  (assoc (:log-default context)
+                          :c "doi"
+                          :f "validate"
+                          :v suspected-doi
+                          :d cached-result
+                          :e (e cached-result)
+                          :o "c"))
+          cached-result)
+
+        ; Valid or invalid, not from cache.
+        (let [result (validate-doi-dropping context suspected-doi)]
+        
+          (if result
+            (redis/set-string-and-expiry-seconds
+              @redis-cache-store
+              suspected-doi
+              @success-expiry-seconds
+              result)
+
+            (redis/set-string-and-expiry-seconds
+              @redis-cache-store suspected-doi
+              @failure-expiry-seconds
+              "NULL"))
+
+          (evidence-log/log!
+                  (assoc (:log-default context)
+                          :c "doi"
+                          :f "validate"
+                          :v suspected-doi
+                          :d cached-result
+                          :e (e cached-result)
+                          :o "e"))
+          result)))))
+
+
