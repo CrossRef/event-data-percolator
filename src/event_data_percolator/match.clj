@@ -40,7 +40,7 @@
             (assoc (:log-default context)
                  :c "match"
                  :f (name t)
-                 :d result
-                 :s (if result "t" "f")))
+                 :d (:match result)
+                 :e (if (:match result) "t" "f")))
 
     result))

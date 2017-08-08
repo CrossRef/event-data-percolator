@@ -25,8 +25,8 @@
              :c "match-shortdoi-url"
              :f "validate"
              :v (:value candidate)
-             :d result
-             :e (if result "t" "f")))
+             :d (:match result)
+             :e (if (:match result) "t" "f")))
 
     (assoc candidate
           :match result)))
