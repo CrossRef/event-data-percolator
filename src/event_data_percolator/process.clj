@@ -221,22 +221,22 @@
                      @c "/" (.count records))
 
            (evidence-log/log!
-             (assoc (:log-default context))
+             (assoc (:log-default context)
                :c "process"
                :f "input-message-time-lag"
-               :v (- (System/currentTimeMillis) (.timestamp record)))
+               :v (- (System/currentTimeMillis) (.timestamp record))))
 
            (evidence-log/log!
-             (assoc (:log-default context))
+             (assoc (:log-default context)
                :c "process"
-               :f "start")
+               :f "start"))
 
 
            (evidence-log/log!
-             (assoc (:log-default context))
+             (assoc (:log-default context)
                :c "process"
                :f "input-message-size"
-               :v (.serializedValueSize record))
+               :v (.serializedValueSize record)))
 
           (if schema-errors
             (log/error "Schema errors with input Evidence Record id" (:id evidence-record) schema-errors)
@@ -249,10 +249,10 @@
           (log/info "Finished processing record" (.key record))
 
           (evidence-log/log!
-             (assoc (:log-default context))
+             (assoc (:log-default context)
                :c "process"
                :f "finish"
-               :v (- (System/currentTimeMillis) start-time))))
+               :v (- (System/currentTimeMillis) start-time)))))
         
         (log/info "Finished processing records" (.count records) "records." (.hashCode records)))
         ; The only way this ends is violently.
