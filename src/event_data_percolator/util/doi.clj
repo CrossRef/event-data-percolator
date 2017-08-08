@@ -156,7 +156,7 @@
 
     ; Don't skip cache.
     (let [cached-value (store/get-string @redis-cache-store suspected-doi)
-          cached-result (when (= "NULL" cached-value) nil cached-value)]
+          cached-result (if (= "NULL" cached-value) nil cached-value)]
 
       (if cached-value
 

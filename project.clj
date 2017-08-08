@@ -1,4 +1,4 @@
-(defproject event-data-percolator "0.3.4"
+(defproject event-data-percolator "0.3.5"
   :description "Event Data Percolator"
   :url "http://eventdata.crossref.org/"
   :license {:name "MIT License"
