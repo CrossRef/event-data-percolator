@@ -84,15 +84,25 @@
    - Ignore and log if timeout lock present.
    - Set lock with timeout.
    - Call Process Evidence Record function, which has side-effects."
-  [evidence-record-input process-f]
+  [context evidence-record-input process-f]
   (let [id (:id evidence-record-input)]
     (cond
       ; This will also set the mutex.
       (not (redis/expiring-mutex!? @redis-mutex-store id mutex-millseconds))
-      (log/info "Skipping Evidence Record due to mutex:" id)
+      (do
+        (log/info "Skipping Evidence Record due to mutex:" id)
+        (evidence-log/log!
+             (assoc (:log-default context)
+               :c "process"
+               :f "skip-processing-elsewhere")))
 
       (store/get-string @evidence-store (storage-key-for-evidence-record-id id))
-      (log/info "Skipping Evidence Record, already processed:" id)
+      (do
+        (log/info "Skipping Evidence Record, already processed:" id)
+        (evidence-log/log!
+             (assoc (:log-default context)
+               :c "process"
+               :f "skip-already-processed")))
 
       :default
       (process-f evidence-record-input))))
@@ -241,6 +251,7 @@
           (if schema-errors
             (log/error "Schema errors with input Evidence Record id" (:id evidence-record) schema-errors)
             (duplicate-guard
+              context
               (json/read-str (.value record) :key-fn keyword)
               
               ; This is where all the work happens!
