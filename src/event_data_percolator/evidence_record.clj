@@ -1,6 +1,7 @@
 (ns event-data-percolator.evidence-record
   "Process an Evidence Record."
   (:require [event-data-percolator.action :as action]
+            [event-data-percolator.util.util :as util]
             [clj-time.core :as clj-time]
             [clj-time.format :as clj-time-format]
             [config.core :refer [env]]
@@ -117,8 +118,6 @@
   (log/debug "Events in " (:id evidence-record))
   (map-actions context action/create-events-for-action evidence-record))
 
-(def percolator-version (System/getProperty "event-data-percolator.version"))
-
 (defn process
   [context evidence-record]
   (let [result (->>
@@ -129,7 +128,7 @@
           (match context)
           (dedupe-matches context)
           (#(assoc-in % [:percolator :artifacts :domain-set-artifact-version] (:domain-list-artifact-version context)))
-          (#(assoc-in % [:percolator :software-version] percolator-version))
+          (#(assoc-in % [:percolator :software-version] util/percolator-version))
           (events context))
 
         ; There are lazy sequences in here. Force the entire structure to be realized.

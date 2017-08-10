@@ -1,6 +1,7 @@
 (ns event-data-percolator.process
   "Top level process inputs."
   (:require [event-data-percolator.evidence-record :as evidence-record]
+            [event-data-percolator.util.util :as util]
             [event-data-percolator.action :as action]
             [clojure.tools.logging :as log]
             [clojure.core.async :refer [thread alts!!]]
@@ -158,7 +159,10 @@
   (log/info "Start process queue")
   (let [threads (map (fn [thread-number]
                        (log/info "Starting processing thread number" thread-number)
-                       (thread (run-f)))
+                       (thread 
+                        (log/info "Running processing thread number" thread-number)
+                        (run-f)
+                        (log/error "Stopped processing thread number" thread-number)))
                      (range concurrency))]
 
     ; Wait for any threads to exit. They shoudln't.
@@ -272,6 +276,12 @@
 (defn process-kafka-inputs-concurrently
   "Run a number of threads to process inputs."
   []
+  (evidence-log/log!
+    {:s "percolator"
+     :c "process"
+     :f "version"
+     :v util/percolator-version})
+
   (let [concurrency (Integer/parseInt (:percolator-process-concurrency env "1"))]
     (log/info "Starting to process in" concurrency "threads.")
     (run-process-concurrently concurrency process-kafka-inputs)

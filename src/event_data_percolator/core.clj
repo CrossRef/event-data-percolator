@@ -6,5 +6,8 @@
 (defn -main
   [& args]
   (condp = (first args)
-    "process" (process/process-kafka-inputs-concurrently)
+    "process" (do
+                (process/process-kafka-inputs-concurrently)
+                (log/error "Exiting!")
+                (System/exit 1))
     (log/error "Unrecognised command: " (first args))))
