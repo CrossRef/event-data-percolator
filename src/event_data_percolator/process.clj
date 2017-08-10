@@ -191,7 +191,11 @@
            "group.id"  "percolator-process"
            "key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer"
            "value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer"
-           "auto.offset.reset" "earliest"})
+           "auto.offset.reset" "earliest"
+           ; Each Evidence Record can be quite large and take a while to process.
+           ; Given the ratio of size to quantity, this can be low.
+           "max.poll.records" 5
+           "session.timeout.ms" 60000})
 
        topic-name (:percolator-input-evidence-record-topic env)]
 
