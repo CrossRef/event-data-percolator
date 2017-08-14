@@ -1,6 +1,5 @@
 (ns event-data-percolator.matchers.landing-page-url
-  (:require [org.httpkit.client :as http]
-            [event-data-percolator.util.web :as web]
+  (:require [event-data-percolator.util.web :as web]
             [clojure.tools.logging :as log]
             [crossref.util.doi :as crdoi]
             [event-data-percolator.util.doi :as doi]
@@ -166,7 +165,18 @@
 
 (defn try-fetched-page-metadata
   [context url]
-  (->> url (web/fetch-respecting-robots context) :body (try-fetched-page-metadata-content context)))
+  (let [should-visit (web/should-visit-landing-page? (:domain-set context) url)]
+    (evidence-log/log!
+        (assoc (:log-default context)
+               :c "match-landingpage-url"
+               :f "should-visit-landing-page"
+               :u url
+               :v (if should-visit "t" "f")))
+
+    (when should-visit
+      (->> url (web/fetch-respecting-robots context)
+               :body
+               (try-fetched-page-metadata-content context)))))
 
 (def redis-db-number (delay (Integer/parseInt (get env :landing-page-cache-redis-db "0"))))
 

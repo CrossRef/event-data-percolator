@@ -1,4 +1,4 @@
-(defproject event-data-percolator "0.3.9"
+(defproject event-data-percolator "0.3.10"
   :description "Event Data Percolator"
   :url "http://eventdata.crossref.org/"
   :license {:name "MIT License"
@@ -16,7 +16,7 @@
                  [http-kit.fake "0.2.1"]
                  [org.clojure/data.json "0.2.6"]
                  [crossref-util "0.1.10"]
-                 [http-kit "2.1.18"]
+                 [http-kit "2.2.0"]
                  [http-kit.fake "0.2.1"]
                  [liberator "0.14.1"]
                  [ring "1.5.0"]

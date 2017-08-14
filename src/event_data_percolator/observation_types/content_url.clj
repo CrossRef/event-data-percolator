@@ -7,43 +7,33 @@
            [org.apache.commons.codec.digest DigestUtils]
            [java.net URL]))
 
-(def url-blacklist
-  [#"\.pdf$"])
-
-(defn url-valid?
-  "Is the URL valid, and passes blacklist test?"
-  [url]
-  (let [blacklist-match (when url (first (keep #(re-find % url) url-blacklist)))
-        valid (when-not blacklist-match (try (new URL url) (catch Exception e nil)))]
-    (boolean valid)))
-
-(defn url-is-landing-page
-  "Is the URL on a landing page domain?"
-  [landing-page-domain-set url]
-  (when-let [domain (try (.getHost (new URL url)) (catch Exception e nil))]
-    (landing-page-domain-set (landing-page-domain-set domain))))
-
 (defn process-content-url-observation
   [context observation]
-  (let [input (:input-url observation "")
-        valid? (url-valid? input)
-        domain-allowed (not (url-is-landing-page (:domain-set context) input))
-        proceed (and valid? domain-allowed)
+  (let [input-url (:input-url observation "")
+        should-visit (web/should-visit-content-page? (:domain-set context) input-url)
+
         ; The :ignore-robots flag is passed in by Agents that have specific exemptions.
         ; E.g. Wikipedia sites' API is excluded for general-purpose robots but allowed for our uses.
-        content (when proceed
+        content (when should-visit
                   (if (:ignore-robots observation)
-                    (web/fetch-ignoring-robots context input)
-                    (web/fetch-respecting-robots context input)))]
+                    (web/fetch-ignoring-robots context input-url)
+                    (web/fetch-respecting-robots context input-url)))]
+
+    ; Log the decision on whether not to visit the URL.
+    (evidence-log/log! (assoc (:log-default context)
+                                 :c "observation"
+                                 :f "should-visit-content-page"
+                                 :v (if should-visit "t" "f")
+                                 :u input-url))
     
-    (doseq [newsfeed-link (html/newsfeed-links-from-html (:body content) input)]
+    (doseq [newsfeed-link (html/newsfeed-links-from-html (:body content) input-url)]
        (evidence-log/log! (assoc (:log-default context)
                                  :c "newsfeed-link"
                                  :f "found"
-                                 :v input
+                                 :v input-url
                                  :u newsfeed-link)))
     
-    (if-not domain-allowed
+    (if-not should-visit
       (assoc observation :error :skipped-domain)
       (if-not content
         (assoc observation :error :failed-fetch-url)

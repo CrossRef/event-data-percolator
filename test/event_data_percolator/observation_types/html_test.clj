@@ -81,8 +81,7 @@
 
           expected {:type "html"
                     :input-content "<a href='http://doi.org/10.5555/22222'>cliquez ici</a>"
-                    :candidates [{:type :landing-page-url, :value "http://doi.org/10.5555/22222"}
-                                 {:type :doi-url, :value "http://doi.org/10.5555/22222"}]}]
+                    :candidates [{:type :doi-url, :value "http://doi.org/10.5555/22222"}]}]
 
       (is (= result expected))))
 
@@ -93,8 +92,7 @@
 
       (is (= result {:type "html"
                      :input-content "<p>http://doi.org/abcd</p>"
-                     :candidates [{:type :shortdoi-url, :value "http://doi.org/abcd"}
-                                  {:type :landing-page-url, :value "http://doi.org/abcd"}]})
+                     :candidates [{:type :shortdoi-url, :value "http://doi.org/abcd"}]})
           "One ShortDOI URL candidate found when unlinked")))
 
   (testing "ShortDOI hyperlinked DOIs can be extracted from links"
@@ -104,8 +102,7 @@
 
           expected {:type "html"
                      :input-content "<a href='http://doi.org/abcd'>short and sweet</a>"
-                     :candidates [{:type :landing-page-url, :value "http://doi.org/abcd"}
-                                  {:type :shortdoi-url, :value "http://doi.org/abcd"}]}]
+                     :candidates [{:type :shortdoi-url, :value "http://doi.org/abcd"}]}]
 
       (is (= result expected))))
 
@@ -150,7 +147,6 @@
       (is (= result {:type "html"
                      :input-content html
                      :candidates [{:type :plain-doi :value "10.5555/12345678"}
-                                  {:type :landing-page-url :value "https://doi.org/10.5555/12345678"}
                                   {:type :doi-url :value "https://doi.org/10.5555/12345678"}]})
 
           "Three different kinds of candidates retrieved when DOI is linked and in text."))))

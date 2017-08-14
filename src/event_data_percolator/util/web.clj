@@ -5,7 +5,6 @@
             [config.core :refer [env]]
             [event-data-common.storage.redis :as redis]
             [event-data-common.storage.store :as store]
-            [org.httpkit.client :as client]
             [clojure.core.memoize :as memo]
             [event-data-common.evidence-log :as evidence-log]
             [event-data-percolator.consts])
@@ -14,6 +13,8 @@
            [org.httpkit ProtocolException]))
 
 (def redirect-depth 4)
+
+(def timeout-ms 60000)
 
 (def skip-cache (:percolator-skip-robots-cache env))
 
@@ -32,13 +33,30 @@
              url url]
         (if (> depth redirect-depth)
           nil
-          (let [result @(http/get url {:follow-redirects false :headers headers :as :text :throw-exceptions true})
+          (let [result (deref
+                         (http/get
+                           url
+                           {:follow-redirects false
+                            :headers headers
+                            :as :text
+                            :throw-exceptions true})
+                         timeout-ms
+                         ; If this times out, return a special status for the condp below.
+                         {:error :timeout})
+
                 error (:error result)
                 cookie (-> result :headers :set-cookie)
                 new-headers (merge headers (when cookie {"Cookie" cookie}))]
              
-            (evidence-log/log! (assoc (:log-default context)
-                               :c "fetch" :f "response" :u url :v (:status result)))
+            ; Timeout has no status.
+            (when-let [status (:status result)]
+              (evidence-log/log! (assoc (:log-default context)
+                                 :c "fetch" :f "response" :u url :v (:status result))))
+
+            (when (= :timeout (:error result))
+              (log/warn "Deref timed out!")
+              (evidence-log/log! (assoc (:log-default context)
+                                 :c "fetch" :f "error" :u url :v "timeout")))
 
             (condp = (:status result)
               200 result
@@ -129,7 +147,6 @@
         
         ; If there's no robots file, proceed.
         allowed (if-not rules true (.isAllowed rules url-str))]
-
     allowed))
 
 (defn fetch-respecting-robots
@@ -155,3 +172,36 @@
                              :u url))
 
   (fetch context url))
+
+; Classify URLs by the look of them.
+
+(def url-blacklist
+  "Heuristics for URLs we never want to visit."
+  [#"\.pdf$"])
+
+(defn url-valid?
+  "Is the URL valid, and passes blacklist test?"
+  [url]
+  (let [blacklist-match (when url (first (keep #(re-find % url) url-blacklist)))
+        valid (when-not blacklist-match (try (new URL url) (catch Exception e nil)))]
+    (boolean valid)))
+
+(defn url-is-landing-page
+  [landing-page-domain-set url]
+  (when-let [domain (try (.getHost (new URL url)) (catch Exception e nil))]
+    (landing-page-domain-set domain)))
+
+(defn should-visit-landing-page?
+  "Is this considered to be a Landing Page and we should visit?"
+  [landing-page-domain-set url]
+  (boolean
+    (and (url-valid? url)
+         (url-is-landing-page landing-page-domain-set url))))
+
+(defn should-visit-content-page?
+  "Is this considered to be a Content Page (i.e. not Landing Page) and we should visit?"
+  [landing-page-domain-set url]
+  (boolean
+    (and (url-valid? url)
+         (not (url-is-landing-page landing-page-domain-set url)))))
+

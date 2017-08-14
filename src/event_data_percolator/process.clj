@@ -13,7 +13,6 @@
             [event-data-common.storage.store :as store]
             [clojure.core.memoize :as memo]
             [clojure.data.json :as json]
-            [org.httpkit.client :as client]
             [event-data-common.evidence-log :as evidence-log]
             [robert.bruce :refer [try-try-again]])
   (:import [org.apache.kafka.clients.producer KafkaProducer Producer ProducerRecord]

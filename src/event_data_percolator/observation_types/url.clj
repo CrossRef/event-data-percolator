@@ -1,5 +1,6 @@
 (ns event-data-percolator.observation-types.url
   "Filter a URL by whether or not it looks like a candidate."
+  (:require [event-data-percolator.util.web :as web])
   (:import [java.net URL]))
 
 (def doi-proxies #{"doi.org" "dx.doi.org" "dx.crossref.org"})
@@ -33,17 +34,20 @@
 (defn url-to-landing-page-url-candidate
   "If this looks like a landing page url, return it."
   [url landing-page-domain-set]
-  (when
-    (is-valid-matching-domain url landing-page-domain-set)
-    {:type :landing-page-url :value url}))
+  (let [doi-candidate (url-to-doi-url-candidate url)
+        should-visit (web/should-visit-landing-page? landing-page-domain-set url)]
+
+    ; Don't treat this as a landing page URL if it looks like a DOI.
+    (when (and (not doi-candidate) should-visit)
+      {:type :landing-page-url :value url})))
 
 (defn process-url-observation
   "Process a url observation into a candidate url. Check if valid and if on the domain list."
   [context observation]
+
   (let [input (:input-url observation "")
         
         ; single input input, but candidate responses are always lists.
         candidates (remove nil? [(url-to-doi-url-candidate input)
                                  (url-to-landing-page-url-candidate input (:domain-set context))])]
-
     (assoc observation :candidates candidates)))

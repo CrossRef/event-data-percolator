@@ -5,17 +5,6 @@
             [org.httpkit.fake :as fake]
             [event-data-percolator.test-util :as util]))
 
-(deftest ^:unit url-valid
-  (testing "url-valid? should return true for good URLs and false for invalid urls"
-    (is (true? (content-url/url-valid? "https://example.com/")))
-    (is (true? (content-url/url-valid? "http://example.com")))
-    (is (false? (content-url/url-valid? "")))
-    (is (false? (content-url/url-valid? nil)))
-    (is (false? (content-url/url-valid? "example.com/"))))
-
-  (testing "url-valid? should return false for well-formed URLs on blacklist"
-    (is (false? (content-url/url-valid? "http://example.com/somefile.pdf")))))
-
 (deftest ^:unit process-content-url-observation
   (testing "process-content-url-observation should set error when URL isn't allowed becuase it's empty and therefore doesn't match the domain."
     (let [result (content-url/process-content-url-observation

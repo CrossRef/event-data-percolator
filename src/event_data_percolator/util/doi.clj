@@ -31,10 +31,11 @@
                           (str "10/" doi)
                           doi)
 
-        response @(try-try-again {:sleep 5000 :tries 2}
-                    #(http/get
-                      (str "https://doi.org/api/handles/" input-handle)
-                      {:as :text}))
+        response (try-try-again
+                    {:sleep 5000 :tries 2}
+                    #(deref (http/get
+                              (str "https://doi.org/api/handles/" input-handle)
+                              {:as :text})))
 
         status (:status response)
         body (when (= 200 status)

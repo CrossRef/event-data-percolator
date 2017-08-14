@@ -5,6 +5,12 @@
 
 (defn -main
   [& args]
+
+  (Thread/setDefaultUncaughtExceptionHandler
+    (reify Thread$UncaughtExceptionHandler
+      (uncaughtException [_ thread ex]
+        (log/error ex "Uncaught exception on" (.getName thread)))))
+
   (condp = (first args)
     "process" (do
                 (process/process-kafka-inputs-concurrently)
