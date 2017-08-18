@@ -37,6 +37,7 @@
       
       (evidence-log/log!
         (assoc (:log-default context)
+               :i "p0005"
                :c "match-landingpage-url"
                :f "from-get-params"
                :u url
@@ -78,6 +79,7 @@
 
     (evidence-log/log!
       (assoc (:log-default context)
+             :i "p0006"
              :c "match-landingpage-url"
              :f "from-url-text"
              :u url
@@ -95,6 +97,7 @@
     
     (evidence-log/log!
       (assoc (:log-default context)
+             :i "p0007"
              :c "match-landingpage-url"
              :f "from-pii-from-url-text"
              :u url
@@ -168,6 +171,7 @@
   (let [should-visit (web/should-visit-landing-page? (:domain-set context) url)]
     (evidence-log/log!
         (assoc (:log-default context)
+               :i "p0002"
                :c "match-landingpage-url"
                :f "should-visit-landing-page"
                :u url
@@ -203,8 +207,10 @@
     
     ; Skip cache.
     (let [result (try-fetched-page-metadata context url)]
+      ; Log type p0008 happens once per branch.
       (evidence-log/log!
         (assoc (:log-default context)
+               :i "p0008"
                :c "match-landingpage-url"
                :f "from-page-metadata"
                :u url
@@ -223,6 +229,7 @@
         (do
           (evidence-log/log!
             (assoc (:log-default context)
+                 :i "p0008"
                  :c "match-landingpage-url"
                  :f "from-page-metadata"
                  :u url
@@ -239,6 +246,7 @@
 
             (evidence-log/log!
               (assoc (:log-default context)
+                 :i "p0008"
                  :c "match-landingpage-url"
                  :f "from-page-metadata"
                  :u url

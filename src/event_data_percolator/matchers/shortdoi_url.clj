@@ -22,6 +22,7 @@
   (let [result (match-shortdoi-url context (:value candidate))]
     (evidence-log/log!
       (assoc (:log-default context)
+             :i "p000b"
              :c "match-shortdoi-url"
              :f "validate"
              :v (:value candidate)

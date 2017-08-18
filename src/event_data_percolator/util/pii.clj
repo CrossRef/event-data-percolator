@@ -48,6 +48,9 @@
       
         
       (evidence-log/log! (assoc (:log-default context)
-                                  :c "pii" :f "lookup" :v pii :d result :e (if result "f" "t")))
+                                :i "p0017" :c "pii" :f "lookup"
+                                :v pii
+                                :d result
+                                :e (if result "f" "t")))
 
       result)))

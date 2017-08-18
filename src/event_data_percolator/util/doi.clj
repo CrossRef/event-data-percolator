@@ -49,6 +49,7 @@
 
 
     (evidence-log/log! (assoc (:log-default context)
+                              :i "p0016"
                               :c "doi"
                               :f "resolve"
                               :v doi
@@ -140,12 +141,15 @@
   "Take a suspected DOI or ShortDOI and return the correct full well-formed, extant DOI.
    This is the function you want."
   [context suspected-doi]
+
+  ; There's one "p0015" log message per branch.
   (if skip-cache
 
     ; Valid or invalid, forced not from cache.
     (let [result (validate-doi-dropping context suspected-doi)]
       (evidence-log/log!
         (assoc (:log-default context)
+                :i "p0015"
                 :c "doi"
                 :f "validate"
                 :v suspected-doi
@@ -165,6 +169,7 @@
         (do
           (evidence-log/log!
                   (assoc (:log-default context)
+                          :i "p0015"
                           :c "doi"
                           :f "validate"
                           :v suspected-doi
@@ -190,6 +195,7 @@
 
           (evidence-log/log!
                   (assoc (:log-default context)
+                          :i "p0015"
                           :c "doi"
                           :f "validate"
                           :v suspected-doi

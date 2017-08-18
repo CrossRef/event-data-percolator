@@ -16,6 +16,7 @@
     
     (evidence-log/log!
             (assoc (:log-default context)
+                 :i "p000a"
                  :c "match-plain-doi"
                  :f "match"
                  :v (:value candidate)

@@ -14,7 +14,13 @@
 
 (def redirect-depth 4)
 
-(def timeout-ms 60000)
+(def timeout-ms
+  "Timeout for HTTP requests."
+  30000)
+
+(def deref-timeout-ms
+  "Last-ditch timeout for derefing result. This is a safety-valve to avoid threads hanging."
+  60000)
 
 (def skip-cache (:percolator-skip-robots-cache env))
 
@@ -24,7 +30,8 @@
   [context url]
   
   (evidence-log/log! (assoc (:log-default context)
-                            :c "fetch" :f "request" :u url))
+                            :i "p0018" :c "fetch" :f "request"
+                            :u url))
 
   (try
     (loop [headers {"Referer" "https://eventdata.crossref.org"
@@ -39,8 +46,9 @@
                            {:follow-redirects false
                             :headers headers
                             :as :text
+                            :timeout timeout-ms
                             :throw-exceptions true})
-                         timeout-ms
+                         deref-timeout-ms
                          ; If this times out, return a special status for the condp below.
                          {:error :timeout})
 
@@ -51,7 +59,7 @@
             ; Timeout has no status.
             (when-let [status (:status result)]
               (evidence-log/log! (assoc (:log-default context)
-                                 :c "fetch" :f "response" :u url :v (:status result))))
+                                 :i "p0019" :c "fetch" :f "response" :u url :v (:status result))))
 
             (when (= :timeout (:error result))
               (log/warn "Deref timed out!")
@@ -71,31 +79,31 @@
     (catch java.net.URISyntaxException exception
       (do
         (evidence-log/log! (assoc (:log-default context)
-                                  :c "fetch" :f "error" :v "uri-syntax-exception" :u url))
+                                  :i "p001a" :c "fetch" :f "error" :v "uri-syntax-exception" :u url))
         nil))
 
     (catch java.net.UnknownHostException exception
       (do
         (evidence-log/log! (assoc (:log-default context)
-                                  :c "fetch" :f "error" :v "unknown-host-exception" :u url))
+                                  :i "p001a" :c "fetch" :f "error" :v "unknown-host-exception" :u url))
         nil))
 
     (catch org.httpkit.client.TimeoutException exception
       (do
         (evidence-log/log! (assoc (:log-default context)
-                                  :c "fetch" :f "error" :v "timeout-exception" :u url))
+                                  :i "p001a" :c "fetch" :f "error" :v "timeout-exception" :u url))
         nil))
 
     (catch org.httpkit.ProtocolException exception
       (do
         (evidence-log/log! (assoc (:log-default context)
-                                  :c "fetch" :f "error" :v "protocol-exception" :u url))
+                                  :i "p001a" :c "fetch" :f "error" :v "protocol-exception" :u url))
         nil))
 
     (catch Exception exception
       (do
         (evidence-log/log! (assoc (:log-default context)
-                                  :c "fetch" :f "error" :v "unknown-exception" :u url))
+                                  :i "p001a" :c "fetch" :f "error" :v "unknown-exception" :u url))
 
         nil))))
 
@@ -155,6 +163,7 @@
 
   (let [allowed (allowed? context url)]
     (evidence-log/log! (assoc (:log-default context)
+                              :i "p001b"
                               :c "robot-check"
                               :f "result"
                               :e (if allowed "t" "f")
@@ -167,6 +176,7 @@
   "Fetch URL, ignoring any robots.txt directives"
   [context url]
   (evidence-log/log! (assoc (:log-default context)
+                             :i "p001c"
                              :c "robot-check"
                              :f "skip"
                              :u url))

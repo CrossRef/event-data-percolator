@@ -21,17 +21,20 @@
 
     ; Log the decision on whether not to visit the URL.
     (evidence-log/log! (assoc (:log-default context)
-                                 :c "observation"
-                                 :f "should-visit-content-page"
-                                 :v (if should-visit "t" "f")
-                                 :u input-url))
+                              :i "p0001"
+                              :c "observation"
+                              :f "should-visit-content-page"
+                              :v (if should-visit "t" "f")
+                              :u input-url))
     
     (doseq [newsfeed-link (html/newsfeed-links-from-html (:body content) input-url)]
        (evidence-log/log! (assoc (:log-default context)
+                                 :i "p0014"
                                  :c "newsfeed-link"
                                  :f "found"
                                  :v input-url
-                                 :u newsfeed-link)))
+                                 :u (:href newsfeed-link)
+                                 :p (:rel newsfeed-link))))
     
     (if-not should-visit
       (assoc observation :error :skipped-domain)

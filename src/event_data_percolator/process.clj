@@ -93,16 +93,14 @@
         (log/info "Skipping Evidence Record due to mutex:" id)
         (evidence-log/log!
              (assoc (:log-default context)
-               :c "process"
-               :f "skip-processing-elsewhere")))
+               :i "p0012" :c "process" :f "skip-processing-elsewhere")))
 
       (store/get-string @evidence-store (storage-key-for-evidence-record-id id))
       (do
         (log/info "Skipping Evidence Record, already processed:" id)
         (evidence-log/log!
              (assoc (:log-default context)
-               :c "process"
-               :f "skip-already-processed")))
+               :i "p0011" :c "process" :f "skip-already-processed")))
 
       :default
       (process-f evidence-record-input))))
@@ -148,6 +146,7 @@
                               (json/write-str (assoc event :jwt jwt))))
 
       (evidence-log/log! (assoc (:log-default context)
+                                :i "p000c"
                                 :c "process" :f "send-event" :n (:id event))))
 
     (log/info "Finished saving" id)))
@@ -219,7 +218,7 @@
          (doseq [[partition-number partition-lag] lag]
            (evidence-log/log!
               (assoc (:log-default context)
-                :c "process" :f "input-message-lag"
+                :i "p000d" :c "process" :f "input-message-lag"
                 :p partition-number :v partition-lag))))
        
        (log/info "Got" (.count records) "records." (.hashCode records))
@@ -239,20 +238,17 @@
 
            (evidence-log/log!
              (assoc (:log-default context)
-               :c "process"
-               :f "input-message-time-lag"
+               :i "p0003" :c "process" :f "input-message-time-lag"
                :v (- (System/currentTimeMillis) (.timestamp record))))
 
            (evidence-log/log!
              (assoc (:log-default context)
-               :c "process"
-               :f "start"))
+               :i "p0010" :c "process" :f "start"))
 
 
            (evidence-log/log!
              (assoc (:log-default context)
-               :c "process"
-               :f "input-message-size"
+               :i "p000f" :c "process" :f "input-message-size"
                :v (.serializedValueSize record)))
 
           (if schema-errors
@@ -268,8 +264,7 @@
 
           (evidence-log/log!
              (assoc (:log-default context)
-               :c "process"
-               :f "finish"
+               :i "p0013" :c "process" :f "finish"
                :v (- (System/currentTimeMillis) start-time)))))
         
         (log/info "Finished processing records" (.count records) "records." (.hashCode records)))

@@ -10,6 +10,7 @@
 
     (evidence-log/log!
             (assoc (:log-default context)
+                 :i "p0004"
                  :c "match-doi-url"
                  :f "match"
                  :v (:value candidate)
