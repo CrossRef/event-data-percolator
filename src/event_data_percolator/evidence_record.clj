@@ -23,6 +23,7 @@
    (s/optional-key :license) s/Str
 
    (s/optional-key :agent) s/Any
+   (s/optional-key :artifacts) s/Any
    
    ; Extra per-evidence-record info.
    (s/optional-key :extra) s/Any

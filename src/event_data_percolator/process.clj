@@ -21,6 +21,11 @@
 
 (def domain-list-artifact-name "crossref-domain-list")
 
+(def percolator-version (System/getProperty "event-data-percolator.version"))
+(assert percolator-version "Failed to detect version.")
+(def percolator-version-major-minor (->> percolator-version (re-find #"^(\d+\.\d+)\.\d$") second))
+(assert percolator-version-major-minor "Failed to detect major/minor version.")
+
 (defn retrieve-domain-set
   "Return tuple of [version-url, domain-list-set]"
   []
@@ -186,7 +191,7 @@
 
         consumer (KafkaConsumer.
           {"bootstrap.servers" (:global-kafka-bootstrap-servers env)
-           "group.id"  "percolator-process"
+           "group.id"  (str "percolator-process" percolator-version-major-minor)
            "key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer"
            "value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer"
            "auto.offset.reset" "earliest"
