@@ -144,15 +144,27 @@
 
     (doseq [event events]
       (log/debug "Sending event: " (:id event))
-      ; Piggy-back the JWT in the Event. Bus will understand.
-      (.send @kafka-producer
-             (ProducerRecord. topic
-                              (:id event)
-                              (json/write-str (assoc event :jwt jwt))))
+      
 
-      (evidence-log/log! (assoc (:log-default context)
-                                :i "p000c"
-                                :c "process" :f "send-event" :n (:id event))))
+      (try
+        ; Wait for the future, so sending is synchronous.
+        (.get (.send @kafka-producer
+               (ProducerRecord. topic
+                                (:id event)
+
+                                ; Piggy-back the JWT in the Event. Bus will understand.
+                                (json/write-str (assoc event :jwt jwt)))))
+
+        (evidence-log/log! (assoc (:log-default context)
+                                  :i "p000c"
+                                  :c "process" :f "send-event" :n (:id event)))
+
+        (catch Exception ex
+          (log/error "Exception sending Event ID to Kafka" (:id event) ":" (.getMessage ex))
+
+          (evidence-log/log! (assoc (:log-default context)
+                          :i "p001d"
+                          :c "process" :f "send-event-error" :n (:id event))))))
 
     (log/info "Finished saving" id)))
 
