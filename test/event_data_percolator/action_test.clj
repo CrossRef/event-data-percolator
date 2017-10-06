@@ -109,7 +109,7 @@
       (is (= (-> result2 :obj :url) "https://dx.doi.org/10.5555/12345678")))))
 
 
-(deftest create-events-for-action
+(deftest ^:unit create-events-for-action
   (testing "When there are are extra Events but there was no match, no Events should be emitted."
     (let [extra-events [{:obj_id "https://example.com/1",
                          :occurred_at "2017-04-01T00:33:21Z",
@@ -173,7 +173,8 @@
              :occurred_at "2016-02-05",
              :subj_id "https://blog.com/1234",
              :action "add",
-             :subj {:pid "https://blog.com/1234"},
+             :subj {:pid "https://blog.com/1234"
+                    :url "https://blog.com/1234"},
              :source_id "SOURCE_ID",
              :obj
              {:pid "https://dx.doi.org/10.5555/12345678",
@@ -227,7 +228,8 @@
         :occurred_at "2016-02-05",
         :subj_id "https://blog.com/1234",
         :action "add",
-        :subj {:pid "https://blog.com/1234"},
+        :subj {:pid "https://blog.com/1234"
+               :url "https://blog.com/1234"},
         :source_id "SOURCE_ID",
         :obj
         {:pid "https://dx.doi.org/10.5555/12345678",
@@ -235,13 +237,13 @@
         :evidence_record "http://example.com/evidence/123456",
         :relation_type_id "cites"}])))))
 
-(deftest dedupe-by-val-substring
+(deftest ^:unit dedupe-by-val-substring
   (testing "dedupe-by-val-substring removes all matches that are a substring of any other in the group."
     (is (= (action/dedupe-by-val-substring [{:value "1"} {:value "1234"} {:value "12"} {:value "oops"}])
           [{:value "1234"} {:value "oops"}])
       "Substrings should be removed. Non-dupes should be untouched")))
 
-(deftest dedupe-matches
+(deftest ^:unit dedupe-matches
   (testing "When there are duplicate matches that represent the same thing match-candidates should de-duplicate them.
             See event-data-percolator.observation-types.html-test/html-with-duplicates for when this might occur."
     (let [input-action {:matches [; This should be removed because the matched DOI is a duplicate of another one and the value is a substring of another.
@@ -262,3 +264,48 @@
          result (action/dedupe-matches util/mock-context util/mock-evidence-record input-action)]
       (is (= result expected-result)))))
 
+
+(deftest ^:unit canonical-url-for-action
+  (testing "Can detect the first canonical url in any input observation."
+    (let [input-action {:processed-observations
+                        [{:type :irrelevant :nothing :else}
+                         {:type :content-url :canonical-url "http://example.com/canonical"}]}]
+      (is (= (action/canonical-url-for-action input-action) "http://example.com/canonical"))))
+
+  (testing "Can detect the first canonical fron any type."
+    ; Could be from :content-url or :html
+    (let [input-action {:processed-observations
+                         [{:type :doesnt-matter :canonical-url "http://example.com/canonical"}]}]
+      (is (= (action/canonical-url-for-action input-action) "http://example.com/canonical"))))
+
+  (testing "Can detect multiple found canonical URLs if they are identical."
+    ; We don't expect this ever to happen.
+    ; But if it does, and they are identical, that's fine because there's no ambiguity.
+    (let [input-action {:processed-observations
+                        [{:type :irrelevant :nothing :else}
+                         {:type :content-url :canonical-url "http://example.com/canonical"}
+                         {:type :irrelevant :further :irrelevancies}
+                         {:type :content-url :canonical-url "http://example.com/canonical"}]}]
+      (is (= (action/canonical-url-for-action input-action) "http://example.com/canonical"))))
+  
+  (testing "Ignores duplicate different found canonical URLs if they are not identical."
+    ; We don't expect this ever to happen.
+    ; But it if does, that's ambiguous, so return nothing.
+    (let [input-action {:processed-observations
+                        [{:type :irrelevant :nothing :else}
+                         {:type :content-url :canonical-url "http://example.com/canonical"}
+                         {:type :irrelevant :further :irrelevancies}
+                         {:type :content-url :canonical-url "http://example.com/no-I-am"}]}]
+      (is (= (action/canonical-url-for-action input-action) nil))))
+
+  (testing "Returns nil when nil found."
+    (let [input-action {:processed-observations
+                        [{:type :irrelevant :nothing :else}
+                         {:type :content-url :canonical-url nil}]}]
+      (is (= (action/canonical-url-for-action input-action) nil))))
+
+  (testing "Returns nil when none found."
+    (let [input-action {:processed-observations
+                        [{:type :irrelevant :nothing :else}
+                         {:type :content-url}]}]
+      (is (= (action/canonical-url-for-action input-action) nil)))))

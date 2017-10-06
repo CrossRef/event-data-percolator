@@ -103,7 +103,6 @@
         
               "Overall structure preserved. Matches gathered for each action over candidates. Occurred-at carried through to match.")))))
 
-
 (deftest ^:unit events
   (testing "events should transform matches into events"
     ; Ensure that no HTTP requests are made.
@@ -148,7 +147,7 @@
         (is (= (->> events (map :source_id) set) #{"THE_SOURCE_NAME"}) "Events each have correct (same) source_id, taken from the bundle.")
         (is (= (->> events (map :occurred_at) set) #{"2017-05-02T00:00:00.000Z"}) "Events each have correct (same) occurred_at, taken from the Action.")
         (is (= (->> events (map :action) set) #{"add"}) "Events each have default 'add' action, taken from the match.")
-        (is (= (->> events (map :subj) set) #{{:pid "http://example.com" :title "My example Subject" :custom "value"}}) "Custom subject metadata via subj is merged with URL.")
+        (is (= (->> events (map :subj) set) #{{:pid "http://example.com" :url "http://example.com"  :title "My example Subject" :custom "value"}}) "Custom subject metadata via subj is merged with URL.")
         (is (= (->> events (map :relation_type_id) set) #{"contemplates"}) "relation_type_id should be taken from the actions")
         (is (= (->> events (map :id) set count) 2) "Each event has a different ID.")
         (is (= (->> events (map :timestamp) set) #{nil}) "Events do not have timestamps (though the Evidence Record does). They are assigned downstream when accepted by the Event Bus.")))))
@@ -186,6 +185,72 @@
                             {:id "55555" :and :other-fields}
                             {:id "66666" :and :other-fields}})
           "Events collected from all pages and all actions."))))
+
+(deftest ^:unit canonical-urls
+  (testing "events should include canonical URL as the subj-id where supplied."
+    ; Ensure that no HTTP requests are made.
+    (fake/with-fake-http []
+      (let [; Input bundle that came out of candidates.
+            evidence-record {:source-token "ABCDEFGH"
+                             :source-id "THE_SOURCE_NAME"
+                             :timestamp "2017-05-02T00:00:00.000Z"
+                             :id "1234"
+                             :pages [{:actions
+                                       [; One action without a canonical URL.
+                                        {:url "http://example.com/my-article#comment1"
+                                         :subj {:title "My example Subject" :custom "value"}
+                                         :relation-type-id "contemplates"
+                                         :occurred-at "2017-05-02T00:00:00.000Z"
+                                         :id "1234"
+                                         :processed-observations
+                                           [{:type "content-url"
+                                             :input-url "http://example.com/my-article#comment1"
+                                             :candidates
+                                             [{:type :doi-url
+                                               :value "http://doi.org/10.5555/22222"}]}]
+                                         :matches [{:type :doi-url
+                                                    :value "http://doi.org/10.5555/22222"
+                                                    :match "https://doi.org/10.5555/22222"}]}
+
+                                        ; One with a canonical URL.
+                                        {:url "http://example.com/my-article#comment1"
+                                         :subj {:title "My example Subject" :custom "value"}
+                                         :relation-type-id "contemplates"
+                                         :occurred-at "2017-05-02T00:00:00.000Z"
+                                         :id "5678"
+                                         :processed-observations
+                                           [{:type "content-url"
+                                             :input-url "http://example.com/my-article#comment1"
+                                             :canonical-url "http://example.com/my-article"
+                                             :candidates
+                                             [{:type :doi-url
+                                               :value "http://doi.org/10.5555/22222"}]}]
+                                         :matches [{:type :doi-url
+                                                    :value "http://doi.org/10.5555/22222"
+                                                    :match "https://doi.org/10.5555/22222"}]}]}]}
+            
+            result (evidence-record/events util/mock-context evidence-record)
+            events (->> result :pages first :actions (mapcat :events))]
+
+            ; First one has no canonical URL.
+            (is (-> events first :subj_id (= "http://example.com/my-article#comment1"))
+              "Action URL used first event subj_id")
+
+            (is (-> events first :subj :pid (= "http://example.com/my-article#comment1"))
+              "Action URL used first event subj.pid")
+
+            (is (-> events first :subj :url (= "http://example.com/my-article#comment1"))
+              "Action URL used first event subj.url")
+
+            ; Second one has canonical URL.
+            (is (-> events second :subj_id (= "http://example.com/my-article"))
+              "Canonical URL used second event subj_id when supplied")
+
+            (is (-> events second :subj :pid (= "http://example.com/my-article"))
+              "Canonical URL used second event subj.pid when supplied")
+
+            (is (-> events second :subj :url (= "http://example.com/my-article#comment1"))
+              "Action URL used second event subj.url")))))
 
 (deftest ^:unit map-actions
   (testing "map-actions should apply a function to all actions within an input bundle, preserving the rest of the structure"

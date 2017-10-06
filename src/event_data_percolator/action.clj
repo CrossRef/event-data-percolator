@@ -40,7 +40,7 @@
 
 
 (defn process-observations-candidates
-  "Step Process all the observations of an Action to generate Candidates. Collect Candidates.
+  "Process all the observations of an Action to generate Candidates. Collect Candidates.
    If it's a duplicate action, the candidate extractor won't run."
   [context evidence-record action]
   (let [observations (:observations action)
@@ -102,22 +102,42 @@
 
     (assoc action :matches all-matches)))
 
+(defn canonical-url-for-action
+  "If a canonical URL was detected in one of the observations, return this. Else nil."
+  [action]
+  (let [observations (:processed-observations action)
+        unique-canonical-urls (set (keep :canonical-url observations))]
+    (when (= 1 (count unique-canonical-urls))
+      (first unique-canonical-urls))))
+
 (defn create-event-from-match
   [evidence-record action match]
-  ; Provide default subject metadata if not supplied.
-  (let [subj (merge {:pid (:url action)} (:subj action {}))
+  
+  (let [; subj.url is the URL supplied in the Action.
+        subj-url (:url action)
+        ; subj_id is the most 'persistent' version.
+        ; That might be the same URL, or the canonical URL reported by the webpage.
+        subj-id (or (canonical-url-for-action action)
+                    (:url action))
+
+        ; Provide default subject metadata if not supplied.
+        subj (merge {:pid subj-id :url subj-url}
+                    (:subj action {}))
+
         ; For the obj, include the DOI URL as :pid,
         ; but also include the input URL as the :url
         ; if it wasn't a URL, include the PID as the URL.
         obj-url (when (and (#{:landing-page-url :shortdoi-url :doi-url} (:type match))
                            (:value match))
                   (:value match))
+
         obj (merge {:pid (:match match)
                     :url (or obj-url
                              (:match match))} (:obj action {}))
+
         base-event {:id (str (UUID/randomUUID))
                     :source_token (:source-token evidence-record)
-                    :subj_id (:url action)
+                    :subj_id subj-id
                     :obj_id (:match match)
                     :relation_type_id (:relation-type-id action)
                     :source_id (:source-id evidence-record)
@@ -146,7 +166,6 @@
 (defn create-events-for-action
   "Update action to include a seq of Events generated from observations in the Action. Plus extra-events if included, and if there were any matches."
   [context evidence-record action]
-  
   (let [events-from-matches (map (partial create-event-from-match evidence-record action) (:matches action))
         events-from-extras (when (not-empty (:matches action)) (map (partial create-event-from-extra-event evidence-record) (:extra-events action)))
         events (concat events-from-matches events-from-extras)]

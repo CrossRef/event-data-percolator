@@ -41,6 +41,7 @@
         ; Simplest possible thing that returns candidates (actually passed all the way through to plain-text).
         (is (= result {:input-url "http://can-be-retrieved.com/abc"
                        :input-content "Webpage content 10.5555/12345678"
+                       :canonical-url nil
                        :candidates [{:value "10.5555/12345678", :type :plain-doi}]}))))))
 
 (deftest ^:unit robots-exclusion
@@ -66,6 +67,7 @@
 
         (is (= result {:input-url "http://allow-robots.com/abc"
                        :input-content "Allowed content 10.5555/12345678"
+                       :canonical-url nil
                        :candidates [{:value "10.5555/12345678", :type :plain-doi}]})
             "Matches should be made when robots allowed request.")))))
 
@@ -81,6 +83,7 @@
         (is (= result {:input-url "http://disallow-robots.com/abc"
                        :input-content "Disallow robots content 10.5555/12345678"
                        :ignore-robots true
+                       :canonical-url nil
                        :candidates [{:value "10.5555/12345678", :type :plain-doi}]})
           "Matches should be made even when robots prohibits."))))
 
@@ -94,6 +97,26 @@
 
         (is (= result {:input-url "http://allow-robots.com/abc"
                        :ignore-robots true
+                       :canonical-url nil
                        :input-content "Allow robots content 10.5555/12345678"
                        :candidates [{:value "10.5555/12345678", :type :plain-doi}]})
             "Matches should be made when robots.txt would allow anyway.")))))
+
+
+(def content-with-canonical "<html><head><link rel=\"canonical\" href=\"https://www.example.com/i-am-canonical-url\" /></head>look at this doi 10.5555/12345678</html>")
+
+(deftest ^:unit canonical-url-carried-through
+  (testing "When there's a canonical URL identified in the event-data-percolator.observation-types.html namespace it should be carried throgh "
+    (fake/with-fake-http ["http://www.example-website.com/1234"
+                           content-with-canonical]
+      
+      (let [result (content-url/process-content-url-observation
+                    util/mock-context
+                    {:input-url "http://www.example-website.com/1234"})]
+        (is (nil? (:error result)))
+
+        ; Simplest possible thing that returns candidates (actually passed all the way through to plain-text).
+        (is (= result {:input-url "http://www.example-website.com/1234"
+                       :input-content content-with-canonical
+                       :canonical-url "https://www.example.com/i-am-canonical-url"
+                       :candidates [{:value "10.5555/12345678", :type :plain-doi}]}))))))

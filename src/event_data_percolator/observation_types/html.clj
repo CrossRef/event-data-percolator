@@ -60,11 +60,36 @@
     ; This isn't mission-critical, so just ignore.
     (catch Exception _ nil)))
 
+(defn canonical-link-from-html
+  "If there's a canonical link, return it."
+  [html]
+  (try
+    (when html
+      (let [parsed (Jsoup/parse html)
+            canonical-links (->> parsed
+                           (#(.select % "link[rel=canonical]"))
+                           (map #(.attr % "href"))
+                           set)]
+
+          ; If there's more than one, and they're different, ignore.
+          (when (= 1 (count canonical-links))
+            (first canonical-links))))
+
+    ; Constructing URIs from inputs may throw IllegalArgumentExceptions, NPE etc.
+    ; This isn't mission-critical, so just ignore.
+    (catch Exception _ nil)))
+
+
+
 (defn process-html-content-observation
   "Process an observation of type html-content."
   [context observation]
   (let [input (:input-content observation "")
         candidate-urls (links-from-html input)
+
+        ; Canonical url if we found it.
+        ; Especially useful when retrieving blog posts.
+        canonical-url (canonical-link-from-html input)
         text (plaintext-from-html input)
 
         ; Get all the candidates from the plaintext view.
@@ -77,5 +102,6 @@
                     (keep #(url/url-to-landing-page-url-candidate % (:domain-set context)) candidate-urls)
                     (keep url/url-to-doi-url-candidate candidate-urls))]
         
-    (assoc observation :candidates candidates)))
+    (assoc observation :candidates candidates
+                       :canonical-url canonical-url)))
 

@@ -42,7 +42,8 @@
   (assoc observation :error :unrecognised-observation-type))
 
 (defn process-observation
-  "Process an observation, extracting candidates unless it's part of a duplicate action."
+  "Process an observation, extracting candidates unless it's part of a duplicate action.
+   Return the observation object with candidates attached."
   [context observation duplicate?]
   ; Choose a dispatch function or pass-through if unrecognised-observation-type.
   (let [sensitive? (:sensitive observation)

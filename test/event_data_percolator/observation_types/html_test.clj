@@ -60,6 +60,7 @@
                    {:type "html" :input-content "the quick brown 10.5555/1111 jumps"})]
 
       (is (= result {:type "html"
+                     :canonical-url nil
                      :input-content "the quick brown 10.5555/1111 jumps"
                      :candidates [{:value "10.5555/1111" :type :plain-doi}]})
           "One plain DOI candidate returned.")))
@@ -70,6 +71,7 @@
                    {:type "html" :input-content "<p>the quick <b>brown 10.5555/1111</b> jumps</p>"})]
 
       (is (= result {:type "html"
+                     :canonical-url nil
                      :input-content "<p>the quick <b>brown 10.5555/1111</b> jumps</p>"
                      :candidates [{:value "10.5555/1111" :type :plain-doi}]})
           "One plain DOI candidate found in a text node with surrounding markup.")))
@@ -80,6 +82,7 @@
                    {:type "html" :input-content "<a href='http://doi.org/10.5555/22222'>cliquez ici</a>"})
 
           expected {:type "html"
+                    :canonical-url nil
                     :input-content "<a href='http://doi.org/10.5555/22222'>cliquez ici</a>"
                     :candidates [{:type :doi-url, :value "http://doi.org/10.5555/22222"}]}]
 
@@ -91,6 +94,7 @@
                    {:type "html" :input-content "<p>http://doi.org/abcd</p>"})]
 
       (is (= result {:type "html"
+                     :canonical-url nil
                      :input-content "<p>http://doi.org/abcd</p>"
                      :candidates [{:type :shortdoi-url, :value "http://doi.org/abcd"}]})
           "One ShortDOI URL candidate found when unlinked")))
@@ -101,8 +105,9 @@
                    {:type "html" :input-content "<a href='http://doi.org/abcd'>short and sweet</a>"})
 
           expected {:type "html"
-                     :input-content "<a href='http://doi.org/abcd'>short and sweet</a>"
-                     :candidates [{:type :shortdoi-url, :value "http://doi.org/abcd"}]}]
+                    :canonical-url nil
+                    :input-content "<a href='http://doi.org/abcd'>short and sweet</a>"
+                    :candidates [{:type :shortdoi-url, :value "http://doi.org/abcd"}]}]
 
       (is (= result expected))))
 
@@ -112,6 +117,7 @@
                    {:type "html" :input-content "this is <em>my PII S232251141300001-2</em> there"})]
 
       (is (= result {:type "html"
+                     :canonical-url nil
                      :input-content "this is <em>my PII S232251141300001-2</em> there"
                      :candidates [{:value "S232251141300001-2" :type :pii}]})
           "PII candidate found in text nodes")))
@@ -122,6 +128,7 @@
                    {:type "html" :input-content "<b>one two <i>three http://example.com/four</i> five http://ignore.com/four"})]
 
       (is (= result {:type "html"
+                     :canonical-url nil
                      :input-content "<b>one two <i>three http://example.com/four</i> five http://ignore.com/four"
                      :candidates [{:value "http://example.com/four" :type :landing-page-url}]})
           "Article landing page from known domain can be extracted from text nodes. Non-matching domains ignored.")))
@@ -133,6 +140,7 @@
                    {:type "html" :input-content "<p> <a href='http://example.com/five'>this</a> <a href='http://ignore.com/four'>ignore me!</a></p>"})]
 
       (is (= result {:type "html"
+                     :canonical-url nil
                      :input-content "<p> <a href='http://example.com/five'>this</a> <a href='http://ignore.com/four'>ignore me!</a></p>"
                      :candidates [{:value "http://example.com/five" :type :landing-page-url}]})
           "Article landing page from known domain can be extracted from link. Non-matching domains ignored."))))
@@ -146,6 +154,7 @@
           
       (is (= result {:type "html"
                      :input-content html
+                     :canonical-url nil
                      :candidates [{:type :plain-doi :value "10.5555/12345678"}
                                   {:type :doi-url :value "https://doi.org/10.5555/12345678"}]})
 
@@ -166,7 +175,7 @@
 <link rel='service.post' type='application/atom+xml' title='Companion Animal Psychology - Atom' href='https://www.blogger.com/feeds/4990755601078984403/posts/default' />
 </html>")
 
-(deftest newsfeed-detection
+(deftest ^:unit newsfeed-detection
   (testing "Newsfeeds links are identified and extracted from HTML. Makes relative URIs absolute."
     (is (= (html/newsfeed-links-from-html rss-html "http://www.example.com/my-blog/page")
            #{{:rel "alternate", :href "http://www.companionanimalpsychology.com/feeds/posts/default?alt=rss"}
@@ -180,3 +189,28 @@
              {:rel "service.post", :href "https://www.blogger.com/feeds/10966011/posts/default"}
              {:rel "service.post", :href "https://www.blogger.com/feeds/4990755601078984403/posts/default"}}))))
 
+
+(def multiple-canonical "<html><head><link rel=\"canonical\" href=\"https://www.example.com/i-am-canonical-url\" /><link rel=\"canonical\" href=\"https://www.example.com/no-i-am-canonical\" /></head></html>")
+(def single-canonical "<html><head><link rel=\"canonical\" href=\"https://www.example.com/i-am-canonical-url\" /></head></html>")
+(def no-canonical "<html><head></head>hello</html>")
+
+
+(deftest ^:unit canonical-url-detection
+  (testing "If an HTML page has a canonical URL, it should be included in the observations"
+    
+    (is (= (html/canonical-link-from-html no-canonical) nil)
+       "No canonical link, no result")
+
+    (is (= (html/canonical-link-from-html single-canonical) "https://www.example.com/i-am-canonical-url")
+        "One canonical link, correct result")
+
+    (is (= (html/canonical-link-from-html multiple-canonical) nil)
+      "Multiple canonical links are ambuguous, should result in no result"))
+
+  (testing "Observation should include canonical URL if supplied."
+    (let [result (html/process-html-content-observation
+                   util/mock-context
+                   {:type "html" :input-content single-canonical})]
+
+      (is (= (:canonical-url result) "https://www.example.com/i-am-canonical-url")))))
+      
