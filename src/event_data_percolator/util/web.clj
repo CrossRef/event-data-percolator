@@ -38,6 +38,7 @@
                     "User-Agent" event-data-percolator.consts/user-agent-for-robots}
              depth 0
              url url]
+
         (if (> depth redirect-depth)
           nil
           (let [result (deref
@@ -54,7 +55,10 @@
 
                 error (:error result)
                 cookie (-> result :headers :set-cookie)
-                new-headers (merge headers (when cookie {"Cookie" cookie}))]
+                new-headers (merge headers (when cookie {"Cookie" cookie}))
+
+                ; In the case of redirects, return the most recent redirect.
+                reported-result (assoc result :final-url url)]
              
             ; Timeout has no status.
             (when-let [status (:status result)]
@@ -66,13 +70,13 @@
               (evidence-log/log! (assoc (:log-default context)
                                  :c "fetch" :f "error" :u url :v "timeout")))
 
-            (condp = (:status result)
-              200 result
+            (condp = (:status reported-result)
+              200 reported-result
               ; Weirdly some Nature pages return 401 with the content. http://www.nature.com/nrendo/journal/v10/n9/full/nrendo.2014.114.html
-              401 result
-              301 (recur new-headers (inc depth) (-> result :headers :location))
-              303 (recur new-headers (inc depth) (-> result :headers :location))
-              302 (recur new-headers (inc depth) (-> result :headers :location))
+              401 reported-result
+              301 (recur new-headers (inc depth) (-> reported-result :headers :location))
+              303 (recur new-headers (inc depth) (-> reported-result :headers :location))
+              302 (recur new-headers (inc depth) (-> reported-result :headers :location))
               nil))))
 
     ; On error just return nil, but add exception to trace.

@@ -110,23 +110,39 @@
     (when (= 1 (count unique-canonical-urls))
       (first unique-canonical-urls))))
 
+(defn final-url-for-action
+  "Return the final URL from any observations. This can occur if there were redirects."
+  [action]
+  (let [observations (:processed-observations action)
+        final-urls (set (keep :final-url observations))]
+    ; We only expect to get one of these per Action.
+    ; If we do get duplicates, predictable default behaviour is take the first.
+    (first final-urls)))
+
+(defn best-subj-url-for-action
+  "Return the best URL that represents the subject. This is, in order of preference:
+   - the canonical URL
+   - the final URL that was visited in any sequence of redirects
+   - the action's :url parameter"
+  [action]
+  (or (canonical-url-for-action action)
+      (final-url-for-action action)
+      (:url action)))
+
 (defn create-event-from-match
   [evidence-record action match]
   
   (let [; subj.url is the URL supplied in the Action.
         subj-url (:url action)
-        ; subj_id is the most 'persistent' version.
-        ; That might be the same URL, or the canonical URL reported by the webpage.
-        subj-id (or (canonical-url-for-action action)
-                    (:url action))
+
+        subj-id (best-subj-url-for-action action)
 
         ; Provide default subject metadata if not supplied.
         subj (merge {:pid subj-id :url subj-url}
                     (:subj action {}))
 
-        ; For the obj, include the DOI URL as :pid,
-        ; but also include the input URL as the :url
-        ; if it wasn't a URL, include the PID as the URL.
+        ; For the obj, include the DOI URL as :pid, but also include the input URL as the :url
+        ; Only the following sources provide a URL as the value (others have e.g. text DOI).
         obj-url (when (and (#{:landing-page-url :shortdoi-url :doi-url} (:type match))
                            (:value match))
                   (:value match))

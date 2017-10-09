@@ -40,6 +40,7 @@
 
         ; Simplest possible thing that returns candidates (actually passed all the way through to plain-text).
         (is (= result {:input-url "http://can-be-retrieved.com/abc"
+                       :final-url "http://can-be-retrieved.com/abc"
                        :input-content "Webpage content 10.5555/12345678"
                        :canonical-url nil
                        :candidates [{:value "10.5555/12345678", :type :plain-doi}]}))))))
@@ -66,6 +67,7 @@
                      {:input-url "http://allow-robots.com/abc"})]
 
         (is (= result {:input-url "http://allow-robots.com/abc"
+                       :final-url "http://allow-robots.com/abc"
                        :input-content "Allowed content 10.5555/12345678"
                        :canonical-url nil
                        :candidates [{:value "10.5555/12345678", :type :plain-doi}]})
@@ -81,6 +83,7 @@
 
         ; No candidates should be matched because of robots exclusion.
         (is (= result {:input-url "http://disallow-robots.com/abc"
+                       :final-url "http://disallow-robots.com/abc"
                        :input-content "Disallow robots content 10.5555/12345678"
                        :ignore-robots true
                        :canonical-url nil
@@ -96,6 +99,7 @@
                       :ignore-robots true})]
 
         (is (= result {:input-url "http://allow-robots.com/abc"
+                       :final-url "http://allow-robots.com/abc"
                        :ignore-robots true
                        :canonical-url nil
                        :input-content "Allow robots content 10.5555/12345678"
@@ -117,6 +121,37 @@
 
         ; Simplest possible thing that returns candidates (actually passed all the way through to plain-text).
         (is (= result {:input-url "http://www.example-website.com/1234"
+                       :final-url "http://www.example-website.com/1234"
                        :input-content content-with-canonical
                        :canonical-url "https://www.example.com/i-am-canonical-url"
                        :candidates [{:value "10.5555/12345678", :type :plain-doi}]}))))))
+
+(deftest ^:unit final-url-recorded
+  (testing "When there is a sequence of redirects, the final URL should be included in the observation."
+    (fake/with-fake-http ["http://feedproxy.google.com/~r/thebreakthrough/~3/Kr57lBR2w1w/stuck-in-the-s-curve"
+                          {:status 301 :headers {:location "http://interrim.com/test"}}
+                          
+                          ; An extra redirect to ensure that we follow more than one hop.
+                          "http://interrim.com/test"
+                          {:status 302 :headers {:location "https://thebreakthrough.org/index.php/voices/stuck-in-the-s-curve?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+thebreakthrough+%28The+Breakthrough+Institute+Full+Site+RSS%29"}}
+
+                          "https://thebreakthrough.org/index.php/voices/stuck-in-the-s-curve?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+thebreakthrough+%28The+Breakthrough+Institute+Full+Site+RSS%29"
+                          {:status 200 :body "<html>hello</html>"}]
+                          
+      (let [result (content-url/process-content-url-observation
+                    util/mock-context
+                    {:input-url "http://feedproxy.google.com/~r/thebreakthrough/~3/Kr57lBR2w1w/stuck-in-the-s-curve"})]
+        (is (nil? (:error result)))
+
+        ; Simplest possible thing that returns candidates (actually passed all the way through to plain-text).
+        (is (= (:input-url result)
+               "http://feedproxy.google.com/~r/thebreakthrough/~3/Kr57lBR2w1w/stuck-in-the-s-curve")
+            "Input URL should be preserved")
+
+        (is (= (:input-content "<html>hello</html>"))
+               "Content of final redirect should be returned.")
+
+        (is (= (:final-url result)
+               "https://thebreakthrough.org/index.php/voices/stuck-in-the-s-curve?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+thebreakthrough+%28The+Breakthrough+Institute+Full+Site+RSS%29")
+            "Final URL of redirect chain should be reported.")))))
+

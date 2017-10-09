@@ -42,5 +42,10 @@
         (assoc observation :error :failed-fetch-url)
         (let [; Attach content then pass the thing to the HTML processor for heavy lifting.
               new-observation (assoc observation :input-content (:body content))
-              html-observations (html/process-html-content-observation context new-observation)]
-          html-observations)))))
+              html-observations (html/process-html-content-observation context new-observation)
+              
+              ; Include the final redirect URL that we visited.
+              with-final-url (if-let [url (:final-url content)]
+                               (assoc html-observations :final-url url)
+                               html-observations)]
+          with-final-url)))))

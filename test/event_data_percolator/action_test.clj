@@ -309,3 +309,76 @@
                         [{:type :irrelevant :nothing :else}
                          {:type :content-url}]}]
       (is (= (action/canonical-url-for-action input-action) nil)))))
+
+(deftest ^:unit final-url-for-action
+  (testing "final-url-for-action can retrieve the final-url from the first observation's :final-url value"
+   (let [input-action {:processed-observations
+                        [{:input-url "http://example.com" :final-url "http://sandwiches.com"}]}]
+      (is (= (action/final-url-for-action input-action) "http://sandwiches.com")))))
+
+(deftest ^:unit best-subj-url-for-action
+  (testing "best-subj-url-for-action should choose canonical URL as first choice."
+    (is (= (action/best-subj-url-for-action
+             {:processed-observations
+              [{:type :content-url :canonical-url "http://alpha.com/canonical"}]
+              :final-url "http://beta.com/xyz"
+              :url "http://gamma.com/abcdefg"})
+           "http://alpha.com/canonical")))
+
+  (testing "best-subj-url-for-action should choose final-url as second choice."
+    (is (= (action/best-subj-url-for-action
+             {:processed-observations
+              [{:type :content-url :canonical-url "http://alpha.com/canonical"}]
+              :final-url "http://beta.com/xyz"
+              :url "http://gamma.com/abcdefg"})
+           "http://alpha.com/canonical")))
+
+  (testing "best-subj-url-for-action should choose action URL as third choice."
+    (is (= (action/best-subj-url-for-action
+             {:processed-observations
+              []
+              :url "http://gamma.com/abcdefg"})
+           "http://gamma.com/abcdefg"))))
+
+(deftest ^:unit best-subj-url-for-action-events
+  (testing "`events` should use the 'best' URL for both subj_id and subj.pid, i.e. return value of `best-subj-url-for-action`"
+    
+    (with-redefs [event-data-percolator.action/best-subj-url-for-action
+                  (fn [action] "http://returned.com/this-is-the-best-url")]
+  
+      ; We're mocking out the return value of best-subj-url-for-action, so it doesn't use this content.      
+      (let [input-action {:url "https://example.com/the-action-url"
+                          :occurred-at "2016-02-05"
+                          :relation-type-id "cites"
+                          
+                          :matches
+                          [{:value "http://psychoceramics.labs.crossref.org/12345"
+                            :type :landing-page-url
+                            :match "https://dx.doi.org/10.5555/12345678"}]
+                          
+                          :processed-observations
+                          [{:type :content-url
+                            :canonical-url "http://returned.com/this-is-the-best-url"
+                            :final-url "http://example.com/the-final-url"
+                            :url "http://example.com/the-observation-url"}]}
+           
+            evidence-record {:source-token "SOURCE_TOKEN"
+                             :source-id "SOURCE_ID"
+                             :license "http://example.com/license"
+                             :url "http://example.com/evidence/123456"
+                             :pages [{:actions [input-action]}]}
+
+           result-action (action/create-events-for-action util/mock-context evidence-record input-action)
+           first-event (-> result-action :events first)]
+
+      (is (= (:subj_id first-event)
+             (-> first-event :subj :pid)
+             "http://returned.com/this-is-the-best-url")
+          "Best URL should be use for both fields")
+
+      (is (= (-> first-event :subj :url)
+             "https://example.com/the-action-url")
+          "Action URL should be used for the subj.url")))))
+
+
+        
