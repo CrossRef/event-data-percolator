@@ -3,6 +3,7 @@
    This is mostly tested by evidence-record-tests"
   (:require [event-data-percolator.observation :as observation]
             [event-data-percolator.match :as match]
+            [event-data-percolator.util.web :as web]
             [config.core :refer [env]]
             [crossref.util.doi :as crdoi]
             [event-data-common.storage.s3 :as s3]
@@ -126,8 +127,12 @@
    - the action's :url parameter"
   [action]
   (or (canonical-url-for-action action)
-      (final-url-for-action action)
-      (:url action)))
+      
+      (when-let [x (final-url-for-action action)]
+        (web/remove-tracking-params x))
+      
+      (when-let [x (:url action)]
+        (web/remove-tracking-params x))))
 
 (defn create-event-from-match
   [evidence-record action match]

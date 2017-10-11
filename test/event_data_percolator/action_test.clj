@@ -328,17 +328,39 @@
   (testing "best-subj-url-for-action should choose final-url as second choice."
     (is (= (action/best-subj-url-for-action
              {:processed-observations
-              [{:type :content-url :canonical-url "http://alpha.com/canonical"}]
-              :final-url "http://beta.com/xyz"
+              [{:type :content-url :final-url "http://beta.com/xyz"}]
+              
               :url "http://gamma.com/abcdefg"})
-           "http://alpha.com/canonical")))
+           "http://beta.com/xyz"))
+
+    (is (= (action/best-subj-url-for-action
+             {:processed-observations
+              [{:type :content-url :final-url "http://beta.com/xyz?utm_keyword=sandwiches"}]
+              
+              :url "http://gamma.com/abcdefg"})
+           "http://beta.com/xyz"))
+        "Cursory check to ensure that tracking params are removed when using the 'final' url.")
 
   (testing "best-subj-url-for-action should choose action URL as third choice."
     (is (= (action/best-subj-url-for-action
              {:processed-observations
               []
               :url "http://gamma.com/abcdefg"})
-           "http://gamma.com/abcdefg"))))
+           "http://gamma.com/abcdefg"))
+
+    (is (= (action/best-subj-url-for-action
+             {:processed-observations
+              []
+              :url "http://gamma.com/abcdefg?utm_keyword=sandwiches"})
+           "http://gamma.com/abcdefg")
+        "Cursory check to ensure that tracking params are removed when using the action URL")
+
+    (is (= (action/best-subj-url-for-action
+             {:processed-observations
+              []
+              :url "http://gamma.com/abcdefg?utm_keyword=sandwiches&colour=indigo"})
+           "http://gamma.com/abcdefg?colour=indigo")
+        "Cursory check to ensure that tracking params are removed when using the action URL")))
 
 (deftest ^:unit best-subj-url-for-action-events
   (testing "`events` should use the 'best' URL for both subj_id and subj.pid, i.e. return value of `best-subj-url-for-action`"

@@ -1,6 +1,6 @@
 ; The "major.minor" verison number is used for the Kafka Consumer Group.
 ; Every time the major.minor version is bumped, the Percolator will re-scan Evdience records.
-(defproject event-data-percolator "0.4.3"
+(defproject event-data-percolator "0.4.4"
   :description "Event Data Percolator"
   :url "http://eventdata.crossref.org/"
   :license {:name "MIT License"
@@ -39,7 +39,7 @@
                  [com.github.crawler-commons/crawler-commons "0.7"]
                  
                  ; Required for AWS, but not fetched.
-                 [org.apache.httpcomponents/httpclient "4.5.3"] ; Reqired for TLS SNI.
+                 [org.apache.httpcomponents/httpclient "4.5.3"]
                  [org.apache.commons/commons-io "1.3.2"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.apache.logging.log4j/log4j-core "2.6.2"]
