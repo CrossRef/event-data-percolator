@@ -190,27 +190,89 @@
              {:rel "service.post", :href "https://www.blogger.com/feeds/4990755601078984403/posts/default"}}))))
 
 
-(def multiple-canonical "<html><head><link rel=\"canonical\" href=\"https://www.example.com/i-am-canonical-url\" /><link rel=\"canonical\" href=\"https://www.example.com/no-i-am-canonical\" /></head></html>")
-(def single-canonical "<html><head><link rel=\"canonical\" href=\"https://www.example.com/i-am-canonical-url\" /></head></html>")
-(def no-canonical "<html><head></head>hello</html>")
+(def multiple-canonical
+  "<html><head><link rel=\"canonical\" href=\"https://www.example.com/i-am-canonical-url\" /><link rel=\"canonical\" href=\"https://www.example.com/no-i-am-canonical\" /></head></html>")
 
+(def single-canonical
+  "<html><head><link rel=\"canonical\" href=\"https://www.example.com/i-am-canonical-url\" /></head></html>")
+
+(def no-canonical
+  "<html><head></head>hello</html>")
+
+(def empty-canonical
+  "<html><head><link rel=\"canonical\" href=\"\" /></head>hello</html>")
+
+(def protocol-relative-canonical
+  "<html><head><link rel=\"canonical\" href=\"//www.example.com/i-am-canonical-url\" /></head></html>")
+
+(def host-relative-canonical
+  "<html><head><link rel=\"canonical\" href=\"/i-am-canonical-url\" /></head></html>")
+
+(def path-relative-canonical
+  "<html><head><link rel=\"canonical\" href=\"hrmm\" /></head></html>")
+
+(def base-url "http://www.example.com/this-page")
 
 (deftest ^:unit canonical-url-detection
   (testing "If an HTML page has a canonical URL, it should be included in the observations"
     
-    (is (= (html/canonical-link-from-html no-canonical) nil)
+    (is (= (html/canonical-link-from-html no-canonical base-url) nil)
        "No canonical link, no result")
 
-    (is (= (html/canonical-link-from-html single-canonical) "https://www.example.com/i-am-canonical-url")
+    (is (= (html/canonical-link-from-html single-canonical base-url)
+      "https://www.example.com/i-am-canonical-url")
         "One canonical link, correct result")
 
-    (is (= (html/canonical-link-from-html multiple-canonical) nil)
+    (is (= (html/canonical-link-from-html multiple-canonical base-url) nil)
       "Multiple canonical links are ambuguous, should result in no result"))
+
+  (testing "Relative URLs are resolved in the context of the base URL"
+    (is (= (html/canonical-link-from-html protocol-relative-canonical "http://www.example.com")
+           "http://www.example.com/i-am-canonical-url")
+        "Protocol relative URL resolved in http protocol of base")
+
+    (is (= (html/canonical-link-from-html protocol-relative-canonical "https://www.example.com")
+           "https://www.example.com/i-am-canonical-url")
+        "Protocol relative URL resolved in https protocol of base")
+
+    (is (= (html/canonical-link-from-html host-relative-canonical "https://www.example.com")
+           "https://www.example.com/i-am-canonical-url")
+        "Host-relative URL resolved relative to host.")
+
+    (is (= (html/canonical-link-from-html host-relative-canonical "https://www.sandwiches.com")
+           "https://www.sandwiches.com/i-am-canonical-url")
+        "Host-relative URL resolved relative to host.")
+
+    (is (= (html/canonical-link-from-html host-relative-canonical "https://www.sandwiches.com/one/two/three")
+           "https://www.sandwiches.com/i-am-canonical-url")
+        "Host-relative URL resolved relative to host.")
+
+    (is (= (html/canonical-link-from-html path-relative-canonical "https://www.example.com/one/two/three")
+           "https://www.example.com/one/two/hrmm")
+        "Host-relative URL resolved relative to host.")
+
+    (is (= (html/canonical-link-from-html empty-canonical "https://www.example.com")
+           nil)
+        "Empty link param should produce nil.")
+
+    (is (= (html/canonical-link-from-html single-canonical "")
+           "https://www.example.com/i-am-canonical-url")
+        "Nil base URL should canonical url verbatim.")
+
+    (is (= (html/canonical-link-from-html single-canonical nil)
+           "https://www.example.com/i-am-canonical-url")
+        "Nil base URL should canonical url verbatim."))
 
   (testing "Observation should include canonical URL if supplied."
     (let [result (html/process-html-content-observation
                    util/mock-context
-                   {:type "html" :input-content single-canonical})]
+                   {:type "html" :input-url base-url :input-content single-canonical})]
 
-      (is (= (:canonical-url result) "https://www.example.com/i-am-canonical-url")))))
-      
+      (is (= (:canonical-url result) "https://www.example.com/i-am-canonical-url"))))
+
+  (testing "Observation should resolve protocol relative URL if supplied."
+    (let [result (html/process-html-content-observation
+                   util/mock-context
+                   {:type "html" :input-url base-url :input-content protocol-relative-canonical})]
+
+      (is (= (:canonical-url result) "http://www.example.com/i-am-canonical-url")))))

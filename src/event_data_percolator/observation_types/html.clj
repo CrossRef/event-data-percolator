@@ -62,18 +62,23 @@
 
 (defn canonical-link-from-html
   "If there's a canonical link, return it."
-  [html]
+  [html base-url]
   (try
     (when html
       (let [parsed (Jsoup/parse html)
             canonical-links (->> parsed
                            (#(.select % "link[rel=canonical]"))
                            (map #(.attr % "href"))
-                           set)]
+                           ; Need to be careful about empty strings
+                           ; because URI resolution will turn them into the base URL.
+                           (remove clojure.string/blank?)
+                           set)
 
-          ; If there's more than one, and they're different, ignore.
-          (when (= 1 (count canonical-links))
-            (first canonical-links))))
+            ; If there's more than one, and they're different, ignore.
+            the-canonical-link (when (= 1 (count canonical-links))
+                                 (first canonical-links))]
+
+            (str (.resolve (URI. (or base-url "")) (URI. the-canonical-link)))))
 
     ; Constructing URIs from inputs may throw IllegalArgumentExceptions, NPE etc.
     ; This isn't mission-critical, so just ignore.
@@ -87,9 +92,9 @@
   (let [input (:input-content observation "")
         candidate-urls (links-from-html input)
 
-        ; Canonical url if we found it.
+        ; Canonical url if we found it. Needs to be resolved in context of the input url.
         ; Especially useful when retrieving blog posts.
-        canonical-url (canonical-link-from-html input)
+        canonical-url (canonical-link-from-html input (:input-url observation))
         text (plaintext-from-html input)
 
         ; Get all the candidates from the plaintext view.

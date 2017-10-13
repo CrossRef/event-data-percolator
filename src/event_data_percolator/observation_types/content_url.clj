@@ -41,7 +41,9 @@
       (if-not content
         (assoc observation :error :failed-fetch-url)
         (let [; Attach content then pass the thing to the HTML processor for heavy lifting.
-              new-observation (assoc observation :input-content (:body content))
+              ; Need to include the :input-url so any relative canonical URLs can be resolved. 
+              ; (This does happen!)
+              new-observation (assoc observation :input-url input-url :input-content (:body content))
               html-observations (html/process-html-content-observation context new-observation)
               
               ; Include the final redirect URL that we visited.
