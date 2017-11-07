@@ -10,6 +10,7 @@
             [event-data-common.storage.redis :as redis]
             [event-data-common.storage.memory :as memory]
             [event-data-common.storage.store :as store]
+            [event-data-common.url-cleanup :as url-cleanup]
             [clojure.data.json :as json])
   (:import [java.util UUID]))
 
@@ -129,10 +130,10 @@
   (or (canonical-url-for-action action)
       
       (when-let [x (final-url-for-action action)]
-        (web/remove-tracking-params x))
+        (url-cleanup/remove-tracking-params x))
       
       (when-let [x (:url action)]
-        (web/remove-tracking-params x))))
+        (url-cleanup/remove-tracking-params x))))
 
 (defn create-event-from-match
   [evidence-record action match]

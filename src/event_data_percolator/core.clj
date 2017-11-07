@@ -1,10 +1,19 @@
 (ns event-data-percolator.core
   (:require [event-data-percolator.process :as process]
+            [event-data-common.core :as common]
+            [taoensso.timbre :as timbre]
             [clojure.tools.logging :as log])
   (:gen-class))
 
 (defn -main
   [& args]
+
+  (common/init)
+
+  ; Robots file generates unhelpful logging.
+  (timbre/merge-config!
+    {:ns-blacklist ["crawlercommons.robots.*"]})
+
 
   (Thread/setDefaultUncaughtExceptionHandler
     (reify Thread$UncaughtExceptionHandler

@@ -26,8 +26,7 @@
 (def skip-cache (:percolator-skip-robots-cache env))
 
 (defn fetch
-  "Fetch the content at a URL as a string, following redirects and accepting cookies.
-   Take an optional atom to which sequences of urls and status codes will be appended."
+  "Fetch the content at a URL as a string, following redirects and accepting cookies."
   [context url]
   
   (evidence-log/log! (assoc (:log-default context)
@@ -139,7 +138,7 @@
 
 (defn parse-rules
   [robots-file-url file-content]
-  (.parseContent parser robots-file-url (.getBytes file-content "UTF-8") "text/plain" event-data-percolator.consts/user-agent))
+  (.parseContent parser robots-file-url (.getBytes (or file-content "") "UTF-8") "text/plain" event-data-percolator.consts/user-agent))
 
 (defn get-rules
   "Get a Robot Rules object for the given robots.txt file url. Or nil if there aren't any."
@@ -220,51 +219,5 @@
     (and (url-valid? url)
          (not (url-is-landing-page landing-page-domain-set url)))))
 
-(def ignore-parameter-res
-  "Regular expressions of URL parameters that should be ignored.
-   These are parameters that are used for tracking."
-  [
-    #"utm_.*"      ; Google Analytics / Urchin
-    #"WT\..*"      ; WebTrends
-    #"dm_.*"       ; DotMailer
-    #"pk_.*"       ; Piwik
-    #"mc_.*"       ; Mailchimp
-    #"campaign_.*" ; iOS
-  ])
 
-(def ignore-parameter-re
-  (re-pattern (str "^" (clojure.string/join "|" ignore-parameter-res) "$")))
-
-(defn remove-tracking-params
-  "Given a URL and the set of tracking params, remove tracking params."
-  [url]
-  (try
-    (let [original-uri (new URI url)
-          params (URLEncodedUtils/parse original-uri "UTF-8")
-          
-          ; Remove those parameters that we don't want.
-          filtered-params (remove #(re-matches ignore-parameter-re (.getName %)) params)
-
-          ; URIBuilder adds a path value of "/" when input path is "".
-          ; Explicity set null if there is none.
-          url-path (not-empty (.getPath original-uri))
-
-          new-uri (-> (URIBuilder. original-uri)
-                      
-                      ; If it turns out that there are no parameters [after removal] then
-                      ; we need to explicitly remove them.
-                      ; This ensures we don't get a trailing "?" with no parameters.
-                      (#(if-not (empty? filtered-params)
-                          (.setParameters % filtered-params)
-                          (.removeQuery %)))
-
-                      (.setPath url-path)
-
-                      (.build))]
-      (str new-uri))
-
-    (catch Exception ex
-      (do
-        (log/error "Failed to remove tracking params" url)
-        url))))
 
