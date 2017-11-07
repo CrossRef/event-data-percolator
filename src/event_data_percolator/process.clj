@@ -247,46 +247,50 @@
                context (assoc-in context [:log-default :r] (:id evidence-record))
                start-time (System/currentTimeMillis)]
 
-           (log/info "Look at" (:id evidence-record))
+           (when-not (:id evidence-record)
+            (log/error "No ID in Record! Input was:" value))
 
-           (log/info "Start processing:" (.key record)
-                     "size:" (.serializedValueSize record)
-                     @c "/" (.count records))
+           (when (:id evidence-record)
+             (log/info "Look at" (:id evidence-record))
 
-           (evidence-log/log!
-             (assoc (:log-default context)
-               :i "p0003" :c "process" :f "input-message-time-lag"
-               :v (- (System/currentTimeMillis) (.timestamp record))))
+             (log/info "Start processing:" (.key record)
+                       "size:" (.serializedValueSize record)
+                       @c "/" (.count records))
 
-           (evidence-log/log!
-             (assoc (:log-default context)
-               :i "p0010" :c "process" :f "start"))
+             (evidence-log/log!
+               (assoc (:log-default context)
+                 :i "p0003" :c "process" :f "input-message-time-lag"
+                 :v (- (System/currentTimeMillis) (.timestamp record))))
+
+             (evidence-log/log!
+               (assoc (:log-default context)
+                 :i "p0010" :c "process" :f "start"))
 
 
-           (evidence-log/log!
-             (assoc (:log-default context)
-               :i "p000f" :c "process" :f "input-message-size"
-               :v (.serializedValueSize record)))
+             (evidence-log/log!
+               (assoc (:log-default context)
+                 :i "p000f" :c "process" :f "input-message-size"
+                 :v (.serializedValueSize record)))
 
-          (if schema-errors
-            (log/error "Schema errors with input Evidence Record id" (:id evidence-record) schema-errors)
-            (duplicate-guard
-              context
-              (json/read-str (.value record) :key-fn keyword)
-              
-              ; This is where all the work happens!
-              (partial process-and-save context)))
-        
-          (log/info "Finished processing record" (.key record))
+            (if schema-errors
+              (log/error "Schema errors with input Evidence Record id" (:id evidence-record) schema-errors)
+              (duplicate-guard
+                context
+                (json/read-str (.value record) :key-fn keyword)
+                
+                ; This is where all the work happens!
+                (partial process-and-save context)))
+          
+            (log/info "Finished processing record" (.key record))
 
-          (evidence-log/log!
-             (assoc (:log-default context)
-               :i "p0013" :c "process" :f "finish"
-               :v (- (System/currentTimeMillis) start-time)))))
-        
-        (log/info "Finished processing records" (.count records) "records." (.hashCode records)))
-        ; The only way this ends is violently.
-        (recur (inc batch-c)))))
+            (evidence-log/log!
+               (assoc (:log-default context)
+                 :i "p0013" :c "process" :f "finish"
+                 :v (- (System/currentTimeMillis) start-time))))))
+          
+          (log/info "Finished processing records" (.count records) "records." (.hashCode records)))
+          ; The only way this ends is violently.
+          (recur (inc batch-c)))))
 
 (defn process-kafka-inputs-concurrently
   "Run a number of threads to process inputs."
