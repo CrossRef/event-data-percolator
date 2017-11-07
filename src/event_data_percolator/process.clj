@@ -247,11 +247,11 @@
                context (assoc-in context [:log-default :r] (:id evidence-record))
                start-time (System/currentTimeMillis)]
 
-           (when-not (:id evidence-record)
+           (when (nil? (:id evidence-record))
             (log/error "No ID in Record! Input was:" value))
 
            (when (:id evidence-record)
-             (log/info "Look at" (:id evidence-record))
+             (log/info "Look at Evidence Record ID:" (:id evidence-record))
 
              (log/info "Start processing:" (.key record)
                        "size:" (.serializedValueSize record)
