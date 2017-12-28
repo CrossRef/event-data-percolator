@@ -72,8 +72,14 @@
       "value.serializer" "org.apache.kafka.common.serialization.StringSerializer"})))
 
 (defn storage-key-for-evidence-record-id
+  "S3 path for storing processed public Evidence Records."
   [id]
   (str evidence-record/evidence-url-prefix id))
+
+(defn storage-key-for-failed-evidence-record-id
+  [id]
+  "S3 path for storing public, unprocessed Evidence Records that we failed to process."
+  (str evidence-record/failed-evidence-url-prefix id))
 
 ; The mutex is used as a pessimistic lock.
 ; The timeout is used so that the process can crash if it needs to.
@@ -111,62 +117,74 @@
       (process-f evidence-record-input))))
 
 (defn process-and-save
-  "Accept an Evidence Record input, process, save and send Events downstream."
+  "Accept an Evidence Record input, process, save and send Events downstream.
+   If there's an exception, just log it."
   [context evidence-record-input]
   (log/info "Processing" (:id evidence-record-input))
-  (let [id (:id evidence-record-input)
+  (try
+    (let [id (:id evidence-record-input)
+          [domain-list-artifact-version domain-set] (cached-domain-set)
+          context (assoc context
+                        :id id
+                        :domain-set domain-set
+                        :domain-list-artifact-version domain-list-artifact-version)
 
-        [domain-list-artifact-version domain-set] (cached-domain-set)
+          ; Actually do the work of processing an Evidence Record.
+          evidence-record-processed (evidence-record/process context evidence-record-input)
+          
+          ; Remove the JWT before saving as a public record.
+          public-evidence-record (dissoc evidence-record-processed :jwt)
 
-        context (assoc context
-                      :id id
-                      :domain-set domain-set
-                      :domain-list-artifact-version domain-list-artifact-version)
+          storage-key (storage-key-for-evidence-record-id id)
+          events (evidence-record/extract-all-events evidence-record-processed)
+          jwt (:jwt evidence-record-input)
+          topic (:global-event-input-topic env)]
 
+      (log/info "Saving" id)
+      (store/set-string @evidence-store storage-key (json/write-str public-evidence-record))
+
+      ; If everything went ok, save Actions for deduplication.
+      (log/debug "Setting deduplication info for" id)
+      (action/store-action-duplicates evidence-record-processed)
+
+      (doseq [event events]
+        (log/debug "Sending event: " (:id event))
         
-        ; Actually do the work of processing an Evidence Record.
-        evidence-record-processed (evidence-record/process context evidence-record-input)
-        
-        ; Remove the JWT before saving as a public record.
-        public-evidence-record (dissoc evidence-record-processed :jwt)
+        (try
+          ; Wait for the future, so sending is synchronous.
+          (.get (.send @kafka-producer
+                 (ProducerRecord. topic
+                                  (:id event)
 
-        storage-key (storage-key-for-evidence-record-id id)
-        events (evidence-record/extract-all-events evidence-record-processed)
-        jwt (:jwt evidence-record-input)
-        topic (:global-event-input-topic env)]
-
-    (log/info "Saving" id)
-    (store/set-string @evidence-store storage-key (json/write-str public-evidence-record))
-
-    ; If everything went ok, save Actions for deduplication.
-    (log/debug "Setting deduplication info for" id)
-    (action/store-action-duplicates evidence-record-processed)
-
-    (doseq [event events]
-      (log/debug "Sending event: " (:id event))
-      
-
-      (try
-        ; Wait for the future, so sending is synchronous.
-        (.get (.send @kafka-producer
-               (ProducerRecord. topic
-                                (:id event)
-
-                                ; Piggy-back the JWT in the Event. Bus will understand.
-                                (json/write-str (assoc event :jwt jwt)))))
-
-        (evidence-log/log! (assoc (:log-default context)
-                                  :i "p000c"
-                                  :c "process" :f "send-event" :n (:id event)))
-
-        (catch Exception ex
-          (log/error "Exception sending Event ID to Kafka" (:id event) ":" (.getMessage ex))
+                                  ; Piggy-back the JWT in the Event. Bus will understand.
+                                  (json/write-str (assoc event :jwt jwt)))))
 
           (evidence-log/log! (assoc (:log-default context)
-                          :i "p001d"
-                          :c "process" :f "send-event-error" :n (:id event))))))
+                                    :i "p000c"
+                                    :c "process" :f "send-event" :n (:id event)))
 
-    (log/info "Finished saving" id)))
+          (catch Exception ex
+            (log/error "Exception sending Event ID to Kafka" (:id event) ":" (.getMessage ex))
+
+            (evidence-log/log! (assoc (:log-default context)
+                            :i "p001d"
+                            :c "process" :f "send-event-error" :n (:id event))))))
+
+      (log/info "Finished saving" id))
+
+    ; Last line of defence for if processing an Evidence Record wasn't possible.
+    ; Log the error, save the input for later inspection, and continue.
+    (catch Exception e
+      (let [id (:id evidence-record-input)
+            ; Remove the JWT before saving as a public record.
+            public-input-evidence-record (dissoc evidence-record-input :jwt)
+            storage-key (storage-key-for-failed-evidence-record-id id)]
+
+        (log/error "Exception processing evidence record, so skipping:" (:id evidence-record-input))
+        (log/error e)
+        (log/error "Saving at:" storage-key)
+        (store/set-string @evidence-store storage-key (json/write-str public-input-evidence-record))))))
+
 
 (defn run-process-concurrently
   "Run the same function in a number of threads. Exit if any of them exits."

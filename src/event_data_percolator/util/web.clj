@@ -29,6 +29,7 @@
   "Fetch the content at a URL as a string, following redirects and accepting cookies."
   [context url]
   
+  (log/debug "Fetch" url)
   (evidence-log/log! (assoc (:log-default context)
                             :i "p0018" :c "fetch" :f "request"
                             :u url))
@@ -39,6 +40,7 @@
              depth 0
              url url]
 
+        (log/debug "Fetch" url "depth" depth)
         (if (> depth redirect-depth)
           nil
           (let [result (deref
@@ -62,6 +64,7 @@
              
             ; Timeout has no status.
             (when-let [status (:status result)]
+              (log/debug "Fetch got no status for" url)
               (evidence-log/log! (assoc (:log-default context)
                                  :i "p0019" :c "fetch" :f "response" :u url :v (:status result))))
 
@@ -82,30 +85,35 @@
     ; On error just return nil, but add exception to trace.
     (catch java.net.URISyntaxException exception
       (do
+        (log/debug "Error fetching" url exception)
         (evidence-log/log! (assoc (:log-default context)
                                   :i "p001a" :c "fetch" :f "error" :v "uri-syntax-exception" :u url))
         nil))
 
     (catch java.net.UnknownHostException exception
       (do
+        (log/debug "Error fetching" url exception)
         (evidence-log/log! (assoc (:log-default context)
                                   :i "p001a" :c "fetch" :f "error" :v "unknown-host-exception" :u url))
         nil))
 
     (catch org.httpkit.client.TimeoutException exception
       (do
+        (log/debug "Error fetching" url exception)
         (evidence-log/log! (assoc (:log-default context)
                                   :i "p001a" :c "fetch" :f "error" :v "timeout-exception" :u url))
         nil))
 
     (catch org.httpkit.ProtocolException exception
       (do
+        (log/debug "Error fetching" url exception)
         (evidence-log/log! (assoc (:log-default context)
                                   :i "p001a" :c "fetch" :f "error" :v "protocol-exception" :u url))
         nil))
 
     (catch Exception exception
       (do
+        (log/debug "Error fetching" url exception)
         (evidence-log/log! (assoc (:log-default context)
                                   :i "p001a" :c "fetch" :f "error" :v "unknown-exception" :u url))
 
@@ -123,7 +131,7 @@
 
 (defn fetch-robots-cached
   "Return robots file. Return nil if it doesn't exist."
-  [context robots-file-url]  
+  [context robots-file-url]
   (if skip-cache
     (:body (fetch nil robots-file-url))
     (if-let [cached-result (store/get-string @redis-cache-store robots-file-url)]
@@ -159,6 +167,7 @@
         
         ; If there's no robots file, proceed.
         allowed (if-not rules true (.isAllowed rules url-str))]
+    (log/debug "URL allowed?" url-str allowed)
     allowed))
 
 (defn fetch-respecting-robots

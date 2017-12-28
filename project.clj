@@ -1,6 +1,7 @@
 ; The "major.minor" verison number is used for the Kafka Consumer Group.
-; Every time the major.minor version is bumped, the Percolator will re-scan Evdience records.
-(defproject event-data-percolator "0.4.9"
+; Every time the major.minor version is bumped, the Percolator will re-scan Evdience records from the start.
+; Otherwise the normal behaviour of continuing to consume new records.
+(defproject event-data-percolator "0.4.10"
   :description "Event Data Percolator"
   :url "http://eventdata.crossref.org/"
   :license {:name "MIT License"
@@ -43,6 +44,9 @@
                  [org.apache.commons/commons-io "1.3.2"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.apache.kafka/kafka-clients "0.10.2.0"]]
+  
+  
+
   :jvm-opts ["-Duser.timezone=UTC" "-Xmx6g"]
   :main ^:skip-aot event-data-percolator.core
   :target-path "target/%s"

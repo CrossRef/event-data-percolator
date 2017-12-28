@@ -331,6 +331,7 @@ The Percolator uses Event Data's global namespace of configuration values. The f
  - `PERCOLATOR_SKIP_DOI_CACHE` - true or don't set
  - `PERCOLATOR_SKIP_LANDING_PAGE_CACHE` - true or don't set
  - `PERCOLATOR_SKIP_ROBOTS_CACHE` - true or don't set
+ - `PERCOLATOR_LOG_LEVEL` - one of 'debug' or 'info'. Defaults to 'info'.
 
 ## Configure Kafka
 

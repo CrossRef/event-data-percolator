@@ -2,7 +2,8 @@
   (:require [event-data-percolator.process :as process]
             [event-data-common.core :as common]
             [taoensso.timbre :as timbre]
-            [clojure.tools.logging :as log])
+            [clojure.tools.logging :as log]
+            [config.core :refer [env]])
   (:gen-class))
 
 (defn -main
@@ -10,10 +11,19 @@
 
   (common/init)
 
-  ; Robots file generates unhelpful logging.
+  
   (timbre/merge-config!
-    {:ns-blacklist ["crawlercommons.robots.*"]})
+    {:ns-blacklist [
+       ; Robots file generates unhelpful logging.
+       "crawlercommons.robots.*"
+      
+       ; Kafka's DEBUG is overly chatty.
+       "org.apache.kafka.clients.consumer.internals.*"]
+     :level (condp = (env :percolator-log-level) "debug" :debug "info" :info :info)})
 
+  ; A log message at each level.
+  (log/info "Starting Percolator.")
+  (log/debug "Starting Percolator.")
 
   (Thread/setDefaultUncaughtExceptionHandler
     (reify Thread$UncaughtExceptionHandler

@@ -56,6 +56,10 @@
   "Prefix where records are stored."
   "evidence/")
 
+(def failed-evidence-url-prefix
+  "Prefix where failed records are stored."
+  "failed-evidence/")
+
 (defn generate-url
   "Generate a URL for the Evidence Record (where it will be accessible)"
   [id]
