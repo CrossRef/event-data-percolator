@@ -69,7 +69,7 @@
                                  :i "p0019" :c "fetch" :f "response" :u url :v (:status result))))
 
             (when (= :timeout (:error result))
-              (log/warn "Deref timed out!")
+              (log/warn "Deref timed out!" url)
               (evidence-log/log! (assoc (:log-default context)
                                  :c "fetch" :f "error" :u url :v "timeout")))
 
