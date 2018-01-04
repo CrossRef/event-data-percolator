@@ -229,7 +229,7 @@
      (log/info (json/write-str
                 {:type "EvidenceRecordSize"
                  :bytes (.serializedValueSize record)
-                  :proportion-max (/ (float (.serializedValueSize record)) (float max-request-size))}))
+                 :proportion-max (/ (float (.serializedValueSize record)) (float max-request-size))}))
 
      (evidence-log/log!
        (assoc (:log-default context)
@@ -261,6 +261,20 @@
        (assoc (:log-default context)
          :i "p0013" :c "process" :f "finish"
          :v (- (System/currentTimeMillis) start-time))))))
+
+(def concurrency (Integer/parseInt (:percolator-process-concurrency env "1")))
+
+(defn ppmap
+  "pmap with more threads. This will be used with actions that take a long time to run but aren't very heavy."
+  ([f coll]
+    (log/info "Processing" (.count coll) "with parallelism" concurrency)
+    (let [rets (map #(future (f %)) coll)
+          step (fn step [[x & xs :as vs] fs]
+                 (lazy-seq
+                  (if-let [s (seq fs)]
+                    (cons (deref x) (step xs (rest s)))
+                    (map deref vs))))]
+      (step rets (drop concurrency rets)))))
 
 (defn process-kafka-inputs
   "Process an input stream from Kafka in this thread."
@@ -319,7 +333,7 @@
        ; This should strike the right balance between Evidence Records with few Actions (quick to get over with but take overhead)
        ; and large, slow ones.
        (let [before (System/currentTimeMillis)]
-         (dorun (pmap (partial process-kafka-record context max-request-size) records))
+         (dorun (ppmap (partial process-kafka-record context max-request-size) records))
          (let [diff (- (System/currentTimeMillis) before)]
             (log/info (json/write-str {:type "BatchDuration" :ms diff}))))
           
