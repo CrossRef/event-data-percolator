@@ -211,7 +211,7 @@
     (map #(vector (.partition %) (- (get end-offsets %) (.position consumer %))) partitions)))
 
 (defn process-kafka-record
-  [context max-request-size ^ConsumerRecord record]
+  [context fetch-max-bytes ^ConsumerRecord record]
   (let [value (.value record)
         evidence-record (json/read-str value :key-fn keyword)
         schema-errors (evidence-record/validation-errors evidence-record)
@@ -229,7 +229,7 @@
      (log/info (json/write-str
                 {:type "EvidenceRecordSize"
                  :bytes (.serializedValueSize record)
-                 :proportion-max (/ (float (.serializedValueSize record)) (float max-request-size))}))
+                 :proportion-max (/ (float (.serializedValueSize record)) (float fetch-max-bytes))}))
 
      (evidence-log/log!
        (assoc (:log-default context)
@@ -280,11 +280,12 @@
   "Process an input stream from Kafka in this thread."
   []
   (let [; Hardcoded size in bytes for the maximum chunk size that Kafka Consumer can retrieve.
-        ; This is Kafka's current default value of 1MiB. 
+        ; This is 1MiB. Kafka's default is 50 MiB but this is too coarse grained and will lead to pointless delays.
+        ; Plus the amount of heap required for 50MiB of Evidence Records may be wasteful.
         ; A typical Evidence Record cab be up to around 10KiB, meaning ~100 records per batch.
-        ; This size means sufficiently large chunks for parallelism.
+        ; Hopefully this strikes the righ tbalance between sufficiently large chunks for parallelism, lag, and coordination overhead.
         ; We're logging the size of each Evidence Record as a proportion of maximum for operations monitoring.
-        max-request-size 1048576
+        fetch-max-bytes 1048576
 
         ; Execution context for all processing involved in processing this Evidence Record.
         ; This context is passed to all functions that need it.
@@ -296,7 +297,7 @@
            "key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer"
            "value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer"
            "auto.offset.reset" "earliest"
-           "max.request.size" (str max-request-size)
+           "fetch.max.bytes" (str fetch-max-bytes)
            "session.timeout.ms" (int 60000)})
 
        topic-name (:percolator-input-evidence-record-topic env)]
@@ -333,7 +334,7 @@
        ; This should strike the right balance between Evidence Records with few Actions (quick to get over with but take overhead)
        ; and large, slow ones.
        (let [before (System/currentTimeMillis)]
-         (dorun (ppmap (partial process-kafka-record context max-request-size) records))
+         (dorun (ppmap (partial process-kafka-record context fetch-max-bytes) records))
          (let [diff (- (System/currentTimeMillis) before)]
             (log/info (json/write-str {:type "BatchDuration" :ms diff}))))
           
