@@ -77,6 +77,7 @@
   "Map over actions within an Input Evidence Record, leaving the rest intact.
    The action ID is inserted into the log-default object in the context.
    call (f context evidence-record action)"
+   ; This is not a good candidate for pmap, as Actions will typically have only a few items.
   [context f evidence-record]
   (assoc evidence-record
     :pages (map (fn [page]

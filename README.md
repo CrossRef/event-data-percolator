@@ -66,7 +66,7 @@ The interpretation and formulation of the ID is up to the Agent:
 
 ## Workflow
 
-The Percolator accepts Input Evidence Records from an Apache Kafka topic. Because of the design of Kafka, clients should be able to deal with duplicate inputs. The Percolator process function doesn't re-process Input Evidence Records when it knows it is already processing it elsewhere, or where it has already been done. It does this by taking out a mutex in Redis (which times out) and by checking the existence of the Evidence Record in the Evidence Registry. The Percolator runs a configurable number of threads, each of which consumes a number of partitions of the Input Evidence Record Topic.
+The Percolator accepts Input Evidence Records from an Apache Kafka topic. Because of the design of Kafka, clients should be able to deal with duplicate inputs. The Percolator process function doesn't re-process Input Evidence Records when it knows it is already processing it elsewhere, or where it has already been done. It does this by taking out a mutex in Redis (which times out) and by checking the existence of the Evidence Record in the Evidence Registry. Each instance of the Percolator runs a single Kafka client, but 
 
 During a process cycle, the Percolator:
 
@@ -322,7 +322,6 @@ The Percolator uses Event Data's global namespace of configuration values. The f
  - `PERCOLATOR_MUTEX_REDIS_HOST`
  - `PERCOLATOR_MUTEX_REDIS_PORT`
  - `PERCOLATOR_MUTEX_REDIS_PORT` 
- - `PERCOLATOR_PROCESS_CONCURRENCY`
  - `PERCOLATOR_ROBOTS_CACHE_REDIS_DB`
  - `PERCOLATOR_ROBOTS_CACHE_REDIS_HOST`
  - `PERCOLATOR_ROBOTS_CACHE_REDIS_PORT`

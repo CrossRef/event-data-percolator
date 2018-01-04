@@ -16,7 +16,7 @@
             [event-data-common.evidence-log :as evidence-log]
             [robert.bruce :refer [try-try-again]])
   (:import [org.apache.kafka.clients.producer KafkaProducer Producer ProducerRecord]
-           [org.apache.kafka.clients.consumer KafkaConsumer Consumer ConsumerRecords]
+           [org.apache.kafka.clients.consumer KafkaConsumer Consumer ConsumerRecords ConsumerRecord]
            [org.apache.kafka.common TopicPartition PartitionInfo]))
 
 (def domain-list-artifact-name "crossref-domain-list")
@@ -210,14 +210,70 @@
         end-offsets (.endOffsets consumer partitions)]
     (map #(vector (.partition %) (- (get end-offsets %) (.position consumer %))) partitions)))
 
+(defn process-kafka-record
+  [context max-request-size ^ConsumerRecord record]
+  (let [value (.value record)
+        evidence-record (json/read-str value :key-fn keyword)
+        schema-errors (evidence-record/validation-errors evidence-record)
+       
+        context (assoc-in context [:log-default :r] (:id evidence-record))
+        start-time (System/currentTimeMillis)]
+
+   (when (nil? (:id evidence-record))
+    (log/error "No ID in Record! Input was:" value))
+
+   (when (:id evidence-record)
+     (log/info "Look at Evidence Record ID:" (:id evidence-record))
+
+     ; Log both absolute size and proportion of maxmum possible size.
+     (log/info {:type "EvidenceRecordSize"
+                :bytes (.serializedValueSize record)
+                :proportion-max (/ (float (.serializedValueSize record)) (float max-request-size))})
+
+     (evidence-log/log!
+       (assoc (:log-default context)
+         :i "p0003" :c "process" :f "input-message-time-lag"
+         :v (- (System/currentTimeMillis) (.timestamp record))))
+
+     (evidence-log/log!
+       (assoc (:log-default context)
+         :i "p0010" :c "process" :f "start"))
+
+
+     (evidence-log/log!
+       (assoc (:log-default context)
+         :i "p000f" :c "process" :f "input-message-size"
+         :v (.serializedValueSize record)))
+
+    (if schema-errors
+      (log/error "Schema errors with input Evidence Record id" (:id evidence-record) schema-errors)
+      (duplicate-guard
+        context
+        (json/read-str (.value record) :key-fn keyword)
+        
+        ; This is where all the work happens!
+        (partial process-and-save context)))
+
+    (log/info "Finished processing record" (.key record))
+
+    (evidence-log/log!
+       (assoc (:log-default context)
+         :i "p0013" :c "process" :f "finish"
+         :v (- (System/currentTimeMillis) start-time))))))
+
 (defn process-kafka-inputs
   "Process an input stream from Kafka in this thread."
   []
-  (let [; Execution context for all processing involved in processing this Evidence Record.
+  (let [; Hardcoded size in bytes for the maximum chunk size that Kafka Consumer can retrieve.
+        ; This is Kafka's current default value of 1MiB. 
+        ; A typical Evidence Record cab be up to around 10KiB, meaning ~100 records per batch.
+        ; This size means sufficiently large chunks for parallelism.
+        ; We're logging the size of each Evidence Record as a proportion of maximum for operations monitoring.
+        max-request-size 1048576
+
+        ; Execution context for all processing involved in processing this Evidence Record.
         ; This context is passed to all functions that need it.
-        context {; A default evidence log message with common fields present.
-                 ; As we get down the call stack, more detail is added.
-                 :log-default {:s "percolator"}}
+        context {:log-default {:s "percolator"}}
 
         consumer (KafkaConsumer.
           {"bootstrap.servers" (:global-kafka-bootstrap-servers env)
@@ -225,9 +281,7 @@
            "key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer"
            "value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer"
            "auto.offset.reset" "earliest"
-           ; Each Evidence Record can be quite large and take a while to process.
-           ; Given the ratio of size to quantity, this can be low.
-           "max.poll.records" (int 5)
+           "max.request.size" (str max-request-size)
            "session.timeout.ms" (int 60000)})
 
        topic-name (:percolator-input-evidence-record-topic env)]
@@ -241,86 +295,34 @@
    (loop [batch-c 0]
      (log/info "Polling...")
      (let [^ConsumerRecords records (.poll consumer (int 10000))
-           lag (lag-for-assigned-partitions consumer)
+           lag (lag-for-assigned-partitions consumer)]
 
-           ; Count of number of records processed in this batch.
-           c (atom 0)]
-
-       (log/info "Lag for partitions:" lag)
-
+       ; Every now and again report on the lag for each partition we're subscribed to. It's useful to keep an eye on this.
        ; Only need to log this infrequently, as it's very chatty.
        (when (zero? (rem batch-c 100))
          (doseq [[partition-number partition-lag] lag]
-           (evidence-log/log!
+          ; Log for operations analytics.
+          (log/info {:type "PartitionLag" :partition partition-number :lag partition-lag})
+
+          ; Useful for Evidence Logs to explain for delays and interruptions.
+          (evidence-log/log!
               (assoc (:log-default context)
                 :i "p000d" :c "process" :f "input-message-lag"
                 :p partition-number :v partition-lag))))
        
-       (log/info "Got" (.count records) "records." (.hashCode records))
-       (doseq [^ConsumerRecords record records]
-         (swap! c inc)
-         (let [value (.value record)
-               evidence-record (json/read-str value :key-fn keyword)
-               schema-errors (evidence-record/validation-errors evidence-record)
-               context (assoc-in context [:log-default :r] (:id evidence-record))
-               start-time (System/currentTimeMillis)]
-
-           (when (nil? (:id evidence-record))
-            (log/error "No ID in Record! Input was:" value))
-
-           (when (:id evidence-record)
-             (log/info "Look at Evidence Record ID:" (:id evidence-record))
-
-             (log/info "Start processing:" (.key record)
-                       "size:" (.serializedValueSize record)
-                       @c "/" (.count records))
-
-             (evidence-log/log!
-               (assoc (:log-default context)
-                 :i "p0003" :c "process" :f "input-message-time-lag"
-                 :v (- (System/currentTimeMillis) (.timestamp record))))
-
-             (evidence-log/log!
-               (assoc (:log-default context)
-                 :i "p0010" :c "process" :f "start"))
-
-
-             (evidence-log/log!
-               (assoc (:log-default context)
-                 :i "p000f" :c "process" :f "input-message-size"
-                 :v (.serializedValueSize record)))
-
-            (if schema-errors
-              (log/error "Schema errors with input Evidence Record id" (:id evidence-record) schema-errors)
-              (duplicate-guard
-                context
-                (json/read-str (.value record) :key-fn keyword)
-                
-                ; This is where all the work happens!
-                (partial process-and-save context)))
+       ; We don't know the memory size of the batch, just the number of records.
+       ; We do log the size of each one though.
+       (log/info {:type "BatchSize" :count (.count records)})
+       
+       ; Each Evidence Record gets processed in parallel.
+       ; This should strike the right balance between Evidence Records with few Actions (quick to get over with but take overhead)
+       ; and large, slow ones.
+       (let [before (System/currentTimeMillis)]
+         (dorun (pmap (partial process-kafka-record context max-request-size) records))
+         (let [diff (- (System/currentTimeMillis) before)]
+            (log/info {:type "BatchDuration" :ms diff})))
           
-            (log/info "Finished processing record" (.key record))
-
-            (evidence-log/log!
-               (assoc (:log-default context)
-                 :i "p0013" :c "process" :f "finish"
-                 :v (- (System/currentTimeMillis) start-time))))))
-          
-          (log/info "Finished processing records" (.count records) "records." (.hashCode records)))
-          ; The only way this ends is violently.
-          (recur (inc batch-c)))))
-
-(defn process-kafka-inputs-concurrently
-  "Run a number of threads to process inputs."
-  []
-  (evidence-log/log!
-    {:s "percolator"
-     :c "process"
-     :f "version"
-     :v util/percolator-version})
-
-  (let [concurrency (Integer/parseInt (:percolator-process-concurrency env "1"))]
-    (log/info "Starting to process in" concurrency "threads.")
-    (run-process-concurrently concurrency process-kafka-inputs)
-    (log/error "Stopped processing!")))
+       (log/info "Finished processing records" (.count records) "records." (.hashCode records)))
+       ; The only way this ends is violently.
+       (recur (inc batch-c)))))
 
