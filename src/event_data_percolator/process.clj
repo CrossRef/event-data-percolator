@@ -226,9 +226,10 @@
      (log/info "Look at Evidence Record ID:" (:id evidence-record))
 
      ; Log both absolute size and proportion of maxmum possible size.
-     (log/info {:type "EvidenceRecordSize"
-                :bytes (.serializedValueSize record)
-                :proportion-max (/ (float (.serializedValueSize record)) (float max-request-size))})
+     (log/info (json/write-str
+                {:type "EvidenceRecordSize"
+                 :bytes (.serializedValueSize record)
+                  :proportion-max (/ (float (.serializedValueSize record)) (float max-request-size))}))
 
      (evidence-log/log!
        (assoc (:log-default context)
@@ -302,7 +303,7 @@
        (when (zero? (rem batch-c 100))
          (doseq [[partition-number partition-lag] lag]
           ; Log for operations analytics.
-          (log/info {:type "PartitionLag" :partition partition-number :lag partition-lag})
+          (log/info (json/write-str {:type "PartitionLag" :partition partition-number :lag partition-lag}))
 
           ; Useful for Evidence Logs to explain for delays and interruptions.
           (evidence-log/log!
@@ -312,7 +313,7 @@
        
        ; We don't know the memory size of the batch, just the number of records.
        ; We do log the size of each one though.
-       (log/info {:type "BatchSize" :count (.count records)})
+       (log/info (json/write-str {:type "BatchSize" :count (.count records)}))
        
        ; Each Evidence Record gets processed in parallel.
        ; This should strike the right balance between Evidence Records with few Actions (quick to get over with but take overhead)
@@ -320,7 +321,7 @@
        (let [before (System/currentTimeMillis)]
          (dorun (pmap (partial process-kafka-record context max-request-size) records))
          (let [diff (- (System/currentTimeMillis) before)]
-            (log/info {:type "BatchDuration" :ms diff})))
+            (log/info (json/write-str {:type "BatchDuration" :ms diff}))))
           
        (log/info "Finished processing records" (.count records) "records." (.hashCode records)))
        ; The only way this ends is violently.
