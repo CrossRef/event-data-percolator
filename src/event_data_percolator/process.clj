@@ -313,18 +313,16 @@
      (let [^ConsumerRecords records (.poll consumer (int 10000))
            lag (lag-for-assigned-partitions consumer)]
 
-       ; Every now and again report on the lag for each partition we're subscribed to. It's useful to keep an eye on this.
-       ; Only need to log this infrequently, as it's very chatty.
-       (when (zero? (rem batch-c 100))
-         (doseq [[partition-number partition-lag] lag]
-          ; Log for operations analytics.
-          (log/info (json/write-str {:type "PartitionLag" :partition partition-number :lag partition-lag}))
+       ; Report on the partition lag. As batches are large and far between, it's OK to do this every batch.
+       (doseq [[partition-number partition-lag] lag]
+        ; Log for operations analytics.
+        (log/info (json/write-str {:type "PartitionLag" :partition partition-number :lag partition-lag}))
 
-          ; Useful for Evidence Logs to explain for delays and interruptions.
-          (evidence-log/log!
-              (assoc (:log-default context)
-                :i "p000d" :c "process" :f "input-message-lag"
-                :p partition-number :v partition-lag))))
+        ; Useful for Evidence Logs to explain for delays and interruptions.
+        (evidence-log/log!
+            (assoc (:log-default context)
+              :i "p000d" :c "process" :f "input-message-lag"
+              :p partition-number :v partition-lag)))
        
        ; We don't know the memory size of the batch, just the number of records.
        ; We do log the size of each one though.
