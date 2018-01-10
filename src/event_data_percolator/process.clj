@@ -17,7 +17,8 @@
             [robert.bruce :refer [try-try-again]])
   (:import [org.apache.kafka.clients.producer KafkaProducer Producer ProducerRecord]
            [org.apache.kafka.clients.consumer KafkaConsumer Consumer ConsumerRecords ConsumerRecord]
-           [org.apache.kafka.common TopicPartition PartitionInfo]))
+           [org.apache.kafka.common TopicPartition PartitionInfo]
+           [java.util.concurrent Executors]))
 
 (def domain-list-artifact-name "crossref-domain-list")
 
@@ -262,19 +263,28 @@
          :i "p0013" :c "process" :f "finish"
          :v (- (System/currentTimeMillis) start-time))))))
 
-(def concurrency (Integer/parseInt (:percolator-process-concurrency env "1")))
+; Concurrency is used both to se the default thread pool for `future` but also as a parallelism parameter
+; to do-parallel. Both must be set to get any effect. NB other bits of the code, and dependent libraries may
+; draw from this threadpool, so do-parallel partitions will never be 1:1 with the thread pool.
+(def concurrency (atom 1))
+(when-let [concurrency-str (:percolator-process-concurrency env)]
+  (let [concurrency-val (Integer/parseInt concurrency-str)]
+    (reset! concurrency concurrency-val)
+    (set-agent-send-off-executor! (Executors/newFixedThreadPool concurrency-val))))
 
-(defn ppmap
-  "pmap with more threads. This will be used with actions that take a long time to run but aren't very heavy."
-  ([f coll]
-    (log/info "Processing" (.count coll) "with parallelism" concurrency)
-    (let [rets (map #(future (f %)) coll)
-          step (fn step [[x & xs :as vs] fs]
-                 (lazy-seq
-                  (if-let [s (seq fs)]
-                    (cons (deref x) (step xs (rest s)))
-                    (map deref vs))))]
-      (step rets (drop concurrency rets)))))
+(defn do-parallel
+  "Apply to to collection in parallel. Coupled to the threadpool size configured by percolator-process-concurrency."
+  [f coll]
+  (let [chunks (partition-all @concurrency coll)
+        chunk-count (atom 0)
+        size (count chunks)]
+    (log/info "Process batch with size:" size " concurrency:" @concurrency)
+    (doseq [chunk chunks]
+      (log/info "Processing chunk" @chunk-count "of" size)
+      (let [futures (doall (map #(future (f %)) chunk))]
+        (dorun (map deref futures)))
+      (swap! chunk-count inc))
+  (log/info "Finished batch with size:" size " concurrency:" @concurrency)))
 
 (defn process-kafka-inputs
   "Process an input stream from Kafka in this thread."
@@ -334,7 +344,10 @@
        ; This should strike the right balance between Evidence Records with few Actions (quick to get over with but take overhead)
        ; and large, slow ones.
        (let [before (System/currentTimeMillis)]
-         (dorun (ppmap (partial process-kafka-record context fetch-max-bytes) records))
+         (do-parallel
+           (partial process-kafka-record context fetch-max-bytes)
+           records)
+
          (let [diff (- (System/currentTimeMillis) before)]
             (log/info (json/write-str {:type "BatchDuration" :ms diff}))))
           
