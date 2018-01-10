@@ -277,7 +277,7 @@
   [f coll]
   (let [chunks (partition-all @concurrency coll)
         chunk-count (atom 0)
-        size (count chunks)]
+        size (count coll)]
     (log/info "Process batch with size:" size " concurrency:" @concurrency)
     (doseq [chunk chunks]
       (log/info "Processing chunk" @chunk-count "of" size)
@@ -290,12 +290,11 @@
   "Process an input stream from Kafka in this thread."
   []
   (let [; Hardcoded size in bytes for the maximum chunk size that Kafka Consumer can retrieve.
-        ; This is 1MiB. Kafka's default is 50 MiB but this is too coarse grained and will lead to pointless delays.
-        ; Plus the amount of heap required for 50MiB of Evidence Records may be wasteful.
-        ; A typical Evidence Record cab be up to around 10KiB, meaning ~100 records per batch.
+        ; This hardcoded to Kafka's default of 50 MiB.
+        ; A typical Evidence Record cab be up to around 10KiB.
         ; Hopefully this strikes the righ tbalance between sufficiently large chunks for parallelism, lag, and coordination overhead.
         ; We're logging the size of each Evidence Record as a proportion of maximum for operations monitoring.
-        fetch-max-bytes 1048576
+        fetch-max-bytes 52428800
 
         ; Execution context for all processing involved in processing this Evidence Record.
         ; This context is passed to all functions that need it.
