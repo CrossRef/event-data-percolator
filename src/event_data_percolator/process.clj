@@ -277,7 +277,7 @@
   [f coll]
   (let [chunks (partition-all @concurrency coll)
         chunk-count (atom 0)
-        size (count coll)]
+        size (.count coll)]
     (log/info "Process batch with size:" size " concurrency:" @concurrency)
     (doseq [chunk chunks]
       (log/info "Processing chunk" @chunk-count "of" size)
