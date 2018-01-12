@@ -187,23 +187,6 @@
         (store/set-string @evidence-store storage-key (json/write-str public-input-evidence-record))))))
 
 
-(defn run-process-concurrently
-  "Run the same function in a number of threads. Exit if any of them exits."
-  [concurrency run-f]
-  (log/info "Start process queue")
-  (let [threads (map (fn [thread-number]
-                       (log/info "Starting processing thread number" thread-number)
-                       (thread 
-                        (log/info "Running processing thread number" thread-number)
-                        (run-f)
-                        (log/error "Stopped processing thread number" thread-number)))
-                     (range concurrency))]
-
-    ; Wait for any threads to exit. They shoudln't.
-    (alts!! threads)
-
-    (log/warn "One thread died, exiting.")))
-
 (defn lag-for-assigned-partitions
   "Return map of topic partition number to message lag."
   [consumer]
@@ -261,7 +244,10 @@
     (evidence-log/log!
        (assoc (:log-default context)
          :i "p0013" :c "process" :f "finish"
-         :v (- (System/currentTimeMillis) start-time))))))
+         :v (- (System/currentTimeMillis) start-time)))))
+
+    ; Return true to signal completion, can be useful for debugging parallel execution.
+    true)
 
 ; Concurrency is used both to se the default thread pool for `future` but also as a parallelism parameter
 ; to do-parallel. Both must be set to get any effect. NB other bits of the code, and dependent libraries may
@@ -272,19 +258,45 @@
     (reset! concurrency concurrency-val)
     (set-agent-send-off-executor! (Executors/newFixedThreadPool concurrency-val))))
 
+(def future-timeout
+  "Timeout for running background parallel processes. 
+  This is an emergency circuit-breaker, so can be reasonably high."
+ ; 1 hour
+ 3600000)
+
 (defn do-parallel
-  "Apply to to collection in parallel. Coupled to the threadpool size configured by percolator-process-concurrency."
+  "Apply to to collection in parallel. Coupled to the threadpool size configured by percolator-process-concurrency.
+   f should return true to indicate success."
   [f coll]
   (let [chunks (partition-all @concurrency coll)
-        chunk-count (atom 0)
+        ; Start with "chunk 1" for readability.
+        chunk-count (atom 1)
         size (.count coll)]
     (log/info "Process batch with size:" size " concurrency:" @concurrency)
     (doseq [chunk chunks]
-      (log/info "Processing chunk" @chunk-count "of" size)
-      (let [futures (doall (map #(future (f %)) chunk))]
-        (dorun (map deref futures)))
-      (swap! chunk-count inc))
+      (log/info "Processing chunk" @chunk-count "of" (count chunks) "in a batch size" size)
+
+      (let [futures (doall
+                      (map #(future
+                              (try
+                                (f %)
+                              (catch Exception e
+                                (log/error "Unhandled error in do-parallel:" (.getMessage e))
+                                :exception)))
+                           chunk))
+            results (doall (map #(deref % future-timeout :timeout) futures))
+            all-ok (every? true? results)]
+      
+      (when all-ok
+        (log/info "Chunk" @chunk-count "successful."))
+
+      (when-not all-ok
+        (log/error "Chunk" @chunk-count "unsuccessful.")
+        (log/warn "Parallel execution results:" results))
+
+      (swap! chunk-count inc)))
   (log/info "Finished batch with size:" size " concurrency:" @concurrency)))
+
 
 (defn process-kafka-inputs
   "Process an input stream from Kafka in this thread."

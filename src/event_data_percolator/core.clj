@@ -15,7 +15,6 @@
 
   (common/init)
 
-
   (timbre/merge-config!
     {:ns-blacklist [
        ; Robots file generates unhelpful logging.
