@@ -82,11 +82,11 @@
   (assoc evidence-record
     :pages (map (fn [page]
       (assoc page
-        :actions (map #(f
-                        (assoc-in context [:log-default :a] (:id %))
-                        evidence-record
-                        %)
-                        (:actions page)))) (:pages evidence-record))))
+        :actions (doall (map #(f
+                                (assoc-in context [:log-default :a] (:id %))
+                                evidence-record
+                                %)
+                                (:actions page))))) (:pages evidence-record))))
 
 (defn url
   "Associate a URL based on the ID."
@@ -103,19 +103,19 @@
 (defn candidates
   "Produce candidates in input evidence-record."
   [context evidence-record]
-  (log/debug "Candidates in " (:id evidence-record))
+  (log/debug "Candidates in" (:id evidence-record))
   (map-actions context action/process-observations-candidates evidence-record))
 
 (defn match
   "Match candidates in input evidence-record."
   [context evidence-record]
-  (log/debug "Match in " (:id evidence-record))
+  (log/debug "Match in" (:id evidence-record))
   (map-actions context action/match-candidates evidence-record))
 
 (defn dedupe-matches
   "Dedupe matches WITHIN an action."
   [context evidence-record]
-  (log/debug "Dedupe in " (:id evidence-record))
+  (log/debug "Dedupe in" (:id evidence-record))
   (map-actions context action/dedupe-matches evidence-record))
 
 (defn events
@@ -126,6 +126,7 @@
 
 (defn process
   [context evidence-record]
+  (log/debug "Start Evidence Record process in" (:id evidence-record))
   (let [result (->>
           evidence-record
           (url context)
@@ -135,12 +136,13 @@
           (dedupe-matches context)
           (#(assoc-in % [:percolator :artifacts :domain-set-artifact-version] (:domain-list-artifact-version context)))
           (#(assoc-in % [:percolator :software-version] util/percolator-version))
-          (events context))
+          (events context))]
 
-        ; There are lazy sequences in here. Force the entire structure to be realized.
-        realized (clojure.walk/postwalk identity result)]
-    (log/debug "Finished processing" (:id realized))
-    realized))
+    (log/debug "Realizing lazy structure in" (:id evidence-record))
+    ; There are lazy sequences in here. Force the entire structure to be realized.
+    (let [realized (clojure.walk/postwalk identity result)]
+      (log/debug "Finished processing" (:id realized))
+      realized)))
 
 (defn extract-all-events
   "Extract all events for pushing downstream."

@@ -255,16 +255,9 @@
                  :o "e"))
             result)))))
 
-(defn unchunk [s]
-  (when (seq s)
-    (lazy-seq
-      (cons (first s)
-            (unchunk (next s))))))
-
 (defn match-landing-page-url
   "Try a multitude of ways to match, cheapest first."
   [context url]
-  ; Step through lazy seq, an item at a time.
   (or
     (try-from-get-params context url)
     (try-doi-from-url-text context url)

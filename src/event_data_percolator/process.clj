@@ -149,7 +149,7 @@
       (action/store-action-duplicates evidence-record-processed)
 
       (doseq [event events]
-        (log/debug "Sending event: " (:id event))
+        (log/debug "Sending event from" (:id evidence-record-input) "event:" (:id event))
         
         (try
           ; Wait for the future, so sending is synchronous.
