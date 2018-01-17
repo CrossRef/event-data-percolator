@@ -24,7 +24,8 @@
 
 (def percolator-version (System/getProperty "event-data-percolator.version"))
 (assert percolator-version "Failed to detect version.")
-(def percolator-version-major-minor (->> percolator-version (re-find #"^(\d+\.\d+)\.\d+$") second))
+(def percolator-version-major-minor (->> percolator-version (re-find #"^([^.]+\.[^.]+)\.[^.]+$") second))
+
 (assert percolator-version-major-minor "Failed to detect major/minor version.")
 
 (def kafka-send-timeout-seconds
