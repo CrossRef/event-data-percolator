@@ -166,8 +166,8 @@
 
                                   ; Piggy-back the JWT in the Event. Bus will understand.
                                   (json/write-str (assoc event :jwt jwt))))
-                TimeUnit/SECONDS
-                kafka-send-timeout-seconds)
+                kafka-send-timeout-seconds
+                TimeUnit/SECONDS)
 
           (evidence-log/log! (assoc (:log-default context)
                                     :i "p000c"
