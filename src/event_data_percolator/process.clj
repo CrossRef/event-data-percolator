@@ -18,7 +18,7 @@
   (:import [org.apache.kafka.clients.producer KafkaProducer Producer ProducerRecord]
            [org.apache.kafka.clients.consumer KafkaConsumer Consumer ConsumerRecords ConsumerRecord]
            [org.apache.kafka.common TopicPartition PartitionInfo]
-           [java.util.concurrent Executors]))
+           [java.util.concurrent Executors TimeUnit]))
 
 (def domain-list-artifact-name "crossref-domain-list")
 
@@ -26,6 +26,11 @@
 (assert percolator-version "Failed to detect version.")
 (def percolator-version-major-minor (->> percolator-version (re-find #"^(\d+\.\d+)\.\d+$") second))
 (assert percolator-version-major-minor "Failed to detect major/minor version.")
+
+(def kafka-send-timeout-seconds
+  "All Kafka sends should happen more or less immediately.
+  Give up after a minute as a circuit-breaker."
+  (long 60))
 
 (defn retrieve-domain-set
   "Return tuple of [version-url, domain-list-set]"
@@ -152,13 +157,17 @@
         (log/debug "Sending event from" (:id evidence-record-input) "event:" (:id event))
         
         (try
-          ; Wait for the future, so sending is synchronous.
+          ; Wait for the java.util.Concurrent future, so sending is synchronous. 
+          ; Kafka should be configured with a high replication factor, so this may be not be instantaneous. 
+          ; Timeout results in exception.
           (.get (.send @kafka-producer
                  (ProducerRecord. topic
                                   (:id event)
 
                                   ; Piggy-back the JWT in the Event. Bus will understand.
-                                  (json/write-str (assoc event :jwt jwt)))))
+                                  (json/write-str (assoc event :jwt jwt))))
+                TimeUnit/SECONDS
+                kafka-send-timeout-seconds)
 
           (evidence-log/log! (assoc (:log-default context)
                                     :i "p000c"
