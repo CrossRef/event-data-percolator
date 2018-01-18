@@ -78,15 +78,17 @@
    The action ID is inserted into the log-default object in the context.
    call (f context evidence-record action)"
    ; This is not a good candidate for pmap, as Actions will typically have only a few items.
+   ; Force evaluation to be eager, as the final result will be represented in a single Evidence Record in memory anyway.
+   ; This forces each step of the Percolator's work to complete before the next one begins.
   [context f evidence-record]
   (assoc evidence-record
-    :pages (map (fn [page]
-      (assoc page
-        :actions (doall (map #(f
-                                (assoc-in context [:log-default :a] (:id %))
-                                evidence-record
-                                %)
-                                (:actions page))))) (:pages evidence-record))))
+    :pages (doall (map (fn [page]
+          (assoc page
+            :actions (doall (map #(f
+                                    (assoc-in context [:log-default :a] (:id %))
+                                    evidence-record
+                                    %)
+                                    (:actions page))))) (:pages evidence-record)))))
 
 (defn url
   "Associate a URL based on the ID."
