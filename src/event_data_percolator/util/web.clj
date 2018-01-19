@@ -64,7 +64,6 @@
              
             ; Timeout has no status.
             (when-let [status (:status result)]
-              (log/debug "Timeout for" url)
               (evidence-log/log! (assoc (:log-default context)
                                  :i "p0019" :c "fetch" :f "response" :u url :v (:status result))))
 
