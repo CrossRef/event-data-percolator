@@ -14,7 +14,8 @@
             [clojure.core.memoize :as memo]
             [clojure.data.json :as json]
             [event-data-common.evidence-log :as evidence-log]
-            [robert.bruce :refer [try-try-again]])
+            [robert.bruce :refer [try-try-again]]
+            [com.climate.claypoole :as cp])
   (:import [org.apache.kafka.clients.producer KafkaProducer Producer ProducerRecord]
            [org.apache.kafka.clients.consumer KafkaConsumer Consumer ConsumerRecords ConsumerRecord]
            [org.apache.kafka.common TopicPartition PartitionInfo]
@@ -185,7 +186,7 @@
 
     ; Last line of defence for if processing an Evidence Record wasn't possible.
     ; Log the error, save the input for later inspection, and continue.
-    (catch Exception e
+    (catch Throwable e
       (let [id (:id evidence-record-input)
             ; Remove the JWT before saving as a public record.
             public-input-evidence-record (dissoc evidence-record-input :jwt)
@@ -265,48 +266,13 @@
 (def concurrency (atom 1))
 (when-let [concurrency-str (:percolator-process-concurrency env)]
   (let [concurrency-val (Integer/parseInt concurrency-str)]
-    (reset! concurrency concurrency-val)
-    (set-agent-send-off-executor! (Executors/newFixedThreadPool concurrency-val))))
+    (reset! concurrency concurrency-val)))
 
 (def future-timeout
   "Timeout for running background parallel processes. 
   This is an emergency circuit-breaker, so can be reasonably high."
  ; 1 hour
  3600000)
-
-(defn do-parallel
-  "Apply to to collection in parallel. Coupled to the threadpool size configured by percolator-process-concurrency.
-   f should return true to indicate success."
-  [f coll]
-  (let [chunks (partition-all @concurrency coll)
-        ; Start with "chunk 1" for readability.
-        chunk-count (atom 1)
-        size (.count coll)]
-    (log/info "Process batch with size:" size " concurrency:" @concurrency)
-    (doseq [chunk chunks]
-      (log/info "Processing chunk" @chunk-count "of" (count chunks) "in a batch size" size)
-
-      (let [futures (doall
-                      (map #(future
-                              (try
-                                (f %)
-                              (catch Exception e
-                                (log/error "Unhandled error in do-parallel:" (.getMessage e))
-                                :exception)))
-                           chunk))
-            results (doall (map #(deref % future-timeout :timeout) futures))
-            all-ok (every? true? results)]
-      
-      (when all-ok
-        (log/info "Chunk" @chunk-count "successful."))
-
-      (when-not all-ok
-        (log/error "Chunk" @chunk-count "unsuccessful.")
-        (log/warn "Parallel execution results:" results))
-
-      (swap! chunk-count inc)))
-  (log/info "Finished batch with size:" size " concurrency:" @concurrency)))
-
 
 (defn process-kafka-inputs
   "Process an input stream from Kafka in this thread."
@@ -363,9 +329,10 @@
        ; This should strike the right balance between Evidence Records with few Actions (quick to get over with but take overhead)
        ; and large, slow ones.
        (let [before (System/currentTimeMillis)]
-         (do-parallel
-           (partial process-kafka-record context fetch-max-bytes)
-           records)
+         (cp/pdoseq
+           @concurrency
+           [record records]
+           (process-kafka-record context fetch-max-bytes record))
 
          (let [diff (- (System/currentTimeMillis) before)]
             (log/info (json/write-str {:type "BatchDuration" :ms diff}))))
