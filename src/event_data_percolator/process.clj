@@ -228,7 +228,7 @@
 
      (evidence-log/log!
        (assoc (:log-default context)
-         :i "p0003" :c "process" :f "input-message-time-lag"
+         :i "p000e" :c "process" :f "input-message-time-lag"
          :v (- (System/currentTimeMillis) (.timestamp record))))
 
      (evidence-log/log!
