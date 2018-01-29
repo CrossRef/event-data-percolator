@@ -15,6 +15,11 @@
 (def doi-escaped-re #"(10\.\d{4,9}%2[Ff][^\s]+)")
 (def shortdoi-re #"([a-zA-Z0-9]+)")
 
+(def future-timeout
+  "This is an emergency circuit-breaker, so can be reasonably high."
+ ; 1 minute
+ 60000)
+
 (defn try-hostname
   "Try to get a hostname from a URL string."
   [text]
@@ -23,6 +28,8 @@
 (defn resolve-doi
   "Resolve and validate a DOI or ShortDOI, expressed as not-URL form. May or may not be URLEscaped. Return the DOI."
   [context doi]
+
+  (log/debug "resolve-doi input:" doi)
 
   (let [is-short-doi (not (re-matches #"^10\.\d+/.*" doi))
 
@@ -35,7 +42,9 @@
                     {:sleep 5000 :tries 2}
                     #(deref (http/get
                               (str "https://doi.org/api/handles/" input-handle)
-                              {:as :text})))
+                              {:as :text})
+                            future-timeout
+                            nil))
 
         status (:status response)
         body (when (= 200 status)
@@ -87,6 +96,7 @@
 (defn validate-doi-dropping
   "For a given suspected DOI or shortDOI, validate that it exists, possibly chopping some of the end off to get there."
   [context doi]
+  (log/debug "validate-doi-dropping input:" doi)
   (loop [i 0
          doi doi]
     ; Terminate if we're at the end of clipping things off or the DOI no longer looks like an DOI. 
@@ -141,6 +151,8 @@
   "Take a suspected DOI or ShortDOI and return the correct full well-formed, extant DOI.
    This is the function you want."
   [context suspected-doi]
+
+  (log/debug "validate-cached input:" suspected-doi "skip:" skip-cache)
 
   ; There's one "p0015" log message per branch.
   (if skip-cache

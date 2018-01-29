@@ -17,11 +17,11 @@
 
 (def timeout-ms
   "Timeout for HTTP requests."
-  30000)
+  3000)
 
 (def deref-timeout-ms
   "Last-ditch timeout for derefing result. This is a safety-valve to avoid threads hanging."
-  60000)
+  1000)
 
 (def skip-cache (:percolator-skip-robots-cache env))
 
@@ -29,7 +29,8 @@
   "Fetch the content at a URL as a string, following redirects and accepting cookies."
   [context url]
   
-  (log/debug "Fetch" url)
+  (log/debug "fetch input:" url)
+
   (evidence-log/log! (assoc (:log-default context)
                             :i "p0018" :c "fetch" :f "request"
                             :u url))
@@ -40,7 +41,7 @@
              depth 0
              url url]
 
-        (log/debug "Fetch" url "depth" depth)
+        (log/debug "fetch input:" url "depth:" depth)
         (if (> depth redirect-depth)
           nil
           (let [result (deref
@@ -61,14 +62,16 @@
 
                 ; In the case of redirects, return the most recent redirect.
                 reported-result (assoc result :final-url url)]
-             
+            
+            (log/debug "fetch input:" url "status:" (:status result))
+
             ; Timeout has no status.
             (when-let [status (:status result)]
               (evidence-log/log! (assoc (:log-default context)
                                  :i "p0019" :c "fetch" :f "response" :u url :v (:status result))))
 
             (when (= :timeout (:error result))
-              (log/warn "Deref timed out!" url)
+              (log/warn "fetch timeout input:" url)
               (evidence-log/log! (assoc (:log-default context)
                                  :c "fetch" :f "error" :u url :v "timeout")))
 
@@ -131,6 +134,7 @@
 (defn fetch-robots-cached
   "Return robots file. Return nil if it doesn't exist."
   [context robots-file-url]
+  (log/debug "fetch-robots-cached input:" robots-file-url)
   (if skip-cache
     (:body (fetch nil robots-file-url))
     (if-let [cached-result (store/get-string @redis-cache-store robots-file-url)]
@@ -150,6 +154,7 @@
 (defn get-rules
   "Get a Robot Rules object for the given robots.txt file url. Or nil if there aren't any."
   [context robots-file-url]
+  (log/debug "get-rules input:" robots-file-url)
   (when-let [file-content (fetch-robots-cached context robots-file-url)]
     (parse-rules robots-file-url file-content)))
 
@@ -161,18 +166,19 @@
 
 (defn allowed?
   [context url-str]
+  (log/debug "allowed? input:" url-str)
   (let [robots-file-url (new URL (new URL url-str) "/robots.txt")
         rules (get-rules-cached context (str robots-file-url))
         
         ; If there's no robots file, proceed.
         allowed (if-not rules true (.isAllowed rules url-str))]
-    (log/debug "URL allowed?" url-str allowed)
+    (log/debug "allowed? input:" url-str "result:" allowed)
     allowed))
 
 (defn fetch-respecting-robots
   "Fetch URL, respecting robots.txt directives for domain."
   [context url]
-
+  (log/debug "fetch-respecting-robots input:" url)
   (let [allowed (allowed? context url)]
     (evidence-log/log! (assoc (:log-default context)
                               :i "p001b"
@@ -187,6 +193,7 @@
 (defn fetch-ignoring-robots
   "Fetch URL, ignoring any robots.txt directives"
   [context url]
+  (log/debug "fetch-ignoring-robots input:" url)
   (evidence-log/log! (assoc (:log-default context)
                              :i "p001c"
                              :c "robot-check"

@@ -10,7 +10,8 @@
             [event-data-percolator.matchers.plain-doi :as plain-doi]
             [event-data-percolator.matchers.shortdoi-url :as shortdoi-url]
             [event-data-percolator.matchers.landing-page-url :as landing-page-url]
-            [event-data-common.evidence-log :as evidence-log]))
+            [event-data-common.evidence-log :as evidence-log]
+            [clojure.tools.logging :as log]))
 
 ; Each of these names corresponds to an Evidence Log type, so be sure to keep the Evidence Logs docs in step.
 (def candidate-processors {
@@ -28,6 +29,7 @@
 
 (defn match-candidate
   [context candidate]
+  (log/debug "match-candidate")
   (let [t (:type candidate)
         f (candidate-processors t match-unrecognised-type)
         result (f context candidate)]

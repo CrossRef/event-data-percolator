@@ -89,6 +89,8 @@
 (defn process-html-content-observation
   "Process an observation of type html-content."
   [context observation]
+  (log/debug "process-html-content-observation")
+
   (let [input (:input-content observation "")
         candidate-urls (links-from-html input)
 

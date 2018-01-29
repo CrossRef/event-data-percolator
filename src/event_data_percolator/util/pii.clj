@@ -11,6 +11,11 @@
 
 (def pii-re #"([SB][0-9XB\-]{16,20})")
 
+(def future-timeout
+  "This is an emergency circuit-breaker, so can be reasonably high."
+ ; 1 minute
+ 60000)
+
 (defn find-candidate-piis
   "Extract all the PII-looking strings found in this text snippet."
   [text]
@@ -23,12 +28,13 @@
 (defn validate-pii
   "Validate a PII and return the DOI if it's been used as an alternative ID."
   [context pii]
+  (log/debug "validate-pii input:" pii)
   (when-not (clojure.string/blank? pii)
     (let [http-result (try
                    (try-try-again {:sleep 5000 :tries 2}
                     #(-> 
-                      (http/get "https://api.crossref.org/v1/works" {:query-params {:filter (str "alternative-id:" pii)}})
-                       deref
+                       (http/get "https://api.crossref.org/v1/works" {:query-params {:filter (str "alternative-id:" pii)}})
+                       (deref future-timeout nil)
                        :body
                        json/read-str))
                    (catch Exception ex (fn []

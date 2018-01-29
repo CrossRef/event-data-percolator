@@ -41,6 +41,7 @@
 (defn process-plaintext-content-observation
   "Process an observation of type plaintext-content."
   [context observation]
+  (log/debug "process-plaintext-content-observation")
   (let [input (:input-content observation "")
         possible-urls (possible-urls-from-text input)
 

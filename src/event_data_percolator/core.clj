@@ -8,8 +8,6 @@
             [config.core :refer [env]])
   (:gen-class))
 
-
-
 (defn -main
   [& args]
 
@@ -32,7 +30,9 @@
   (Thread/setDefaultUncaughtExceptionHandler
     (reify Thread$UncaughtExceptionHandler
       (uncaughtException [_ thread ex]
-        (log/error ex "Uncaught exception on" (.getName thread)))))
+        (log/error ex "Default uncaught exception:" (.getName thread))
+        ; Intentionally log and prn. There's a suggestion that sometimes logging doesn't work in exceptional circumstances.
+        (prn ex "Default uncaught exception:" (.getName thread)))))
 
   (condp = (first args)
     ; There will be other commands in future, such as 

@@ -1,17 +1,24 @@
 (ns event-data-percolator.matchers.plain-doi
   (:require [event-data-percolator.util.doi :as doi]
             [crossref.util.doi :as crdoi]
-            [event-data-common.evidence-log :as evidence-log])
+            [event-data-common.evidence-log :as evidence-log]
+            [clojure.tools.logging :as log])
   (:import [java.net URLEncoder URLDecoder]))
 
 (defn match-plain-doi
   "Return a canonical DOI if this is a valid, extant DOI."
   [context plain-doi]
+
+  (log/debug "match-plain-doi input:" plain-doi)
+
   (when-let [validated (doi/validate-cached context plain-doi)]
     (crdoi/normalise-doi validated)))
 
 (defn match-plain-doi-candidate
   [context candidate]
+
+  (log/debug "match-plain-doi-candidate input:" candidate)
+
   (let [result (match-plain-doi context (:value candidate))]
     
     (evidence-log/log!

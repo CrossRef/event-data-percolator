@@ -11,7 +11,8 @@
    (:require [event-data-percolator.observation-types.content-url :as content-url]
              [event-data-percolator.observation-types.html :as html]
              [event-data-percolator.observation-types.plaintext :as plaintext]
-             [event-data-percolator.observation-types.url :as url])
+             [event-data-percolator.observation-types.url :as url]
+             [clojure.tools.logging :as log])
    (:import [org.apache.commons.codec.digest DigestUtils]))
 
 (def process-types {

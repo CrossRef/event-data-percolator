@@ -29,6 +29,9 @@
 (defn try-from-get-params
   "If there's a DOI in a get parameter of a URL, find it"
   [context url]
+
+  (log/debug "try-from-get-params input:" url)
+
   (try
     (let [params (-> url cemerick-url/query->map clojure.walk/keywordize-keys)
           doi-like-values (keep (fn [[k v]] (when (re-matches whole-doi-re v) v)) params)
@@ -44,6 +47,8 @@
                :d result
                :e (e result)))
 
+      (log/debug "try-from-get-params result" result)
+
         result)
 
     ; Some things look like URLs but turn out not to be.
@@ -52,6 +57,9 @@
 (defn try-doi-from-url-text
   "Match an embedded DOI, try various treatments to make it fit."
   [context url]
+
+  (log/debug "try-doi-from-url-text input:" url)
+
   (let [matches (map second (re-seq doi-re url))
 
         last-slash (map #(clojure.string/replace % #"^(10\.\d+/(.*))/.*$" "$1") matches)
@@ -77,6 +85,8 @@
 
         result (-> extant first normalize-doi-if-exists)]
 
+    (log/debug "try-doi-from-url-text result:" result)
+
     (evidence-log/log!
       (assoc (:log-default context)
              :i "p0006"
@@ -90,11 +100,16 @@
 
 (defn try-pii-from-url-text
   [context url]
+  
+  (log/debug "try-pii-from-url-text input:" url)
+
   (let [result (->> url
                     pii/find-candidate-piis
                     (map (comp (partial pii/validate-pii context) :value))
                     first)]
     
+    (log/debug "try-pii-from-url-text result:" result)
+
     (evidence-log/log!
       (assoc (:log-default context)
              :i "p0007"
@@ -136,6 +151,9 @@
 (defn try-fetched-page-metadata-content
   "Extract DOI from Metadata tags."
   [context text]
+
+  (log/debug "try-fetched-page-metadata-content")
+
   (try
     (when text
       (let [document (Jsoup/parse text)
@@ -168,6 +186,7 @@
 
 (defn try-fetched-page-metadata
   [context url]
+  (log/debug "try-fetched-page-metadata input:" url)
   (let [should-visit (web/should-visit-landing-page? (:domain-set context) url)]
     (evidence-log/log!
         (assoc (:log-default context)
@@ -203,6 +222,8 @@
 ; Other results are derived algorithmically, so there's no use caching those.
 (defn try-fetched-page-metadata-cached
   [context url]
+  (log/debug "try-fetched-page-metadata-cached input:" url "skip-cache:" skip-cache)
+
   (if skip-cache
     
     ; Skip cache.
@@ -258,6 +279,9 @@
 (defn match-landing-page-url
   "Try a multitude of ways to match, cheapest first."
   [context url]
+
+  (log/debug "match-landing-page-url input:" url)
+  
   (or
     (try-from-get-params context url)
     (try-doi-from-url-text context url)
@@ -266,5 +290,8 @@
 
 (defn match-landing-page-url-candidate
   [context candidate]
+
+  (log/debug "match-landing-page-url-candidate input:" candidate)
+  
   (assoc candidate
     :match (match-landing-page-url context (:value candidate))))

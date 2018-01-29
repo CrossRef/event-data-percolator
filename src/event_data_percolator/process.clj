@@ -128,7 +128,7 @@
   "Accept an Evidence Record input, process, save and send Events downstream.
    If there's an exception, just log it."
   [context evidence-record-input]
-  (log/info "Processing" (:id evidence-record-input))
+  (log/info "process-and-save start:" (:id evidence-record-input))
   (try
     (let [id (:id evidence-record-input)
           [domain-list-artifact-version domain-set] (cached-domain-set)
@@ -148,11 +148,11 @@
           jwt (:jwt evidence-record-input)
           topic (:global-event-input-topic env)]
 
-      (log/info "Saving" id)
+      (log/info "process-and-save save:" id)
       (store/set-string @evidence-store storage-key (json/write-str public-evidence-record))
 
       ; If everything went ok, save Actions for deduplication.
-      (log/debug "Setting deduplication info for" id)
+      (log/debug "process-and-save set duplicate info:" id)
       (action/store-action-duplicates evidence-record-processed)
 
       (doseq [event events]
@@ -182,7 +182,7 @@
                             :i "p001d"
                             :c "process" :f "send-event-error" :n (:id event))))))
 
-      (log/info "Finished saving" id))
+      (log/info "process-and-save finished:" id))
 
     ; Last line of defence for if processing an Evidence Record wasn't possible.
     ; Log the error, save the input for later inspection, and continue.
@@ -207,6 +207,7 @@
 
 (defn process-kafka-record
   [context fetch-max-bytes ^ConsumerRecord record]
+  (log/debug "process-kafka-record start")
   (let [value (.value record)
         evidence-record (json/read-str value :key-fn keyword)
         schema-errors (evidence-record/validation-errors evidence-record)
@@ -257,6 +258,8 @@
          :i "p0013" :c "process" :f "finish"
          :v (- (System/currentTimeMillis) start-time)))))
 
+    (log/debug "process-kafka-record finish")
+
     ; Return true to signal completion, can be useful for debugging parallel execution.
     true)
 
@@ -277,6 +280,7 @@
 (defn process-kafka-inputs
   "Process an input stream from Kafka in this thread."
   []
+  (log/debug "process-kafka-inputs start")
   (let [; Hardcoded size in bytes for the maximum chunk size that Kafka Consumer can retrieve.
         ; This hardcoded to Kafka's default of 50 MiB.
         ; A typical Evidence Record cab be up to around 10KiB.
@@ -306,9 +310,11 @@
    
    ; Loop forever, recording how many batches ever processed.
    (loop [batch-c 0]
-     (log/info "Polling...")
+     (log/info "process-kafka-inputs poll batch" batch-c)
      (let [^ConsumerRecords records (.poll consumer (int 10000))
            lag (lag-for-assigned-partitions consumer)]
+       
+       (log/debug "process-kafka-inputs polled!")
 
        ; Report on the partition lag. As batches are large and far between, it's OK to do this every batch.
        (doseq [[partition-number partition-lag] lag]
@@ -338,6 +344,8 @@
             (log/info (json/write-str {:type "BatchDuration" :ms diff}))))
           
        (log/info "Finished processing records" (.count records) "records." (.hashCode records)))
+       
        ; The only way this ends is violently.
+       (log/debug "process-kafka-inputs next batch")
        (recur (inc batch-c)))))
 

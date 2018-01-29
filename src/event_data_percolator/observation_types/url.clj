@@ -1,6 +1,7 @@
 (ns event-data-percolator.observation-types.url
   "Filter a URL by whether or not it looks like a candidate."
-  (:require [event-data-percolator.util.web :as web])
+  (:require [event-data-percolator.util.web :as web]
+            [clojure.tools.logging :as log])
   (:import [java.net URL]))
 
 (def doi-proxies #{"doi.org" "dx.doi.org" "dx.crossref.org"})
@@ -44,6 +45,7 @@
 (defn process-url-observation
   "Process a url observation into a candidate url. Check if valid and if on the domain list."
   [context observation]
+  (log/debug "process-url-observation input:" observation)
 
   (let [input (:input-url observation "")
         

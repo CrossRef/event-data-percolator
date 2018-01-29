@@ -2,13 +2,16 @@
   "Extract unlinked DOIs, unlinked URLs and linked URLs (including DOIs) from HTML document at given URL."
   (:require [event-data-percolator.observation-types.html :as html]
             [event-data-percolator.util.web :as web]
-            [event-data-common.evidence-log :as evidence-log])
+            [event-data-common.evidence-log :as evidence-log]
+            [clojure.tools.logging :as log])
   (:import [org.jsoup Jsoup]
            [org.apache.commons.codec.digest DigestUtils]
            [java.net URL]))
 
 (defn process-content-url-observation
   [context observation]
+  (log/debug "process-content-url-observation input:" observation)
+
   (let [input-url (:input-url observation "")
         should-visit (web/should-visit-content-page? (:domain-set context) input-url)
 

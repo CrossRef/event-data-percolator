@@ -11,7 +11,8 @@
             [event-data-common.storage.memory :as memory]
             [event-data-common.storage.store :as store]
             [event-data-common.url-cleanup :as url-cleanup]
-            [clojure.data.json :as json])
+            [clojure.data.json :as json]
+            [clojure.tools.logging :as log])
   (:import [java.util UUID]))
 
 (def action-dedupe-store
@@ -29,7 +30,7 @@
    If there's duplicate information (a chunk of JSON representing a previous Evidence Record), associate it with the Action, otherwise pass it through.
    The store is updated with the values in the 'push' process."
   [context evidence-record action]
-
+  (log/debug "dedupe-action id:" (:id action))
   (if-let [id (:id action)]
     (let [k (str "action/" id)
          duplicate-info (store/get-string @action-dedupe-store k)
@@ -45,6 +46,7 @@
   "Process all the observations of an Action to generate Candidates. Collect Candidates.
    If it's a duplicate action, the candidate extractor won't run."
   [context evidence-record action]
+  (log/debug "process-observations-candidates")
   (let [observations (:observations action)
         duplicate? (:duplicate action)
         processed-observations (map
@@ -57,6 +59,7 @@
 (defn match-candidates
   "Attempt to match all candidates into DOIs."
   [context evidence-record action]
+   (log/debug "match-candidates")
    (let [matches (mapcat (fn [observation]
                        (map #(match/match-candidate context %) (:candidates observation)))
                      (:processed-observations action))
@@ -137,7 +140,7 @@
 
 (defn create-event-from-match
   [evidence-record action match]
-  
+  (log/debug "create-event-from-match")
   (let [; subj.url is the URL supplied in the Action.
         subj-url (:url action)
 
@@ -175,6 +178,7 @@
 (defn create-event-from-extra-event
   "Given an extra Event in an Action, expand it to include the full compliment of fields."
   [evidence-record event]
+  (log/debug "create-event-from-extra-event")
   (let [base-event (merge {:evidence_record (:url evidence-record)
                            :id (str (UUID/randomUUID))
                            :source_token (:source-token evidence-record)
@@ -188,6 +192,7 @@
 (defn create-events-for-action
   "Update action to include a seq of Events generated from observations in the Action. Plus extra-events if included, and if there were any matches."
   [context evidence-record action]
+  (log/debug "create-events-for-action")
   (let [events-from-matches (map (partial create-event-from-match evidence-record action) (:matches action))
         events-from-extras (when (not-empty (:matches action)) (map (partial create-event-from-extra-event evidence-record) (:extra-events action)))
         events (concat events-from-matches events-from-extras)]
@@ -197,6 +202,7 @@
 (defn store-action-duplicates
   "Save all action IDs from an evidence record into duplicate records. Called on 'push'."
   [evidence-record]
+  (log/debug "store-action-duplicates")
   (let [actions (mapcat :actions (:pages evidence-record))]
     (doseq [action actions]
       ; Action ID might not be set.
