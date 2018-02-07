@@ -11,9 +11,20 @@
   (:import [java.net URL URI]
            [crawlercommons.robots SimpleRobotRulesParser BaseRobotRules]
            [org.httpkit ProtocolException]
-           [org.apache.http.client.utils URLEncodedUtils URIBuilder]))
+           [org.apache.http.client.utils URLEncodedUtils URIBuilder]
+           [javax.net.ssl SNIHostName SNIServerName SSLEngine SSLParameters]))
 
 (def redirect-depth 4)
+
+(defn sni-configure
+  [^SSLEngine ssl-engine ^URI uri]
+  (let [^SSLParameters ssl-params (.getSSLParameters ssl-engine)]
+    (.setServerNames ssl-params [(SNIHostName. (.getHost uri))])
+    (.setSSLParameters ssl-engine ssl-params)))
+
+(def sni-client (org.httpkit.client/make-client
+                  {:ssl-configurer sni-configure}))
+
 
 (def timeout-ms
   "Timeout for HTTP requests."
@@ -51,7 +62,8 @@
                             :headers headers
                             :as :text
                             :timeout timeout-ms
-                            :throw-exceptions true})
+                            :throw-exceptions true
+                            :client sni-client})
                          deref-timeout-ms
                          ; If this times out, return a special status for the condp below.
                          {:error :timeout})
@@ -62,7 +74,7 @@
 
                 ; In the case of redirects, return the most recent redirect.
                 reported-result (assoc result :final-url url)]
-            
+
             (log/debug "fetch input:" url "status:" (:status result))
 
             ; Timeout has no status.
