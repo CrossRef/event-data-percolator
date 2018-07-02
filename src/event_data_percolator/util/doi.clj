@@ -9,7 +9,8 @@
             [event-data-common.storage.redis :as redis]
             [clojure.tools.logging :as log]
             [event-data-common.evidence-log :as evidence-log]
-            [clojure.data.json :as json]))
+            [clojure.data.json :as json]
+            [event-data-percolator.util.web :as web]))
 
 (def doi-re #"(10\.\d{4,9}/[^\s]+)")
 (def doi-escaped-re #"(10\.\d{4,9}%2[Ff][^\s]+)")
@@ -42,7 +43,8 @@
                     {:sleep 5000 :tries 2}
                     #(deref (http/get
                               (str "https://doi.org/api/handles/" input-handle)
-                              {:as :text})
+                              {:as :text
+                               :client web/sni-client})
                             future-timeout
                             nil))
 

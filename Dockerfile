@@ -1,7 +1,7 @@
 # Event Data Percolator
 # Production build of Crossref Event Data Percolator
 
-FROM clojure:lein-2.7.0-alpine
+FROM clojure:lein-2.8.1-alpine
 MAINTAINER Joe Wass jwass@crossref.org
 
 COPY src /usr/src/app/src
