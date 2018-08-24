@@ -21,6 +21,8 @@
            [org.apache.kafka.common TopicPartition PartitionInfo]
            [java.util.concurrent Executors TimeUnit]))
 
+
+
 (def domain-list-artifact-name "crossref-domain-list")
 
 (def percolator-version (System/getProperty "event-data-percolator.version"))
@@ -294,7 +296,7 @@
 
         consumer (KafkaConsumer.
           {"bootstrap.servers" (:global-kafka-bootstrap-servers env)
-           "group.id"  (str "percolator-process" percolator-version-major-minor)
+           "group.id"  (str "percolator-process" percolator-version-major-minor (:percolator-kafka-consumer-group-bump env))
            "key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer"
            "value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer"
            "auto.offset.reset" "earliest"

@@ -332,7 +332,8 @@ The Percolator uses Event Data's global namespace of configuration values. The f
  - `PERCOLATOR_SKIP_LANDING_PAGE_CACHE` - true or don't set
  - `PERCOLATOR_SKIP_ROBOTS_CACHE` - true or don't set
  - `PERCOLATOR_LOG_LEVEL` - one of 'debug' or 'info'. Defaults to 'info'.
-
+ - `PERCOLATOR_KAFKA_CONSUMER_GROUP_BUMP` - leave empty by default. If supplied, can be used to bump to a new consumer group during sysadmin
+ 
 ## Configure Kafka
 
 You should create a Kafka topic for the Input Evidence records with suffucient partitions for future expansion. Also note that a status topic should exist. Topic name should agree with value of PERCOLATOR_INPUT_EVIDENCE_RECORD_TOPIC and GLOBAL_EVENT_INPUT_TOPIC
