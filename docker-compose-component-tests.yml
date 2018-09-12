@@ -24,6 +24,7 @@ services:
      - PERCOLATOR_ROBOTS_CACHE_REDIS_HOST=redis
      - PERCOLATOR_ROBOTS_CACHE_REDIS_DB=7
      - PERCOLATOR_SKIP_ROBOTS_CACHE=TRUE
+     - GLOBAL_EVIDENCE_URL_BASE=https://evidence.eventdata.crossref.org
     depends_on:
      - redis
     command: "lein test :unit"

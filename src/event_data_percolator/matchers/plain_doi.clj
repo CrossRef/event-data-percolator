@@ -30,5 +30,7 @@
                  :d (:match result)
                  :e (if (:match result) "t" "f")))
 
-  (assoc candidate
-         :match result)))
+    (assoc candidate
+         :match result
+         :method :doi-literal
+         :verification :literal)))

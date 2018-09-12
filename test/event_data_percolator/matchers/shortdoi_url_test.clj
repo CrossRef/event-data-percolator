@@ -8,7 +8,10 @@
   (testing "match-shortdoi-url-candidate matches valid shortDOI and converts to full DOI."
     (fake/with-fake-http ["https://doi.org/api/handles/10/hvx" (util/short-doi-ok "10.5555/12345678")]
       (let [result (shortdoi-url/match-shortdoi-url-candidate util/mock-context {:value "http://doi.org/hvx"})]
-        (is (= result {:value "http://doi.org/hvx" :match "https://doi.org/10.5555/12345678"}))))))
+        (is (= result {:value "http://doi.org/hvx"
+                       :match "https://doi.org/10.5555/12345678"
+                       :method :doi-literal
+                       :verification :literal}))))))
 
 ; Regression for https://github.com/CrossRef/event-data-percolator/issues/40
 (deftest ^:component match-shortdoi-url-candidate-empty

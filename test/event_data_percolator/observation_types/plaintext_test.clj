@@ -39,9 +39,9 @@
   (testing "Landing Page URLs can be extracted from text"
     (let [result (plaintext/process-plaintext-content-observation
                   util/mock-context
-                  {:type "html" :input-content "one two three http://example.com/four five http://ignore.com/four"})]
+                  {:type "html" :input-content "one two three http://www.example.com/four five http://ignore.com/four"})]
     
       (is (= result {:type "html"
-                     :input-content "one two three http://example.com/four five http://ignore.com/four"
-                     :candidates [{:value "http://example.com/four" :type :landing-page-url}]})
+                     :input-content "one two three http://www.example.com/four five http://ignore.com/four"
+                     :candidates [{:value "http://www.example.com/four" :type :landing-page-url}]})
           "Article landing page from known domain can be extracted from text. Non-matching domains ignored."))))

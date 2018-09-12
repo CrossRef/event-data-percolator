@@ -21,5 +21,7 @@
                  :e (if (:match result) "t" "f")))
 
     (assoc candidate
-           :match result)))
+           :match result
+           :method :doi-literal
+           :verification :literal)))
 

@@ -11,7 +11,7 @@
             [event-data-common.artifact :as artifact]
             [event-data-common.storage.memory :as memory]
             [event-data-common.storage.store :as store]
-            [clojure.core.memoize :as memo]
+            [event-data-common.landing-page-domain :as landing-page-domain]
             [clojure.data.json :as json]
             [event-data-common.evidence-log :as evidence-log]
             [robert.bruce :refer [try-try-again]]
@@ -20,10 +20,6 @@
            [org.apache.kafka.clients.consumer KafkaConsumer Consumer ConsumerRecords ConsumerRecord]
            [org.apache.kafka.common TopicPartition PartitionInfo]
            [java.util.concurrent Executors TimeUnit]))
-
-
-
-(def domain-list-artifact-name "crossref-domain-list")
 
 (def percolator-version (System/getProperty "event-data-percolator.version"))
 (assert percolator-version "Failed to detect version.")
@@ -36,24 +32,10 @@
   Give up after a minute as a circuit-breaker."
   (long 60))
 
-(defn retrieve-domain-set
-  "Return tuple of [version-url, domain-list-set]"
-  []
-  (log/info "Retrieving domain list artifact")
-
-  ; Fetch the cached copy of the domain list.
-  (let [domain-list-artifact-version (artifact/fetch-latest-version-link domain-list-artifact-name)
-        ; ~ 5KB string, set of ~ 8000
-        domain-set (-> domain-list-artifact-name artifact/fetch-latest-artifact-stream clojure.java.io/reader line-seq set)]
-    [domain-list-artifact-version domain-set]))
 
 (def cache-milliseconds
   "One hour"
   3600000)
-
-(def cached-domain-set
-  "Cache the domain list and version url. It's very rarely actually updated."
-  (memo/ttl retrieve-domain-set {} :ttl/threshold cache-milliseconds))
 
 (def evidence-store
   (delay
@@ -133,11 +115,12 @@
   (log/info "process-and-save start:" (:id evidence-record-input))
   (try
     (let [id (:id evidence-record-input)
-          [domain-list-artifact-version domain-set] (cached-domain-set)
-          context (assoc context
-                        :id id
-                        :domain-set domain-set
-                        :domain-list-artifact-version domain-list-artifact-version)
+          
+          context (-> context
+                      (assoc :id id)
+                      ; Get a copy of the latest landing page domain set.
+                      (landing-page-domain/assoc-domain-decision-structure))
+
 
           ; Actually do the work of processing an Evidence Record.
           evidence-record-processed (evidence-record/process context evidence-record-input)

@@ -1,0 +1,111 @@
+{
+  "domains": [
+    "www.xyz.net",
+    "www.example.com",
+    "www.zombo.com",
+    "www.crossref.org",
+    "psychoceramics.labs.crossref.org",
+    "article.com",
+    "www.ijorcs.org",
+    "www.ncbi.nlm.nih.gov",
+    "www.nomos-elibrary.de",
+    "onlinelibrary.wiley.com"
+  ],
+  "prefixes": [
+    "10.5555",
+    "10.6666",
+    "10.7777"
+  ],
+  "domains-prefixes": {
+    "psychoceramics.labs.crossref.org": {
+      "10.5555": {
+        "domain-recognised": true,
+        "domain-confirmed": true
+      }
+    },
+    "article.com": {
+      "10.5555": {
+        "domain-recognised": true,
+        "domain-confirmed": true
+      }
+    },
+    "www.crossref.org": {
+      "10.13003": {
+        "domain-recognised": true,
+        "domain-confirmed": false
+      }
+    },
+    "www.xyz.net": {
+      "10.5555": {
+        "domain-recognised": true,
+        "domain-confirmed": true
+      }
+    },
+    "www.example.com": {
+      "10.5555": {
+        "domain-recognised": true,
+        "domain-confirmed": true
+      }
+    },
+    "www.zombo.com": {
+      "10.7777": {
+        "domain-recognised": true,
+        "domain-confirmed": true
+      }
+    },
+    "pubsonline.informs.org": {
+      "10.1287": {
+        "domain-recognised": true,
+        "domain-confirmed": true
+      }
+    },
+    "www.circumpolarhealthjournal.net": {
+      "10.3402": {
+        "domain-recognised": true,
+        "domain-confirmed": true
+      }
+    },
+    "ccforum.biomedcentral.com": {
+      "10.1186": {
+        "domain-recognised": true,
+        "domain-confirmed": true
+      }
+    },
+    "jnci.oxfordjournals.org": {
+      "10.1093": {
+        "domain-recognised": true,
+        "domain-confirmed": true
+      }
+    },
+    "link.springer.com": {
+      "10.1007": {
+        "domain-recognised": true,
+        "domain-confirmed": true
+      }
+    },
+    "www.ncbi.nlm.nih.gov": {
+      "10.1007": {
+        "domain-recognised": true,
+        "domain-confirmed": true
+      }
+    },
+    "www.ijorcs.org": {
+      "10.7815": {
+        "domain-recognised": true,
+        "domain-confirmed": true
+      }
+    },
+    "www.nomos-elibrary.de": {
+      "10.5235": {
+        "domain-recognised": true,
+        "domain-confirmed": true
+      }
+    },
+    "onlinelibrary.wiley.com":
+        {"10.1002": {
+          "domain-recognised": true,
+          "domain-confirmed": true
+        }
+    }
+  }
+}

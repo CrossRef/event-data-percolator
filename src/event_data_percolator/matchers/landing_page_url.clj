@@ -1,15 +1,22 @@
 (ns event-data-percolator.matchers.landing-page-url
   (:require [event-data-percolator.util.web :as web]
+            [cemerick.url :as cemerick-url]
+            [clojure.core.memoize :as memo]
+            [clojure.data.json :as json]
             [clojure.tools.logging :as log]
-            [crossref.util.doi :as crdoi]
-            [event-data-percolator.util.doi :as doi]
-            [event-data-percolator.util.pii :as pii]
-            [event-data-common.storage.store :as store]
-            [event-data-common.storage.redis :as redis]
-            [event-data-common.evidence-log :as evidence-log]
             [config.core :refer [env]]
-            [robert.bruce :refer [try-try-again]]
-            [cemerick.url :as cemerick-url])
+            [crossref.util.doi :as crdoi]
+            [event-data-common.artifact :as artifact]
+            [event-data-common.evidence-log :as evidence-log]
+            [event-data-common.landing-page-domain :as landing-page-domain]
+            [event-data-common.storage.redis :as redis]
+            [event-data-common.storage.store :as store]
+            [event-data-percolator.observation-types.html :as html-match]
+            [event-data-percolator.util.doi :as doi]
+            [event-data-percolator.util.html :as html]
+            [event-data-percolator.util.pii :as pii]
+            [event-data-percolator.util.web :as web]
+            [robert.bruce :refer [try-try-again]])
   (:import [java.net URL]
            [org.jsoup Jsoup]))
 
@@ -36,7 +43,14 @@
     (let [params (-> url cemerick-url/query->map clojure.walk/keywordize-keys)
           doi-like-values (keep (fn [[k v]] (when (re-matches whole-doi-re v) v)) params)
           extant (keep (partial doi/validate-cached context) doi-like-values)
-          result (-> extant first normalize-doi-if-exists)]
+          doi (-> extant first normalize-doi-if-exists)
+          
+          ; Check that the domain in question has a relationship with this DOI.
+          verification (cond
+                         (landing-page-domain/domain-confirmed-for-doi? context url doi) :confirmed-domain-prefix
+                         (landing-page-domain/domain-recognised-for-doi? context url doi) :recognised-domain-prefix
+                         (landing-page-domain/domain-recognised? context url) :recognised-domain
+                         :default nil)]
       
       (evidence-log/log!
         (assoc (:log-default context)
@@ -44,12 +58,16 @@
                :c "match-landingpage-url"
                :f "from-get-params"
                :u url
-               :d result
-               :e (e result)))
+               :d doi
+               :e (e doi)))
 
-      (log/debug "try-from-get-params result" result)
+      (log/debug "try-from-get-params result" doi)
 
-        result)
+        
+        (when (and doi verification)
+          {:match doi
+           :method :get-params
+           :verification verification}))
 
     ; Some things look like URLs but turn out not to be.
     (catch IllegalArgumentException _ nil)))
@@ -83,7 +101,14 @@
 
         extant (keep (partial doi/validate-cached context) candidates)
 
-        result (-> extant first normalize-doi-if-exists)]
+        result (-> extant first normalize-doi-if-exists)
+
+        ; Check that the domain in question has a relationship with this DOI.
+        verification (cond
+                       (landing-page-domain/domain-confirmed-for-doi? context url result) :confirmed-domain-prefix
+                       (landing-page-domain/domain-recognised-for-doi? context url result) :recognised-domain-prefix
+                       (landing-page-domain/domain-recognised? context url) :recognised-domain
+                       :default nil)]
 
     (log/debug "try-doi-from-url-text result:" result)
 
@@ -96,7 +121,10 @@
              :d result
              :e (e result)))
 
-        result))
+         (when (and result verification)
+          {:match result
+           :method :url-text
+           :verification verification})))
 
 (defn try-pii-from-url-text
   [context url]
@@ -119,87 +147,11 @@
              :d result
              :e (e result)))
 
-    result))
-
-(def interested-tag-attrs
-  "List of selectors whose attrs we're interested in."
-  [
-    ; e.g. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4852986/?report=classic
-    ["meta[name=citation_doi]" "content"] 
-
-    ; e.g. http://pubsonline.informs.org/doi/abs/10.1287/mnsc.2016.2427
-    ["meta[name=DC.Identifier]" "content"]
-
-    ; e.g. https://figshare.com/articles/A_Modeler_s_Tale/3423371/1
-    ["meta[name=DC.identifier]" "content"]
-
-    ; e.g. http://www.circumpolarhealthjournal.net/index.php/ijch/article/view/18594/html
-    ["meta[name=DC.Identifier.DOI]" "content"] 
-
-    ; e.g. http://pubsonline.informs.org/doi/abs/10.1287/mnsc.2016.2427
-    ["meta[name=DC.Source]" "content"]
-
-    ; e.g.  http://ccforum.biomedcentral.com/articles/10.1186/s13054-016-1322-5
-    ["meta[name=prism.doi]" "content"]])
-
-(def interested-tag-text
-  "List of selectors whose text content we're interested in."
-  [; e.g. http://jnci.oxfordjournals.org/content/108/6/djw160.full
-    "span.slug-doi"])
-
-; Logging for this happens in try-fetched-page-metadata-cached so we can include the :o parameter.
-(defn try-fetched-page-metadata-content
-  "Extract DOI from Metadata tags."
-  [context text]
-
-  (log/debug "try-fetched-page-metadata-content")
-
-  (try
-    (when text
-      (let [document (Jsoup/parse text)
-
-            ; Get specific attribute values from named elements.
-            interested-attr-values (mapcat (fn [[selector attr-name]]
-                                                    (->>
-                                                      (.select document selector)
-                                                      (map #(.attr % attr-name))))
-                                                  interested-tag-attrs)
-
-            ; Get text values from named elements.
-            interested-text-values (mapcat (fn [selector]
-                                                    (->>
-                                                      (.select document selector)
-                                                      (map #(.text %))))
-                                                  interested-tag-text)
-
-            interested-values (distinct (concat interested-attr-values interested-text-values))
-
-            ; Try to normalize by removing recognised prefixes, then resolve
-            extant (keep (comp (partial doi/validate-cached context) crdoi/non-url-doi) interested-values)]
-
-        (-> extant first normalize-doi-if-exists)))
-    ; We're getting text from anywhere. Anything could happen.
-    (catch Exception ex (do
-      (log/warn "Error parsing HTML for DOI.")
-      (.printStackTrace ex)
-      nil))))
-
-(defn try-fetched-page-metadata
-  [context url]
-  (log/debug "try-fetched-page-metadata input:" url)
-  (let [should-visit (web/should-visit-landing-page? (:domain-set context) url)]
-    (evidence-log/log!
-        (assoc (:log-default context)
-               :i "p0002"
-               :c "match-landingpage-url"
-               :f "should-visit-landing-page"
-               :u url
-               :v (if should-visit "t" "f")))
-
-    (when should-visit
-      (->> url (web/fetch-respecting-robots context)
-               :body
-               (try-fetched-page-metadata-content context)))))
+    (when result
+      {:match result
+       :method :pii
+       ; Trust the Crossref metadata lookup to report correctly.
+       :verification :lookup})))
 
 (def redis-db-number (delay (Integer/parseInt (get env :landing-page-cache-redis-db "0"))))
 
@@ -217,17 +169,170 @@
 
 ; Set for component tests.
 (def skip-cache (:percolator-skip-landing-page-cache env))
- 
+
+(defn url-equality
+  "Are the two URLs equal? If so, how equal? Return one of:
+   - :exact - the two paths match exactly
+   - :basic - The domains and paths match but the query strings and schemes don't necessarily. 
+              This is a good middle-ground heuristic.
+   - nil - The two URLs don't match. "
+  [a b]
+  (try
+    ; java.net.URI doesn't parse all URLs we find.
+    (let [a-url (URL. a)
+          b-url (URL. b)
+          
+          ; Try simple string equality first.
+          equal (= a b)
+
+          ; Otherwise check just paths and host. Ignore scheme and query params.
+          basic-equal (and 
+                        (= (-> a-url (.getHost) (.toLowerCase)) (-> a-url (.getHost) (.toLowerCase)))
+                        (= (-> a-url (.getPath) (.toLowerCase)) (-> b-url (.getPath) (.toLowerCase))))]
+      
+      (cond equal :exact
+            basic-equal :basic))
+
+    ; If either is invalid, swallow it.
+    (catch Exception e nil)))
+
+(defn check-url-for-doi
+  "Is the DOI checked as redirecting to this URL? Return one of :exact, :basic or nil."
+  [context url doi]
+  ; Don't retrieve robots as we check URL to DOI redirects,
+  ; as we already have a reason to follow and we're not extracting content.
+  (let [response (web/fetch-ignoring-robots context (crdoi/normalise-doi doi))
+        final-url (:final-url response)
+        equality (url-equality url final-url)]
+    (condp = equality
+      :exact :checked-url-exact
+      :basic :checked-url-basic
+      nil)))
+
+(def verification-priorities
+  "Mapping of match type to preference, lowest best."
+  {; The DOI was visited and redirects back to this URL exactly.
+    :checked-url-exact 1
+
+   ; The DOI was visited and redirects back to this URL almost exactly.
+   :checked-url-basic 2
+
+   ; The DOI has a prefix that has been confirmed to be represented correctly by this domain.
+   :confirmed-domain-prefix 3
+
+   ; The DOI has a prefix that has been recognised for this domain.
+   :recognised-domain-prefix 4
+
+   ; The DOI is specified, and we recognise the domain, as belonging to some member, but no more.
+   :recognised-domain 5
+
+   ; The DOI is specified, but we can't vouch for it.
+   :unrecognised-domain 6})
+
+(defn sort-result-pairs
+  "Take a list of [match-type doi] and sort by preference."
+  [matches]
+  (->> matches 
+    ; First remove those items that don't have priorities. 
+    ; This should never happen, but a mistaken nil would 
+    ; otherwise be sorted into first position.
+    (filter #(some-> % first verification-priorities))
+    (sort-by #(some-> % first verification-priorities))))
+
+(defn doi-from-meta-tags
+  "Return the DOI from meta tags in the retrieved page.
+   Return [verification-type doi], per the `priorities` data."
+  [context url body-content]
+  {:pre [(:domain-decision-structure context)]}
+  (let [dois (when body-content (html/try-fetched-page-metadata-content context body-content))
+        
+        ; Now we build up a list of pairs of [doi method].
+
+        ; Check them to see if they redirect here. Best case.
+        ; Into [:checked-url-exact doi] or [:checked-url-basic doi]
+        checked-dois (keep #(when-let [x (check-url-for-doi context url %)] [x %]) dois)
+
+        ; Check them to see the prefix is confirmed against the domain.
+        ; Into [doi :confirmed]
+        confirmed-domain-dois (keep #(when (landing-page-domain/domain-confirmed-for-doi? context url %) [:confirmed-domain-prefix %]) dois)
+
+        ; Check to see if the prefix is recognised as leading to the domain.
+        recognised-domain-dois (keep #(when (landing-page-domain/domain-recognised-for-doi? context url %) [:recognised-domain-prefix %]) dois)
+
+        ; Check to see if the domain is recognised at all.
+        recognised-domain (keep #(when (landing-page-domain/domain-recognised? context %) [:recognised-domain %]) dois)
+
+        ; Fall-back.
+        fallbacks (map #(vector :unrecognised-domain %) dois)
+
+        matches (concat checked-dois confirmed-domain-dois recognised-domain-dois recognised-domain fallbacks)
+
+        ; Sort them best first, then take the first.
+        result (-> matches sort-result-pairs first)]
+
+    result))
+    
+
+(defn confirmed-doi-in-text-from-url
+  "Visit the URL, scrape the text, return any DOI that redirects back to that page."
+  [context url body-content]
+  (let [response (html-match/process-html-content-observation
+                   context
+                   {:input-content body-content})
+
+        candidates (->> response
+                        :candidates
+                        (map :value)
+                        (map crdoi/normalise-doi)
+                        distinct)
+
+        ; Keep only those DOIs that have a prefix that has led to this domain.
+        ; This avoids visiting every single DOI when we don't think they'll match.
+        dois (filter (partial landing-page-domain/domain-recognised-for-doi? context url) candidates)
+
+        ; Check them to see if they redirect here. Best case.
+        ; As we're scraping the text, we can't afford to return anything that doesn't match.
+        ; Into [:checked-url-exact doi] or [:checked-url-basic doi]
+        matches (keep #(when-let [x (check-url-for-doi context url %)] [x %]) dois)
+
+        ; Unlike the meta tags, there's no fallback in this case. Because we're scraping all DOIs from a page,
+        ; and those DOIs aren't expressed with a specific purpose (they could be citations of other works or 
+        ; the identiier of this one), if none redirect, we have to say that's a failure.
+        ; Sort them best first, then take the first.
+        result (-> matches sort-result-pairs first)]
+    result))
+    
+
+
+(defn try-from-page-content
+  "Failing previous checks, we need to go and retrieve the content."
+  [context url]
+  ; We're not indexing links from this page, so it's OK to ignore robots.txt .
+  (let [body-content (:body (web/fetch-ignoring-robots context url))
+        from-meta-tags (doi-from-meta-tags context url body-content)
+        ; Only try this if we didn't get data from the meta tags.
+        from-body (confirmed-doi-in-text-from-url context url body-content)]
+    (cond
+      from-meta-tags
+      {:match (second from-meta-tags) :method "landing-page-meta-tag" :verification (first from-meta-tags)}
+      
+      from-body
+      {:match (second from-body) :method "landing-page-text" :verification (first from-body)}
+
+      :default nil)))
+
+
+
 ; This one function is responsible for all outgoing web traffic. Cache its results.
 ; Other results are derived algorithmically, so there's no use caching those.
-(defn try-fetched-page-metadata-cached
+(defn try-from-page-content-cached
   [context url]
   (log/debug "try-fetched-page-metadata-cached input:" url "skip-cache:" skip-cache)
 
   (if skip-cache
     
     ; Skip cache.
-    (let [result (try-fetched-page-metadata context url)]
+    (let [result (try-from-page-content context url)]
       ; Log type p0008 happens once per branch.
       (evidence-log/log!
         (assoc (:log-default context)
@@ -235,17 +340,17 @@
                :c "match-landingpage-url"
                :f "from-page-metadata"
                :u url
-               :d result
+               :d (:match result)
                :e (e result)
                :o "e"))
        result)
 
     ; Don't skip cache.
-    ; Cached result will be nil (not found) NULL (preivously failed) or successful result.
-    (let [cached-value (store/get-string @redis-cache-store url)
-          cached-result (if (= "NULL" cached-value) nil cached-value)]
+    ; This is JSON, so nils will be handled.
+    (let [cached-result (when-let [value (store/get-string @redis-cache-store url)]
+                          (json/read-str value :key-fn keyword))]
 
-      (if cached-value
+      (if cached-result
       ; Success or failure from Cache.
         (do
           (evidence-log/log!
@@ -254,15 +359,15 @@
                  :c "match-landingpage-url"
                  :f "from-page-metadata"
                  :u url
-                 :d cached-result
+                 :d (:match cached-result)
                  :e (e cached-result)
                  :o "c"))
            cached-result)
 
         ; No result in cache, 
-        (let [result (try-fetched-page-metadata context url)]
+        (let [result (try-from-page-content context url)]
           (if result
-            (redis/set-string-and-expiry-seconds @redis-cache-store url @success-expiry-seconds result)
+            (redis/set-string-and-expiry-seconds @redis-cache-store url @success-expiry-seconds (json/write-str result))
             (redis/set-string-and-expiry-seconds @redis-cache-store url @failure-expiry-seconds "NULL"))
 
             (evidence-log/log!
@@ -271,27 +376,21 @@
                  :c "match-landingpage-url"
                  :f "from-page-metadata"
                  :u url
-                 :d result
-                 :e (e result)
+                 :d (:match result)
+                 :e (e (:match result))
                  :o "e"))
             result)))))
 
-(defn match-landing-page-url
-  "Try a multitude of ways to match, cheapest first."
-  [context url]
 
-  (log/debug "match-landing-page-url input:" url)
-  
-  (or
-    (try-from-get-params context url)
-    (try-doi-from-url-text context url)
-    (try-pii-from-url-text context url)
-    (try-fetched-page-metadata-cached context url)))
 
 (defn match-landing-page-url-candidate
+  "Try a multitude of ways to match, cheapest first."
   [context candidate]
 
-  (log/debug "match-landing-page-url-candidate input:" candidate)
-  
-  (assoc candidate
-    :match (match-landing-page-url context (:value candidate))))
+  (let [url (:value candidate)
+        result (or
+                 (try-from-get-params context url)
+                 (try-doi-from-url-text context url)
+                 (try-pii-from-url-text context url)
+                 (try-from-page-content-cached context url))]
+    (when result (merge candidate result))))

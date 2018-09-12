@@ -11,7 +11,7 @@
   "Extract a single plaintext string from text of whole document."
   [html]
   (try
-    (-> html
+    (some-> html
         Jsoup/parse
         (.body)
         (.text))
@@ -24,7 +24,7 @@
   "Extract a seq of all links (a hrefs) from an HTML document."
   [html]
   (try
-    (->> html
+    (some->> html
         Jsoup/parse
         (#(.select % "a"))
         (map #(.attr % "href"))
@@ -106,7 +106,7 @@
 
         ; Then merge new candidates.
         candidates (concat plaintext-candidates
-                    (keep #(url/url-to-landing-page-url-candidate % (:domain-set context)) candidate-urls)
+                    (keep (partial url/url-to-landing-page-url-candidate context) candidate-urls)
                     (keep url/url-to-doi-url-candidate candidate-urls))]
         
     (assoc observation :candidates candidates

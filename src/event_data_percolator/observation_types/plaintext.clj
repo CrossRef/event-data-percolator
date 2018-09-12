@@ -22,12 +22,12 @@
 (defn possible-urls-from-text
   "Extract all the candidate URLs found in this text snippet."
   [text]
-  (->> text (re-seq url-re) (map first) distinct))
+  (some->> text (re-seq url-re) (map first) distinct))
 
 (defn candidate-dois-from-text
   "Extract all the candidate DOIs found in this text snippet."
   [text]
-  (->> text
+  (some->> text
     (re-seq doi-re)
     (map first)
     distinct
@@ -48,6 +48,6 @@
         candidates (concat (candidate-dois-from-text input)
                            (candidate-piis-from-text input)
                            (keep url/url-to-doi-url-candidate possible-urls)
-                           (keep #(url/url-to-landing-page-url-candidate % (:domain-set context)) possible-urls))]
+                           (keep (partial url/url-to-landing-page-url-candidate context) possible-urls))]
         
     (assoc observation :candidates candidates)))

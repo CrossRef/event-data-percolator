@@ -136,7 +136,7 @@
           (candidates context)
           (match context)
           (dedupe-matches context)
-          (#(assoc-in % [:percolator :artifacts :domain-set-artifact-version] (:domain-list-artifact-version context)))
+          (#(assoc-in % [:percolator :artifacts :domain-decision-structure-artifact-version] (:domain-decision-structure-artifact-version context)))
           (#(assoc-in % [:percolator :software-version] util/percolator-version))
           (events context))]
 

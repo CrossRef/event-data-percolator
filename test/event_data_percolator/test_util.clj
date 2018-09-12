@@ -1,11 +1,20 @@
 (ns event-data-percolator.test-util
-  (:require [clojure.data.json :as json]))
+  (:require [clojure.data.json :as json]
+            [event-data-common.landing-page-domain :as landing-page-domain]
+            [clojure.java.io :refer [reader resource]]))
 
-; Mock context. No tests should rely on the values here.
+(def test-structure
+  (-> "artifacts/domain-decision-structure.json"
+      resource
+      reader
+      json/read
+      landing-page-domain/parse-domain-decision-structure))
+
 (def mock-context
+  "Mock context, including a known domain-decision structure.
+   This can be extended as needed in tests."
   {:id "20170101-myagent-1234"
-   :domain-set #{"example.com"}
-   :domain-list-artifact-version "http://d1v52iseus4yyg.cloudfront.net/a/crossref-domain-list/versions/1482489046417"})
+   :domain-decision-structure test-structure})
 
 ; Mock evidence record. No tests should rely on the values here.
 (def mock-evidence-record

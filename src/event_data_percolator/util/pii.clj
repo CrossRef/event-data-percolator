@@ -19,7 +19,7 @@
 (defn find-candidate-piis
   "Extract all the PII-looking strings found in this text snippet."
   [text]
-  (->> text
+  (some->> text
     (re-seq pii-re)
     (map first)
     distinct
@@ -32,7 +32,7 @@
   (when-not (clojure.string/blank? pii)
     (let [http-result (try
                    (try-try-again {:sleep 5000 :tries 2}
-                    #(-> 
+                    #(some-> 
                        (http/get "https://api.crossref.org/v1/works" {:query-params {:filter (str "alternative-id:" pii)}})
                        (deref future-timeout nil)
                        :body

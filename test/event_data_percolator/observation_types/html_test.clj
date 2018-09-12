@@ -51,8 +51,6 @@
            (html/links-from-html
              multiple-anchors)))))
 
-(def domain-set #{"example.com" "example.net" "doi.org" "dx.doi.org"})
-
 (deftest ^:unit process-html-content-observation
   (testing "Plain DOIs can be extracted from text nodes"
     (let [result (html/process-html-content-observation
@@ -78,7 +76,7 @@
   
   (testing "Hyperlinked URL DOIs can be extracted from links"
     (let [result (html/process-html-content-observation
-                   (assoc util/mock-context :domain-set #{"doi.org"})
+                   util/mock-context
                    {:type "html" :input-content "<a href='http://doi.org/10.5555/22222'>cliquez ici</a>"})
 
           expected {:type "html"
@@ -90,7 +88,7 @@
 
   (testing "ShortDOI URL DOIs can be extracted from text nodes"
     (let [result (html/process-html-content-observation
-                   (assoc util/mock-context :domain-set #{"doi.org"})
+                   util/mock-context
                    {:type "html" :input-content "<p>http://doi.org/abcd</p>"})]
 
       (is (= result {:type "html"
@@ -101,7 +99,7 @@
 
   (testing "ShortDOI hyperlinked DOIs can be extracted from links"
     (let [result (html/process-html-content-observation
-                   (assoc util/mock-context :domain-set #{"doi.org"})
+                   util/mock-context
                    {:type "html" :input-content "<a href='http://doi.org/abcd'>short and sweet</a>"})
 
           expected {:type "html"
@@ -124,32 +122,33 @@
 
   (testing "Landing Page URLs can be extracted from text nodes"
     (let [result (html/process-html-content-observation
-                   (assoc util/mock-context :domain-set #{"example.com"})
-                   {:type "html" :input-content "<b>one two <i>three http://example.com/four</i> five http://ignore.com/four"})]
+                   util/mock-context
+                   {:type "html" :input-content "<b>one two <i>three http://www.example.com/four</i> five http://ignore.com/four"})]
 
       (is (= result {:type "html"
                      :canonical-url nil
-                     :input-content "<b>one two <i>three http://example.com/four</i> five http://ignore.com/four"
-                     :candidates [{:value "http://example.com/four" :type :landing-page-url}]})
+                     :input-content "<b>one two <i>three http://www.example.com/four</i> five http://ignore.com/four"
+                     :candidates [{:value "http://www.example.com/four" :type :landing-page-url}]})
           "Article landing page from known domain can be extracted from text nodes. Non-matching domains ignored.")))
 
 
   (testing "Landing Page URLs can be extracted from links"
     (let [result (html/process-html-content-observation
-                   (assoc util/mock-context :domain-set #{"example.com"})
-                   {:type "html" :input-content "<p> <a href='http://example.com/five'>this</a> <a href='http://ignore.com/four'>ignore me!</a></p>"})]
+                   util/mock-context
+                   {:type "html" :input-content "<p> <a href='http://www.example.com/five'>this</a> <a href='http://ignore.com/four'>ignore me!</a></p>"})]
 
       (is (= result {:type "html"
                      :canonical-url nil
-                     :input-content "<p> <a href='http://example.com/five'>this</a> <a href='http://ignore.com/four'>ignore me!</a></p>"
-                     :candidates [{:value "http://example.com/five" :type :landing-page-url}]})
+                     :input-content "<p> <a href='http://www.example.com/five'>this</a> <a href='http://ignore.com/four'>ignore me!</a></p>"
+                     :candidates [{:value "http://www.example.com/five" :type :landing-page-url}]})
           "Article landing page from known domain can be extracted from link. Non-matching domains ignored."))))
 
 (deftest ^:unit html-with-duplicates
-  (testing "HTML that contains a DOI in the link and in the text returns one candidate per match type. This will later be de-duped in event-data-percolator.action-test/match-candidates-deupe ."
+  (testing "HTML that contains a DOI in the link and in the text returns one candidate per match type.
+            This will later be de-duped in event-data-percolator.action-test/match-candidates-deupe."
     (let [html "<a href='https://doi.org/10.5555/12345678'>10.5555/12345678</a>"
           result (html/process-html-content-observation
-                   (assoc util/mock-context :domain-set #{"example.com" "doi.org"})
+                   util/mock-context
                    {:type "html" :input-content html})]
           
       (is (= result {:type "html"

@@ -99,35 +99,35 @@
     ; On error just return nil, but add exception to trace.
     (catch java.net.URISyntaxException exception
       (do
-        (log/debug "Error fetching" url exception)
+        (log/debug "Error fetching" url (.getMessage exception))
         (evidence-log/log! (assoc (:log-default context)
                                   :i "p001a" :c "fetch" :f "error" :v "uri-syntax-exception" :u url))
         nil))
 
     (catch java.net.UnknownHostException exception
       (do
-        (log/debug "Error fetching" url exception)
+        (log/debug "Error fetching" url (.getMessage exception))
         (evidence-log/log! (assoc (:log-default context)
                                   :i "p001a" :c "fetch" :f "error" :v "unknown-host-exception" :u url))
         nil))
 
     (catch org.httpkit.client.TimeoutException exception
       (do
-        (log/debug "Error fetching" url exception)
+        (log/debug "Error fetching" url (.getMessage exception))
         (evidence-log/log! (assoc (:log-default context)
                                   :i "p001a" :c "fetch" :f "error" :v "timeout-exception" :u url))
         nil))
 
     (catch org.httpkit.ProtocolException exception
       (do
-        (log/debug "Error fetching" url exception)
+        (log/debug "Error fetching" url (.getMessage exception))
         (evidence-log/log! (assoc (:log-default context)
                                   :i "p001a" :c "fetch" :f "error" :v "protocol-exception" :u url))
         nil))
 
     (catch Exception exception
       (do
-        (log/debug "Error fetching" url exception)
+        (log/debug "Error fetching" url (.getMessage exception))
         (evidence-log/log! (assoc (:log-default context)
                                   :i "p001a" :c "fetch" :f "error" :v "unknown-exception" :u url))
 
@@ -179,13 +179,16 @@
 (defn allowed?
   [context url-str]
   (log/debug "allowed? input:" url-str)
-  (let [robots-file-url (new URL (new URL url-str) "/robots.txt")
-        rules (get-rules-cached context (str robots-file-url))
-        
-        ; If there's no robots file, proceed.
-        allowed (if-not rules true (.isAllowed rules url-str))]
-    (log/debug "allowed? input:" url-str "result:" allowed)
-    allowed))
+  (try
+    (let [robots-file-url (new URL (new URL url-str) "/robots.txt")
+          rules (get-rules-cached context (str robots-file-url))
+          
+          ; If there's no robots file, proceed.
+          allowed (if-not rules true (.isAllowed rules url-str))]
+      (log/debug "allowed? input:" url-str "result:" allowed)
+      allowed)
+    ; Malformed URL should be ignored.
+    (catch Exception _ nil)))
 
 (defn fetch-respecting-robots
   "Fetch URL, respecting robots.txt directives for domain."
@@ -226,25 +229,4 @@
   (let [blacklist-match (when url (first (keep #(re-find % url) url-blacklist)))
         valid (when-not blacklist-match (try (new URL url) (catch Exception e nil)))]
     (boolean valid)))
-
-(defn url-is-landing-page
-  [landing-page-domain-set url]
-  (when-let [domain (try (.getHost (new URL url)) (catch Exception e nil))]
-    (landing-page-domain-set domain)))
-
-(defn should-visit-landing-page?
-  "Is this considered to be a Landing Page and we should visit?"
-  [landing-page-domain-set url]
-  (boolean
-    (and (url-valid? url)
-         (url-is-landing-page landing-page-domain-set url))))
-
-(defn should-visit-content-page?
-  "Is this considered to be a Content Page (i.e. not Landing Page) and we should visit?"
-  [landing-page-domain-set url]
-  (boolean
-    (and (url-valid? url)
-         (not (url-is-landing-page landing-page-domain-set url)))))
-
-
 

@@ -10,7 +10,10 @@
   (testing "match-plain-doi-candidate matches valid DOI."
     (fake/with-fake-http ["https://doi.org/api/handles/10.5555/12345678" (util/doi-ok "10.5555/12345678")]
       (let [result (plain-doi/match-plain-doi-candidate util/mock-context {:value "10.5555/12345678"})]
-        (is (= result {:value "10.5555/12345678", :match "https://doi.org/10.5555/12345678"})))))
+        (is (= result {:value "10.5555/12345678"
+                       :match "https://doi.org/10.5555/12345678"
+                       :method :doi-literal
+                       :verification :literal})))))
 
   (testing "match-plain-doi-candidate does not match nonexistent DOI."
     ; It will try to drop a few off the end to match, with different encodings. Tolerate this.
@@ -21,5 +24,8 @@
                           ; Nor do subsequent ones.
                           #"https://doi.org/api/handles/10.5555.*" (util/doi-not-found)]
       (let [result (plain-doi/match-plain-doi-candidate util/mock-context {:value "10.5555/12345678"})]
-        (is (= result {:value "10.5555/12345678", :match nil}))))))
+        (is (= result {:value "10.5555/12345678"
+                       :match nil
+                       :method :doi-literal
+                       :verification :literal}))))))
 

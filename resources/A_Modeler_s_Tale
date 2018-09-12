@@ -59,7 +59,7 @@
   <meta itemprop="description" content="We created the movie for the 10th International CellML Workshop June 2016 in Auckland, New Zealand.The video shows Researcher 1 (GMT), who developed a model that may cure stupidity. He wants to share the simulation study with his collaborator Researcher 2 (GMT+7) to get some feedback. However, it turns out that sharing the simulation study is not that easy and Researcher 2 (GMT+7) is not able to reproduce the results of Researcher 1 (GMT) using The Simulator.Fortunately, Supervisor comes in to help Researcher 1 (GMT). He points Researcher 1 (GMT) to COMBINE archives. A COMBINE archive is a container format meant to organise and annotate all files necessary to reproduce a simulation study.Eventually, Researcher 1 (GMT) is able to transfer his late-breaking research results bundled into a COMBINE archive to Researcher 2 (GMT+7). The Simulator finally knows what to do, as there is now everything available and in the right place. It turns out that the model is valid and stupidity is going to cease!ThanksWe would like to thank the whole Free Software Community, as most of the video was produced using Free Software! Special thanks to* Debian GNU/Linux (debian.org)* Cheese (wiki.gnome.org/Apps/Cheese)* Flowblade (github.com/jliljebl/flowblade)* Gimp (gimp.org)* Kevin MacLeod (incompetech.com) for providing the music as CC:BY">
   <meta name="google" content="notranslate" />
 
-  <meta name="DC.identifier" content="doi:10.6084/m9.figshare.3423371.v1" />
+  <meta name="DC.identifier" content="doi:10.5555/m9.figshare.3423371.v1" />
 
   <meta property="og:url" content="https://figshare.com/articles/A_Modeler_s_Tale/3423371">
   <meta name="twitter:url" content="https://figshare.com/articles/A_Modeler_s_Tale/3423371">

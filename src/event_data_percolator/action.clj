@@ -160,6 +160,15 @@
                     :url (or obj-url
                              (:match match))} (:obj action {}))
 
+        ; If the match included a matching method and verifiaction, include this.
+        obj (if-let [method (:method match)]
+                    (assoc obj :method method)
+                    obj)
+
+        obj (if-let [verification (:verification match)]
+                    (assoc obj :verification verification)
+                    obj)
+
         base-event {:id (str (UUID/randomUUID))
                     :source_token (:source-token evidence-record)
                     :subj_id subj-id
@@ -173,6 +182,7 @@
                     :evidence_record (:url evidence-record)}
 
         with-license (if-let [license (:license evidence-record)] (assoc base-event :license license) base-event)]
+
       with-license))
 
 (defn create-event-from-extra-event

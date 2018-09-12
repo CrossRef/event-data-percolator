@@ -7,7 +7,9 @@
             [clojure.data.json :as json]
             [event-data-percolator.evidence-record :as evidence-record]
             [event-data-percolator.action :as action]
-            [event-data-percolator.test-util :as util]))
+            [event-data-percolator.util.doi :as doi]
+            [event-data-percolator.test-util :as util]
+            [event-data-percolator.matchers.landing-page-url :as landing-page-url]))
 
 
 (deftest ^:unit url
@@ -96,10 +98,14 @@
                                         :value "http://doi.org/10.5555/22222"}]}]
                                   :matches [{:value "10.5555/11111"
                                              :type :plain-doi
-                                             :match "https://doi.org/10.5555/11111"}
+                                             :match "https://doi.org/10.5555/11111"
+                                             :method :doi-literal
+                                             :verification :literal}
                                             {:type :doi-url
                                              :value "http://doi.org/10.5555/22222"
-                                             :match "https://doi.org/10.5555/22222"}]}]}]})
+                                             :match "https://doi.org/10.5555/22222"
+                                             :method :doi-literal
+                                             :verification :literal}]}]}]})
         
               "Overall structure preserved. Matches gathered for each action over candidates. Occurred-at carried through to match.")))))
 
@@ -132,10 +138,14 @@
                                                :value "http://doi.org/10.5555/22222"}]}]
                                          :matches [{:value "10.5555/11111"
                                                     :type :plain-doi
-                                                    :match "https://doi.org/10.5555/11111"}
+                                                    :match "https://doi.org/10.5555/11111"
+                                                    :method :doi-literal
+                                                    :verification :literal}
                                                    {:type :doi-url
                                                     :value "http://doi.org/10.5555/22222"
-                                                    :match "https://doi.org/10.5555/22222"}]}]}]}
+                                                    :match "https://doi.org/10.5555/22222"
+                                                    :method :doi-literal
+                                                    :verification :literal}]}]}]}
             
             result (evidence-record/events util/mock-context evidence-record)
             events (-> result :pages first :actions first :events)]
@@ -210,7 +220,9 @@
                                                :value "http://doi.org/10.5555/22222"}]}]
                                          :matches [{:type :doi-url
                                                     :value "http://doi.org/10.5555/22222"
-                                                    :match "https://doi.org/10.5555/22222"}]}
+                                                    :match "https://doi.org/10.5555/22222"
+                                                    :method :doi-literal
+                                                    :verification :literal}]}
 
                                         ; One with a canonical URL.
                                         {:url "http://example.com/my-article#comment1"
@@ -227,7 +239,9 @@
                                                :value "http://doi.org/10.5555/22222"}]}]
                                          :matches [{:type :doi-url
                                                     :value "http://doi.org/10.5555/22222"
-                                                    :match "https://doi.org/10.5555/22222"}]}]}]}
+                                                    :match "https://doi.org/10.5555/22222"
+                                                    :method :doi-literal
+                                                      :verification :literal}]}]}]}
             
             result (evidence-record/events util/mock-context evidence-record)
             events (->> result :pages first :actions (mapcat :events))]
@@ -296,38 +310,41 @@
 
 (deftest ^:component end-to-end-process
   (testing "End-to-end processing of Input Bundle should result in an Evidence Record with Events."
-    ; A single redirect so that we can demonstrate that the trace is captured.
-    (fake/with-fake-http ["http://article.com/article/22222" {:status 303 :headers {:location "http://article.com/article/22222-X"}}
-                          "http://article.com/article/22222-X" {:status 200 :body "<html><head><meta name='dc.identifier' content='https://doi.org/10.5555/12345678'></head></html>"}
+    (with-redefs [landing-page-url/check-url-for-doi (constantly :exact)
+                  doi/validate-cached (fn [_ doi] ({"https://doi.org/10.5555/12345678" "10.5555/12345678"} doi))]
 
-                          "https://doi.org/api/handles/10.5555/12345678" (util/doi-ok "10.5555/12345678")
+      ; A single redirect so that we can demonstrate that the trace is captured.
+      (fake/with-fake-http ["http://article.com/article/22222" {:status 303 :headers {:location "http://article.com/article/22222-X"}}
+                            "http://article.com/article/22222-X" {:status 200 :body "<html><head><meta name='dc.identifier' content='https://doi.org/10.5555/12345678'></head></html>"}
 
-                          ; This one throws a timeout error, which should be reported
-                          "http://article.com/article/XXXXX" (fn [a b c] (throw (new org.httpkit.client.TimeoutException "I got bored")))]
-      
-      (let [evidence-record {:id "1234"
-                             :artifacts {:other :value} ; pass-through any artifact info from input package.
-                             :pages [
-                              {:actions [
-                                {:url "http://example.com/page/11111"
-                                 :occurred-at "2017-05-02T00:00:00.000Z"
-                                 :observations [
-                                   {:type "url"
-                                    :input-url "http://article.com/article/22222"}
-                                   {:type "url"
-                                    :input-url "http://article.com/article/XXXXX"}]}]}]}
-            
-            result (evidence-record/process (assoc util/mock-context :domain-set #{"article.com"}) evidence-record)]
+                            "https://doi.org/api/handles/10.5555/12345678" (util/doi-ok "10.5555/12345678")
 
-        (is (= (-> result :percolator :artifacts :domain-set-artifact-version)
-               (:domain-list-artifact-version util/mock-context))
-            "Domain list artifact version should be correctly set from context object.")
+                            ; This one throws a timeout error, which should be reported
+                            "http://article.com/article/XXXXX" (fn [_ _ _] (throw (new org.httpkit.client.TimeoutException "I got bored")))]
+        
+        (let [evidence-record {:id "1234"
+                               :artifacts {:other :value} ; pass-through any artifact info from input package.
+                               :pages [
+                                {:actions [
+                                  {:url "http://myblog.com/page/11111"
+                                   :occurred-at "2017-05-02T00:00:00.000Z"
+                                   :observations [
+                                     {:type "url"
+                                      :input-url "http://article.com/article/22222"}
+                                     {:type "url"
+                                      :input-url "http://article.com/article/XXXXX"}]}]}]}
+              
+              result (evidence-record/process util/mock-context evidence-record)]
 
-        (is (= (-> result :artifacts :other) :value) "Pre-existing values in artifacts are passed through.")
+          (is (= (-> result :percolator :artifacts :domain-decision-structure-artifact-version)
+                 (:domain-decision-structure-artifact-version util/mock-context))
+              "Domain list artifact version should be correctly set from context object.")
 
-        ; The rest of the pieces are tested above.
-        (is (= 1 (-> result :pages first :actions first :events count)) "One event should be found")
-        (is (-> result :id))))))
+          (is (= (-> result :artifacts :other) :value) "Pre-existing values in artifacts are passed through.")
+
+          ; The rest of the pieces are tested above.
+          (is (= 1 (-> result :pages first :actions first :events count)) "One event should be found")
+          (is (-> result :id)))))))
 
 
         
