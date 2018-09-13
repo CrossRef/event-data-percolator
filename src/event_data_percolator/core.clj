@@ -3,10 +3,29 @@
             [event-data-percolator.process :as process]
             [event-data-common.evidence-log :as evidence-log]
             [event-data-common.core :as common]
+            [event-data-common.landing-page-domain :as landing-page-domain]
+            [event-data-percolator.evidence-record :as evidence-record]
             [taoensso.timbre :as timbre]
             [clojure.tools.logging :as log]
-            [config.core :refer [env]])
+            [clojure.data.json :as json]
+            [config.core :refer [env]]
+            [clojure.java.io :refer [writer]])
   (:gen-class))
+
+(defn main-read-file
+  "Read an input evidence record, write to an output evidence record. 
+   This is designed for local testing and should be used with caution, 
+   as duplicate processing has side-effects. Don't use with production 
+   credentials."
+  [input-path output-path]
+  (let [input (json/read-str (slurp input-path) :key-fn keyword)
+        
+        context (-> {:log-default {:s "percolator"}}
+                    (landing-page-domain/assoc-domain-decision-structure))
+        
+        processed (evidence-record/process context input)]
+      (with-open [w (writer output-path)]
+        (json/write processed w))))
 
 (defn -main
   [& args]
@@ -35,7 +54,8 @@
         (prn ex "Default uncaught exception:" (.getName thread)))))
 
   (condp = (first args)
-    ; There will be other commands in future, such as 
+
+    ; Standard run-and-process.
     "process" (do
                 (evidence-log/log!
                   {:s "percolator"
@@ -45,6 +65,11 @@
                  (process/process-kafka-inputs)
                  (log/error "Exiting!")
                  (System/exit 1))
+
+    ; One-off local file, for tinkering.
+    ; lein run process-file input-path output-path
+    ; If this is run with Docker, be aware of what files are available to you!
+    "process-file" (main-read-file (second args) (nth args 2))
     (do 
       (log/error "Unrecognised command: " (first args)))))
 

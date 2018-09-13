@@ -28,11 +28,11 @@
 
 (def timeout-ms
   "Timeout for HTTP requests."
-  3000)
+  10000)
 
 (def deref-timeout-ms
   "Last-ditch timeout for derefing result. This is a safety-valve to avoid threads hanging."
-  1000)
+  100000)
 
 (def skip-cache (:percolator-skip-robots-cache env))
 
