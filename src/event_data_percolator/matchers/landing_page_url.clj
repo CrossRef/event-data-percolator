@@ -364,11 +364,10 @@
                  :o "c"))
            cached-result)
 
-        ; No result in cache, 
+        
         (let [result (try-from-page-content context url)]
-          (if result
-            (redis/set-string-and-expiry-seconds @redis-cache-store url @success-expiry-seconds (json/write-str result))
-            (redis/set-string-and-expiry-seconds @redis-cache-store url @failure-expiry-seconds "NULL"))
+          ; Can be nil.
+          (redis/set-string-and-expiry-seconds @redis-cache-store url @success-expiry-seconds (json/write-str result))
 
             (evidence-log/log!
               (assoc (:log-default context)

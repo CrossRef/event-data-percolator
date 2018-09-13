@@ -96,7 +96,7 @@
                              :body (json/write-str {:message {:items [{:DOI "10.1016/s0169-5347(01)02380-1"}]}})}]
         (is (= (landing-page-url/try-pii-from-url-text util/mock-context "http://api.elsevier.com/content/article/PII:S0169534701023801?httpAccept=text/plain")
                {:match "https://doi.org/10.1016/s0169-5347(01)02380-1"
-                :method :pii-lookup
+                :method :pii
                 :verification :lookup}))))))
 
 (deftest ^:component doi-from-meta-tags-citation-doi-1
