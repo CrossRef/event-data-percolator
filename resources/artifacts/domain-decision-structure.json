@@ -9,7 +9,8 @@
     "www.ijorcs.org",
     "www.ncbi.nlm.nih.gov",
     "www.nomos-elibrary.de",
-    "onlinelibrary.wiley.com"
+    "onlinelibrary.wiley.com",
+    "heart.bmj.com"
   ],
   "prefixes": [
     "10.5555",
@@ -106,6 +107,12 @@
           "domain-recognised": true,
           "domain-confirmed": true
         }
+    },
+    "heart.bmj.com" : {
+      "10.1136" : {
+        "domain-recognised" : true,
+        "domain-confirmed" : true
+      }
     }
   }
 }

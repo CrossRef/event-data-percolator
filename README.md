@@ -282,6 +282,12 @@ These get Redis involved.
 
     time docker-compose -f docker-compose-component-tests.yml run -w /usr/src/app test lein test :component
 
+### Manual experimentation
+
+This is not a test, but can help investigation / bug hunting. Process a local Evidence Record input file and write the output. Care should be taken using this, as the action deduplication has side-effects. Don't use production credentials.
+
+    time docker-compose -f docker-compose-tinker.yml run -w /usr/src/app test lein run process-file «input» «output»
+
 ## Running
 
 There is one process to run. It spins up a configurable number of threads. Other copies can be run for failover or parallelism.

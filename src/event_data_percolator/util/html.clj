@@ -46,10 +46,19 @@
                                                       distinct))
                                                   interested-tag-attrs)
 
-            ; Try to normalize by removing recognised prefixes, then resolve
-            extant-dois (doall (keep (comp (partial doi/validate-cached context) crdoi/normalise-doi) interested-values))]
+            
+            extant-dois (->> interested-values
+                          ; In case the same DOI is repeated, possibly different expressions.
+                          (keep crdoi/non-url-doi)
+                          distinct
+                          (keep (partial doi/validate-cached context))
+                          ; Two inputs may validate to the same output, e.g. casing differences
+                          ; or dropping characters from the end. 
+                          (map crdoi/normalise-doi)
+                          ; Therefore another distinct is required.
+                          distinct)]
 
-        (distinct extant-dois)))
+        extant-dois))
 
     ; We're getting text from anywhere. Anything could happen.
     (catch Exception ex (do

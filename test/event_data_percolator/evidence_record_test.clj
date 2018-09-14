@@ -311,7 +311,7 @@
 (deftest ^:component end-to-end-process
   (testing "End-to-end processing of Input Bundle should result in an Evidence Record with Events."
     (with-redefs [landing-page-url/check-url-for-doi (constantly :exact)
-                  doi/validate-cached (fn [_ doi] ({"https://doi.org/10.5555/12345678" "10.5555/12345678"} doi))]
+                  doi/validate-cached (fn [_ doi] (#{"10.5555/12345678"} doi))]
 
       ; A single redirect so that we can demonstrate that the trace is captured.
       (fake/with-fake-http ["http://article.com/article/22222" {:status 303 :headers {:location "http://article.com/article/22222-X"}}

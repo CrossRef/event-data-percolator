@@ -6,6 +6,7 @@
             [event-data-percolator.matchers.landing-page-url :as landing-page-url]
             [event-data-common.landing-page-domain :as landing-page-domain]
             [event-data-percolator.test-util :as util]
+            [event-data-percolator.util.web :as web]
             [clojure.java.io :refer [reader resource]]))
 
 
@@ -103,49 +104,48 @@
   (testing "DOI can be fetched from meta tag: citation_doi"
     (with-redefs [doi/validate-cached
                   (fn [_ doi]
-                    ({"https://doi.org/10.1007/s10461-013-0685-8"
-      "10.1007/s10461-013-0685-8"} doi))]
+                    (#{"10.1007/s10461-013-0685-8"} doi))]
       (is (= (landing-page-url/doi-from-meta-tags
                util/mock-context
                "http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4852986/?report=classic"
                (slurp "resources/PMC4852986"))
             
-              [:confirmed-domain-prefix "10.1007/s10461-013-0685-8"])))))
+              [:confirmed-domain-prefix "https://doi.org/10.1007/s10461-013-0685-8"])))))
 
 (deftest ^:component doi-from-meta-tags-citation-doi-2
   ; NB pubsonline.informs.org sends different HTML to different agents (Firefox vs Curl).
   ; So this data was captured by Chrome. 
   ; Nonetheless, a good example.
   (testing "DOI can be fetched from meta tag: dc.Identifier"
-    (with-redefs [doi/validate-cached (fn [_ doi] ({"https://doi.org/10.1287/mnsc.2016.2427" "10.1287/mnsc.2016.2427"} doi))]
+    (with-redefs [doi/validate-cached (fn [_ doi] (#{"10.1287/mnsc.2016.2427"} doi))]
       (is (= (landing-page-url/doi-from-meta-tags
                util/mock-context
                "http://pubsonline.informs.org/doi/abs/10.1287/mnsc.2016.2427"
                (slurp "resources/mnsc.2016.2427"))
               
-              [:confirmed-domain-prefix "10.1287/mnsc.2016.2427"])))))
+              [:confirmed-domain-prefix "https://doi.org/10.1287/mnsc.2016.2427"])))))
 
 (deftest ^:component doi-from-meta-tags-dc-identifier
   (testing "DOI can be fetched from meta tag: DC.identifier (different case)"
     (with-redefs [doi/validate-cached
                  (fn [_ doi]
-                   ({"https://doi.org/10.5555/m9.figshare.3423371.v1" "10.5555/m9.figshare.3423371.v1"} doi))]
+                   (#{"10.5555/m9.figshare.3423371.v1"} doi))]
       
         (is (= (landing-page-url/doi-from-meta-tags
                  util/mock-context
                  "https://psychoceramics.labs.crossref.org/articles/A_Modeler_s_Tale/3423371/1"
                  (slurp "resources/A_Modeler_s_Tale"))
-                [:confirmed-domain-prefix "10.5555/m9.figshare.3423371.v1"])))))
+                [:confirmed-domain-prefix "https://doi.org/10.5555/m9.figshare.3423371.v1"])))))
 
 (deftest ^:component doi-from-meta-tags-dc-identifier-doi
   (with-redefs [doi/validate-cached (fn [ctx doi]
-                                      ({"https://doi.org/10.3402/ijch.v71i0.18594" "10.3402/ijch.v71i0.18594"} doi))]
+                                      (#{"10.3402/ijch.v71i0.18594"} doi))]
     (testing "DOI can be fetched from meta tag: DC.Identifier.DOI"
       (is (= (landing-page-url/doi-from-meta-tags
                util/mock-context
                "http://www.circumpolarhealthjournal.net/index.php/ijch/article/view/18594/html"
                (slurp "resources/18594"))
-              [:confirmed-domain-prefix "10.3402/ijch.v71i0.18594"])))))
+              [:confirmed-domain-prefix "https://doi.org/10.3402/ijch.v71i0.18594"])))))
 
 (deftest ^:component doi-from-meta-tags-prism-url
   (testing "DOI can be fetched from meta tag: prism.url"
@@ -153,21 +153,19 @@
     (fake/with-fake-http []
       (with-redefs [landing-page-url/check-url-for-doi (constantly :checked-url-exact)
                     doi/validate-cached (fn [ctx doi]
-                                          ({"https://doi.org/10.1186/s13054-016-1322-5"
-                                             "10.1186/s13054-016-1322-5"} doi))]
+                                          (#{"10.1186/s13054-016-1322-5"} doi))]
         (is (= (landing-page-url/doi-from-meta-tags
                  util/mock-context
                  "http://ccforum.biomedcentral.com/articles/10.1186/s13054-016-1322-5"
                  (slurp "resources/s13054-016-1322-5"))
-               [:checked-url-exact "10.1186/s13054-016-1322-5"]))))))
+               [:checked-url-exact "https://doi.org/10.1186/s13054-016-1322-5"]))))))
 
 (deftest ^:component try-fetched-page-metadata
   (testing "DOI can be fetched from meta tag: citation_doi"
     (with-redefs [doi/validate-cached (fn [ctx doi]
-                                        ({"https://doi.org/10.1093/jnci/djw160"
-                                           "10.1093/jnci/djw160"} doi))]
+                                        (#{"10.1093/jnci/djw160"} doi))]
       (is (= (landing-page-url/doi-from-meta-tags util/mock-context "http://jnci.oxfordjournals.org/content/108/6/djw160.full" (slurp "resources/djw160.full"))
-              [:confirmed-domain-prefix "10.1093/jnci/djw160"])))))
+              [:confirmed-domain-prefix "https://doi.org/10.1093/jnci/djw160"])))))
   
 ; Regression test for https://github.com/CrossRef/event-data-percolator/issues/29
 (deftest ^:component url-text-with-qmark-in-query-param
@@ -247,4 +245,30 @@
               "http://www.schweizerbart.de/papers/metz/detail/15/54914/Objective_mesoscale_analyses_in_complex_terrain_ap"]]]
 
       (is (#{:basic :exact} (landing-page-url/url-equality url-a url-b)) "Example almost URL matches should be :basic or true"))))
+
+
+
+
+;; Regression tests
+
+(deftest ^:unit bmj-meta-tags
+  (testing "Meta tag DOI should be extracted from BMJ page."
+    (fake/with-fake-http []
+      (with-redefs [doi/validate-cached
+                    (fn [ctx doi]
+                      (#{"10.1136/heartjnl-2017-312901"} doi))
+                    
+                    web/fetch-ignoring-robots
+                    (fn [context url]
+                      {:body (slurp "resources/regression-tests/heartjnl-2017-312901html.html")})]
+
+        (let [result (landing-page-url/try-from-page-content
+                        util/mock-context
+                        "https://heart.bmj.com/content/early/2018/08/18/heartjnl-2017-312901?hootPostID=9b4fcf012d0e2ebc1eec83133de23a6e")]
+        
+        (is (= result
+               {:match "https://doi.org/10.1136/heartjnl-2017-312901"
+                :method "landing-page-meta-tag"
+                :verification :confirmed-domain-prefix})))))))
+
 

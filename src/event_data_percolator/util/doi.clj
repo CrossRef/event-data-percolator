@@ -150,8 +150,8 @@
     "f" "t"))
 
 (defn validate-cached
-  "Take a suspected DOI or ShortDOI and return the correct full well-formed, extant DOI.
-   This is the function you want."
+  "Take a suspected DOI or ShortDOI in non-url form and return the correct full
+   well-formed, extant DOI. This is the function you want."
   [context suspected-doi]
 
   (log/debug "validate-cached input:" suspected-doi "skip:" skip-cache)

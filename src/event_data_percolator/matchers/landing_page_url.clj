@@ -309,7 +309,9 @@
   [context url]
   ; We're not indexing links from this page, so it's OK to ignore robots.txt .
   (let [body-content (:body (web/fetch-ignoring-robots context url))
+        
         from-meta-tags (doi-from-meta-tags context url body-content)
+        
         ; Only try this if we didn't get data from the meta tags.
         from-body (confirmed-doi-in-text-from-url context url body-content)]
     (cond
