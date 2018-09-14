@@ -34,6 +34,10 @@
   "Last-ditch timeout for derefing result. This is a safety-valve to avoid threads hanging."
   100000)
 
+(def max-bytes
+  "Don't try and retrieve anything over 50 MiB."
+  (* 1024 1024 50))
+
 (def skip-cache (:percolator-skip-robots-cache env))
 
 (defn fetch
@@ -63,6 +67,7 @@
                             :as :text
                             :timeout timeout-ms
                             :throw-exceptions true
+                            :filter (http/max-body-filter max-bytes)
                             :client sni-client})
                          deref-timeout-ms
                          ; If this times out, return a special status for the condp below.
@@ -119,6 +124,15 @@
         nil))
 
     (catch org.httpkit.ProtocolException exception
+      (do
+        (log/debug "Error fetching" url (.getMessage exception))
+        (evidence-log/log! (assoc (:log-default context)
+                                  :i "p001a" :c "fetch" :f "error" :v "protocol-exception" :u url))
+        nil))
+
+    ; This can happen when the Content-Length is over MAX_INT, which is 2GB which we would reject anyway.
+    ; see https://github.com/http-kit/http-kit/issues/340
+    (catch NumberFormatException exception
       (do
         (log/debug "Error fetching" url (.getMessage exception))
         (evidence-log/log! (assoc (:log-default context)
